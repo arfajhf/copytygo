@@ -139,8 +139,8 @@ func runLiteDev() error {
 	fmt.Println("Backend : http://" + address)
 	fmt.Printf("Routes  : %d\n", len(routes))
 	fmt.Println()
-	fmt.Println("Lite Runtime supports simple inline Text/JSON routes.")
-	fmt.Println("Complex controllers, middleware and arbitrary Go packages still use native mode.")
+	fmt.Println("Lite Runtime supports inline Text/JSON routes with automatic route hot reload.")
+	fmt.Println("Complex controllers, middleware, database calls and arbitrary Go packages still use native mode.")
 	fmt.Println()
 
 	return http.ListenAndServe(address, requestLogMiddleware(mux))
