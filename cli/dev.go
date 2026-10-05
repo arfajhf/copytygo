@@ -122,10 +122,12 @@ func runLiteDev() error {
 			return
 		}
 		for _, route := range currentRoutes {
-			if route.Method == req.Method && route.Path == req.URL.Path {
+			params, matched := matchLitePath(route.Path, req.URL.Path)
+			if route.Method == req.Method && matched {
+				body := renderLiteBody(route.Body, req, params)
 				w.Header().Set("Content-Type", route.ContentType)
 				w.WriteHeader(route.Status)
-				_, _ = w.Write([]byte(route.Body))
+				_, _ = w.Write([]byte(body))
 				return
 			}
 		}
@@ -268,9 +270,12 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 		if !ok || len(call.Args) != 1 {
 			continue
 		}
+		if status, ok := liteStatusFromSelector(sel); ok {
+			route.Status = status
+		}
 		switch sel.Sel.Name {
 		case "Text":
-			value, ok := stringLiteral(call.Args[0])
+			value, ok := liteStringExpr(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
 			}
@@ -357,7 +362,96 @@ func jsonScalar(expr ast.Expr) (string, bool) {
 			return v.Name, true
 		}
 	}
+	if value, ok := liteStringExpr(expr); ok {
+		return strconv.Quote(value), true
+	}
 	return "", false
+}
+
+func liteStringExpr(expr ast.Expr) (string, bool) {
+	if value, ok := stringLiteral(expr); ok {
+		return value, true
+	}
+	call, ok := expr.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return "", false
+	}
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	name, ok := stringLiteral(call.Args[0])
+	if !ok {
+		return "", false
+	}
+	switch sel.Sel.Name {
+	case "Param":
+		return "{{param:" + name + "}}", true
+	case "Query":
+		return "{{query:" + name + "}}", true
+	}
+	return "", false
+}
+
+func liteStatusFromSelector(sel *ast.SelectorExpr) (int, bool) {
+	call, ok := sel.X.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return 0, false
+	}
+	statusSel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || statusSel.Sel.Name != "Status" {
+		return 0, false
+	}
+	lit, ok := call.Args[0].(*ast.BasicLit)
+	if !ok || lit.Kind != token.INT {
+		return 0, false
+	}
+	code, err := strconv.Atoi(lit.Value)
+	if err != nil || code < 100 || code > 599 {
+		return 0, false
+	}
+	return code, true
+}
+
+func matchLitePath(routePath, requestPath string) (map[string]string, bool) {
+	routeParts := strings.Split(strings.Trim(routePath, "/"), "/")
+	requestParts := strings.Split(strings.Trim(requestPath, "/"), "/")
+	if routePath == "/" {
+		routeParts = []string{}
+	}
+	if requestPath == "/" {
+		requestParts = []string{}
+	}
+	if len(routeParts) != len(requestParts) {
+		return nil, false
+	}
+	params := map[string]string{}
+	for i, part := range routeParts {
+		if strings.HasPrefix(part, ":") {
+			name := strings.TrimPrefix(part, ":")
+			if name == "" || requestParts[i] == "" {
+				return nil, false
+			}
+			params[name] = requestParts[i]
+			continue
+		}
+		if part != requestParts[i] {
+			return nil, false
+		}
+	}
+	return params, true
+}
+
+func renderLiteBody(body string, req *http.Request, params map[string]string) string {
+	for key, value := range params {
+		body = strings.ReplaceAll(body, "{{param:"+key+"}}", value)
+	}
+	for key, values := range req.URL.Query() {
+		if len(values) > 0 {
+			body = strings.ReplaceAll(body, "{{query:"+key+"}}", values[0])
+		}
+	}
+	return body
 }
 
 // readFirstLine is intentionally small and dependency-free; it is useful for
