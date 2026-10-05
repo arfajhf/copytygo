@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -131,7 +132,13 @@ func runLiteDev() error {
 
 	host := config.Get("APP_HOST", "127.0.0.1")
 	port := config.Get("APP_PORT", "8080")
-	address := host + ":" + port
+	listener, address, moved, err := listenLiteAddress(host, port)
+	if err != nil {
+		return err
+	}
+	if moved {
+		fmt.Printf("Port %s is already in use. CopyTyGo switched automatically to %s.\n\n", port, strings.TrimPrefix(address, host+":"))
+	}
 
 	fmt.Println("CopyTyGo Dev")
 	fmt.Println("-------------")
@@ -143,7 +150,30 @@ func runLiteDev() error {
 	fmt.Println("Complex controllers, middleware, database calls and arbitrary Go packages still use native mode.")
 	fmt.Println()
 
-	return http.ListenAndServe(address, requestLogMiddleware(mux))
+	return http.Serve(listener, requestLogMiddleware(mux))
+}
+
+func listenLiteAddress(host, preferredPort string) (net.Listener, string, bool, error) {
+	start, err := strconv.Atoi(preferredPort)
+	if err != nil || start < 1 || start > 65535 {
+		return nil, "", false, fmt.Errorf("copytygo lite runtime: invalid APP_PORT %q", preferredPort)
+	}
+
+	for port := start; port <= start+20 && port <= 65535; port++ {
+		address := net.JoinHostPort(host, strconv.Itoa(port))
+		listener, listenErr := net.Listen("tcp", address)
+		if listenErr == nil {
+			return listener, address, port != start, nil
+		}
+	}
+	return nil, "", false, fmt.Errorf("copytygo lite runtime: no free port found from %d to %d", start, minInt(start+20, 65535))
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func requestLogMiddleware(next http.Handler) http.Handler {
