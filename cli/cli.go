@@ -66,7 +66,7 @@ func (cli *CLI) Run() error {
 }
 
 func (cli *CLI) printHelp() {
-	fmt.Printf("\nCopyTyGo v%s\n\n", Version)
+	fmt.Printf("\nCopyTyGo v%s\n\n", version.Framework)
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
 	fmt.Println("  new <name>                 Create a CopyTyGo project")
