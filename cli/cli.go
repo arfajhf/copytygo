@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-const Version = "1.0.0"
+const Version = "1.1.0-dev"
 
 type CommandHandler func(args []string) error
 
@@ -70,7 +70,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
 	fmt.Println("  new <name>                 Create a CopyTyGo project")
-	fmt.Println("  dev                        Run development server")
+	fmt.Println("  dev [--lite]               Run development server with automatic Lite fallback")
 	fmt.Println("  build                      Build application")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")

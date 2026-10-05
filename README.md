@@ -65,3 +65,8 @@ The database can keep efficient integer IDs while public URLs avoid exposing seq
 ## Status
 
 This repository is the v1 learning/reference implementation. Before public production distribution, add CI builds, release signing, database integration tests and a stable compatibility policy.
+
+
+## Development runtime
+
+`ctg dev` uses native Go by default. On supported Windows Application Control failures, CopyTyGo v1.1 can automatically fall back to its lightweight in-process Lite Runtime. Use `ctg dev --lite` to test the fallback directly. See `docs/DEV_RUNTIME.md`.
