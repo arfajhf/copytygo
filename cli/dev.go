@@ -115,19 +115,26 @@ func runLiteDev() error {
 	}
 
 	mux := http.NewServeMux()
-	for _, route := range routes {
-		r := route
-		pattern := r.Method + " " + r.Path
-		mux.HandleFunc(pattern, func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", r.ContentType)
-			w.WriteHeader(r.Status)
-			_, _ = w.Write([]byte(r.Body))
-		})
-	}
-
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8"><title>CopyTyGo</title></head><body style="font-family:system-ui;max-width:760px;margin:60px auto;padding:0 20px"><h1>CopyTyGo Lite Runtime</h1><p>Your development server is running without a generated application executable.</p><p>Try <a href="/api/health">/api/health</a>.</p></body></html>`)
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		currentRoutes, reloadErr := discoverLiteRoutes("routes")
+		if reloadErr != nil {
+			http.Error(w, "CopyTyGo Lite reload error: "+reloadErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, route := range currentRoutes {
+			if route.Method == req.Method && route.Path == req.URL.Path {
+				w.Header().Set("Content-Type", route.ContentType)
+				w.WriteHeader(route.Status)
+				_, _ = w.Write([]byte(route.Body))
+				return
+			}
+		}
+		if req.Method == http.MethodGet && req.URL.Path == "/" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8"><title>CopyTyGo</title></head><body style="font-family:system-ui;max-width:760px;margin:60px auto;padding:0 20px"><h1>CopyTyGo Lite Runtime</h1><p>Your development server is running without a generated application executable.</p><p>Routes reload automatically on each request during development.</p></body></html>`)
+			return
+		}
+		http.NotFound(w, req)
 	})
 
 	host := config.Get("APP_HOST", "127.0.0.1")
