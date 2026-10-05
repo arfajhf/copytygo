@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 	"os"
-)
 
-const Version = "1.1.0-dev"
+	"github.com/arfajhf/copytygo/version"
+)
 
 type CommandHandler func(args []string) error
 
@@ -42,7 +42,7 @@ func (cli *CLI) Run() error {
 	case "version", "--version", "-v":
 		fmt.Printf(
 			"CopyTyGo v%s\n",
-			Version,
+			version.Framework,
 		)
 
 		return nil
