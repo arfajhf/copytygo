@@ -22,13 +22,67 @@ func writeGenerated(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 func MakeController(name, dir string) error {
+	return MakeControllerWithMode(name, dir, false)
+}
+
+func MakeControllerWithMode(name, dir string, resource bool) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid controller name")
 	}
 	if !strings.HasSuffix(name, "Controller") {
 		name += "Controller"
 	}
-	body := fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
+
+	var body string
+	if resource {
+		body = fmt.Sprintf(`package controllers
+
+import "github.com/arfajhf/copytygo/core"
+
+type %s struct{}
+
+func (%s) Index(ctx *core.Context) error {
+	return ctx.JSON(core.Map{"data": []any{}})
+}
+
+func (%s) Show(ctx *core.Context) error {
+	return ctx.JSON(core.Map{"id": ctx.Param("id")})
+}
+
+func (%s) Store(ctx *core.Context) error {
+	if err := ctx.Validate(map[string]string{
+		"name": "required|min:3",
+	}); err != nil {
+		return err
+	}
+
+	return ctx.Status(201).JSON(core.Map{
+		"id":   1,
+		"name": ctx.Input("name"),
+	})
+}
+
+func (%s) Update(ctx *core.Context) error {
+	if err := ctx.Validate(map[string]string{
+		"name": "required|min:3",
+	}); err != nil {
+		return err
+	}
+
+	return ctx.JSON(core.Map{
+		"id":   ctx.Param("id"),
+		"name": ctx.Input("name"),
+	})
+}
+
+func (%s) Destroy(ctx *core.Context) error {
+	return ctx.Status(204).Text("")
+}
+`, name, name, name, name, name, name)
+	} else {
+		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
+	}
+
 	return writeGenerated(filepath.Join(dir, strings.ToLower(strings.TrimSuffix(name, "Controller"))+"_controller.go"), body)
 }
 func MakeModel(name, dir string) error {
