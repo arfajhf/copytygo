@@ -10,6 +10,7 @@ import (
 )
 
 var routePattern = regexp.MustCompile(`\.(Get|Post|Put|Patch|Delete)\("([^"]+)"`)
+var resourceRoutePattern = regexp.MustCompile(`\.Resource\("([^"]+)"`)
 
 func RouteList(root string) error {
 	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
