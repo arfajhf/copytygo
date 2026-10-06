@@ -224,3 +224,42 @@ func TestLiteMemoryCRUD(t *testing.T) {
         t.Fatalf("expected 404 after delete, got %d", missingRec.Code)
     }
 }
+
+
+func TestLiteDiscoversGeneratedAuthRoutes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "auth.go")
+	source := `package routes
+
+import (
+	copyauth "github.com/arfajhf/copytygo/v2/auth"
+	"github.com/arfajhf/copytygo/v2/core"
+)
+
+func RegisterAuth(app *core.Application) {
+	copyauth.Routes(app, "user")
+}
+`
+
+	if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	routes, err := parseLiteRouteFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(routes) != 3 {
+		t.Fatalf("expected 3 auth routes, got %d", len(routes))
+	}
+
+	if routes[0].Path != "/api/auth/register" || routes[0].AuthAction != "register" || routes[0].AuthRole != "user" {
+		t.Fatalf("unexpected register route: %#v", routes[0])
+	}
+	if routes[1].Path != "/api/auth/login" || routes[1].AuthAction != "login" {
+		t.Fatalf("unexpected login route: %#v", routes[1])
+	}
+	if routes[2].Path != "/api/auth/me" || routes[2].AuthAction != "me" {
+		t.Fatalf("unexpected me route: %#v", routes[2])
+	}
+}
