@@ -459,6 +459,12 @@ func mapLiteralJSON(expr ast.Expr) (string, bool) {
 		}
 		value, ok := jsonScalar(kv.Value)
 		if !ok {
+			if composite, compositeOK := kv.Value.(*ast.CompositeLit); compositeOK && len(composite.Elts) == 0 {
+				value = "[]"
+				ok = true
+			}
+		}
+		if !ok {
 			return "", false
 		}
 		if !first {
