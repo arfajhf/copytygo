@@ -1,58 +1,55 @@
-# CopyTyGo Development Runtime
+# CopyTyGo v3 Development Runtime
 
-CopyTyGo v2 keeps native Go as the primary development and production runtime.
+CopyTyGo uses native Go as the primary runtime.
 
 ```text
 ctg dev
-  -> native Go runtime
-       -> success: run the application normally
+  -> native Go
+       -> success: normal development server
        -> supported Windows Application Control block: Lite Runtime
 ```
 
-Force Lite Runtime with:
+Force Lite Runtime:
 
 ```powershell
 ctg dev --lite
 ```
 
-## Lite Runtime v2
+## Lite Runtime v3
 
-Lite Runtime executes inside the installed `ctg` process so Windows does not need to execute a newly generated application binary.
+Lite Runtime executes inside the installed `ctg` process.
 
-Supported development flows include:
+Supported generated flows include:
 
-- GET, POST, PUT, PATCH and DELETE routes
-- route parameters and query parameters
+- GET, POST, PUT, PATCH and DELETE
+- route params/query params
 - `ctx.Body()` and `ctx.Input()`
-- declarative validation
+- validation
 - controller methods
-- `app.Resource(...)`
-- generated resource CRUD
-- MySQL/PostgreSQL resource CRUD
-- generated auth register/login/me routes
-- HTTP status responses
-- route hot reload
+- resource CRUD
+- pagination/search/filter/sort
+- soft-delete resource options
+- MySQL/PostgreSQL resources
+- auth register/login/me
+- hot route reload
 - automatic free-port fallback
 
-Generated database resources can therefore keep working when native development execution is blocked.
+Lite Runtime is not a general Go interpreter. Arbitrary service/package logic still belongs to Native Runtime.
 
-## Native-only Go behavior
+## Production
 
-Lite Runtime is intentionally not a general Go interpreter. Arbitrary application expressions, custom package execution, complex service orchestration and unsupported middleware behavior still belong to Native Runtime.
-
-Production continues to use:
+Production uses a normal Go executable:
 
 ```powershell
 ctg build
 ```
 
-which produces a normal Go application.
+Generated servers include timeouts and graceful shutdown.
 
-## Diagnostics
+Before launch:
 
 ```powershell
-ctg doctor
-ctg doctor --db
+ctg doctor --db --production
 ```
 
-Use `--db` when the project is configured with a live MySQL or PostgreSQL database.
+For production, use `APP_ENV=production`, `APP_DEBUG=false`, a generated strong `APP_KEY`, and real database credentials.
