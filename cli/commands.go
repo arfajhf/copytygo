@@ -35,6 +35,12 @@ func RegisterDeveloperCommands(app *CLI) {
 		}
 		return MakeControllerWithMode(args[0], filepath.Join("app", "controllers"), mode)
 	})
+	app.Command("make:resource", func(args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("usage: ctg make:resource <name>")
+		}
+		return MakeResource(args[0])
+	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf("usage: ctg make:model <name>")
