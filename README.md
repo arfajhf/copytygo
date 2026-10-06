@@ -5,7 +5,7 @@ CopyTyGo is an opinionated full-stack Go framework with a TypeScript-first front
 ## Quick start
 
 ```powershell
-go install github.com/arfajhf/copytygo/v2/cmd/ctg@latest
+go install github.com/arfajhf/copytygo/v3/cmd/ctg@latest
 ctg new toko-online
 cd toko-online
 ctg make:resource Product name:string price:decimal stock:integer description:text?
@@ -163,7 +163,7 @@ The database can keep efficient integer IDs while public URLs avoid exposing seq
 CopyTyGo v2 follows Go semantic import versioning:
 
 ```text
-github.com/arfajhf/copytygo/v2
+github.com/arfajhf/copytygo/v3
 ```
 
 v1 projects can remain on the original module path until intentionally upgraded.
