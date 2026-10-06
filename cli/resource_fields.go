@@ -139,7 +139,7 @@ func writeResourceController(name string, fields []ResourceField) error {
 
 	body := fmt.Sprintf(`package controllers
 
-import "github.com/arfajhf/copytygo/v2/core"
+import "github.com/arfajhf/copytygo/v3/core"
 
 // copytygo:resource %s
 
@@ -218,8 +218,8 @@ func writeResourceMigration(name string, fields []ResourceField) error {
 	content := fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v2/database/migration"
-	"github.com/arfajhf/copytygo/v2/database/schema"
+	"github.com/arfajhf/copytygo/v3/database/migration"
+	"github.com/arfajhf/copytygo/v3/database/schema"
 )
 
 func Register%s() error {
