@@ -120,12 +120,21 @@ func writeResourceController(name string, fields []ResourceField) error {
 
 	var rules strings.Builder
 	var values strings.Builder
+	searchable := []string{}
+	filterable := []string{}
+	sortable := []string{"id", "created_at", "updated_at"}
+
 	for _, field := range fields {
 		rule := validationRuleForResourceField(field)
 		if rule != "" {
 			rules.WriteString(fmt.Sprintf("\t\t\"%s\": %q,\n", field.Name, rule))
 		}
 		values.WriteString(fmt.Sprintf("\t\t\"%s\": ctx.Input(\"%s\"),\n", field.Name, field.Name))
+		filterable = append(filterable, field.Name)
+		sortable = append(sortable, field.Name)
+		if field.Type == "string" || field.Type == "text" {
+			searchable = append(searchable, field.Name)
+		}
 	}
 
 	body := fmt.Sprintf(`package controllers
@@ -137,7 +146,11 @@ import "github.com/arfajhf/copytygo/v2/core"
 type %s struct{}
 
 func (%s) Index(ctx *core.Context) error {
-	return ctx.DBIndex("%s")
+	return ctx.DBIndex("%s", core.DBIndexOptions{
+		Searchable: %#v,
+		Filterable: %#v,
+		Sortable:   %#v,
+	})
 }
 
 func (%s) Show(ctx *core.Context) error {
@@ -170,7 +183,7 @@ func (%s) Destroy(ctx *core.Context) error {
 `,
 		resource,
 		controller,
-		controller, resource,
+		controller, resource, searchable, filterable, sortable,
 		controller, resource,
 		controller, rules.String(), resource, values.String(),
 		controller, rules.String(), resource, values.String(),
