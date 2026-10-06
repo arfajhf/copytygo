@@ -40,7 +40,7 @@ func MakeControllerWithMode(name, dir, mode string) error {
 	case "resource":
 		body = fmt.Sprintf(`package controllers
 
-import "github.com/arfajhf/copytygo/v2/core"
+import "github.com/arfajhf/copytygo/v3/core"
 
 // copytygo:resource %s
 
@@ -86,7 +86,7 @@ func (%s) Destroy(ctx *core.Context) error {
 	case "memory":
 		body = fmt.Sprintf(`package controllers
 
-import "github.com/arfajhf/copytygo/v2/core"
+import "github.com/arfajhf/copytygo/v3/core"
 
 type %s struct{}
 
@@ -122,7 +122,7 @@ func (%s) Destroy(ctx *core.Context) error {
 `, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
 
 	default:
-		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/v2/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
+		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/v3/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
 	}
 
 	return writeGenerated(filepath.Join(dir, strings.ToLower(strings.TrimSuffix(name, "Controller"))+"_controller.go"), body)
@@ -143,7 +143,7 @@ func MakeMiddleware(name, dir string) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid middleware name")
 	}
-	body := fmt.Sprintf("package middleware\n\nimport \"github.com/arfajhf/copytygo/v2/core\"\n\nfunc %s() core.Middleware {\n\treturn func(next core.Handler) core.Handler {\n\t\treturn func(ctx *core.Context) error { return next(ctx) }\n\t}\n}\n", name)
+	body := fmt.Sprintf("package middleware\n\nimport \"github.com/arfajhf/copytygo/v3/core\"\n\nfunc %s() core.Middleware {\n\treturn func(next core.Handler) core.Handler {\n\t\treturn func(ctx *core.Context) error { return next(ctx) }\n\t}\n}\n", name)
 	return writeGenerated(filepath.Join(dir, strings.ToLower(name)+".go"), body)
 }
 func MakeService(name, dir string) error {
