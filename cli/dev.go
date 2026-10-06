@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -19,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/arfajhf/copytygo/config"
+	"github.com/arfajhf/copytygo/validation"
 )
 
 type liteRoute struct {
@@ -27,6 +29,7 @@ type liteRoute struct {
 	ContentType string
 	Status      int
 	Body        string
+	Validation  map[string]string
 }
 
 func Dev(args []string) error {
@@ -125,6 +128,18 @@ func runLiteDev() error {
 		for _, route := range currentRoutes {
 			params, matched := matchLitePath(route.Path, req.URL.Path)
 			if route.Method == req.Method && matched {
+				if fields := liteValidateRequest(req, route.Validation); len(fields) > 0 {
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
+					w.WriteHeader(http.StatusUnprocessableEntity)
+					_ = json.NewEncoder(w).Encode(map[string]any{
+						"error": map[string]any{
+							"status":  http.StatusUnprocessableEntity,
+							"message": "Validation failed",
+							"fields":  fields,
+						},
+					})
+					return
+				}
 				body := renderLiteBody(route.Body, req, params)
 				w.Header().Set("Content-Type", route.ContentType)
 				w.WriteHeader(route.Status)
@@ -368,7 +383,12 @@ func receiverMatches(fn *ast.FuncDecl, controllerType string) bool {
 }
 
 func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, bool) {
-	route := liteRoute{Method: method, Path: path, Status: http.StatusOK}
+	route := liteRoute{
+		Method: method,
+		Path: path,
+		Status: http.StatusOK,
+		Validation: parseLiteValidationRules(handler),
+	}
 	for _, stmt := range handler.Body.List {
 		ret, ok := stmt.(*ast.ReturnStmt)
 		if !ok || len(ret.Results) != 1 {
@@ -507,8 +527,136 @@ func liteStringExpr(expr ast.Expr) (string, bool) {
 		return "{{param:" + name + "}}", true
 	case "Query":
 		return "{{query:" + name + "}}", true
+	case "Input":
+		return "{{input:" + name + "}}", true
 	}
 	return "", false
+}
+
+func parseLiteValidationRules(handler *ast.FuncLit) map[string]string {
+	rules := map[string]string{}
+	ast.Inspect(handler.Body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || len(call.Args) != 1 {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "Validate" {
+			return true
+		}
+		composite, ok := call.Args[0].(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		for _, element := range composite.Elts {
+			kv, ok := element.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, keyOK := stringLiteral(kv.Key)
+			value, valueOK := stringLiteral(kv.Value)
+			if keyOK && valueOK {
+				rules[key] = value
+			}
+		}
+		return true
+	})
+	return rules
+}
+
+func liteRequestData(req *http.Request) map[string]string {
+	data := map[string]string{}
+	if req == nil || req.Body == nil {
+		return data
+	}
+
+	raw, err := io.ReadAll(req.Body)
+	if err != nil {
+		return data
+	}
+	req.Body = io.NopCloser(strings.NewReader(string(raw)))
+
+	contentType := strings.ToLower(req.Header.Get("Content-Type"))
+	if strings.Contains(contentType, "application/json") {
+		var decoded map[string]any
+		if json.Unmarshal(raw, &decoded) == nil {
+			for key, value := range decoded {
+				switch v := value.(type) {
+				case string:
+					data[key] = v
+				default:
+					encoded, err := json.Marshal(v)
+					if err == nil {
+						data[key] = string(encoded)
+					}
+				}
+			}
+		}
+		return data
+	}
+
+	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+		if values, err := urlParseQuery(string(raw)); err == nil {
+			for key, items := range values {
+				if len(items) > 0 {
+					data[key] = items[0]
+				}
+			}
+		}
+	}
+	return data
+}
+
+func urlParseQuery(raw string) (map[string][]string, error) {
+	values := make(map[string][]string)
+	for _, part := range strings.Split(raw, "&") {
+		if part == "" {
+			continue
+		}
+		pieces := strings.SplitN(part, "=", 2)
+		key := pieces[0]
+		value := ""
+		if len(pieces) == 2 {
+			value = pieces[1]
+		}
+		values[key] = append(values[key], value)
+	}
+	return values, nil
+}
+
+func liteValidateRequest(req *http.Request, rules map[string]string) map[string][]string {
+	if len(rules) == 0 {
+		return nil
+	}
+	data := liteRequestData(req)
+	v := validation.New(data)
+	for field, ruleList := range rules {
+		for _, rule := range strings.Split(ruleList, "|") {
+			rule = strings.TrimSpace(rule)
+			switch {
+			case rule == "required":
+				v.Required(field)
+			case rule == "email":
+				v.Email(field)
+			case rule == "integer":
+				v.Integer(field)
+			case strings.HasPrefix(rule, "min:"):
+				if n, err := strconv.Atoi(strings.TrimPrefix(rule, "min:")); err == nil {
+					v.Min(field, n)
+				}
+			case strings.HasPrefix(rule, "max:"):
+				if n, err := strconv.Atoi(strings.TrimPrefix(rule, "max:")); err == nil {
+					v.Max(field, n)
+				}
+			case strings.HasPrefix(rule, "oneof:"):
+				v.OneOf(field, strings.Split(strings.TrimPrefix(rule, "oneof:"), ",")...)
+			}
+		}
+	}
+	if v.Valid() {
+		return nil
+	}
+	return map[string][]string(v.Errors())
 }
 
 func liteStatusFromSelector(sel *ast.SelectorExpr) (int, bool) {
@@ -568,6 +716,9 @@ func renderLiteBody(body string, req *http.Request, params map[string]string) st
 		if len(values) > 0 {
 			body = strings.ReplaceAll(body, "{{query:"+key+"}}", values[0])
 		}
+	}
+	for key, value := range liteRequestData(req) {
+		body = strings.ReplaceAll(body, "{{input:"+key+"}}", value)
 	}
 	if strings.Contains(body, "{{body}}") && req.Body != nil {
 		raw, err := io.ReadAll(req.Body)
