@@ -12,7 +12,7 @@
 - Added single-role/multi-role auth scaffold.
 - Added security middleware, migration reset/fresh and route listing.
 
-## v1.1.0-rc.1
+## v1.1.0
 
 - Reworked `ctg dev` into a runtime orchestrator with native-first execution.
 - Added automatic Windows Application Control detection and Lite Runtime fallback.
