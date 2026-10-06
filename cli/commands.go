@@ -22,15 +22,18 @@ func RegisterDeveloperCommands(app *CLI) {
 	})
 	app.Command("make:controller", func(args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf("usage: ctg make:controller <name> [--resource]")
+			return fmt.Errorf("usage: ctg make:controller <name> [--resource|--memory-resource]")
 		}
-		resource := false
+		mode := ""
 		for _, arg := range args[1:] {
-			if arg == "--resource" {
-				resource = true
+			switch arg {
+			case "--resource":
+				mode = "resource"
+			case "--memory-resource":
+				mode = "memory"
 			}
 		}
-		return MakeControllerWithMode(args[0], filepath.Join("app", "controllers"), resource)
+		return MakeControllerWithMode(args[0], filepath.Join("app", "controllers"), mode)
 	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {
