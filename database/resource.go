@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/arfajhf/copytygo/v2/database/query"
@@ -18,6 +19,26 @@ type Resource struct {
 	Table  string
 }
 
+type ResourceListOptions struct {
+	Page          int
+	PerPage       int
+	Search        string
+	SearchColumns []string
+	Sort          string
+	Order         string
+	Filters       map[string]string
+	Filterable    []string
+	Sortable      []string
+}
+
+type ResourcePage struct {
+	Data       []map[string]any `json:"data"`
+	Page       int              `json:"page"`
+	PerPage    int              `json:"per_page"`
+	Total      int64            `json:"total"`
+	TotalPages int              `json:"total_pages"`
+}
+
 func NewResource(db *sql.DB, driver, table string) (*Resource, error) {
 	if db == nil {
 		return nil, fmt.Errorf("copytygo: database connection is nil")
@@ -29,9 +50,90 @@ func NewResource(db *sql.DB, driver, table string) (*Resource, error) {
 }
 
 func (r *Resource) Index() ([]map[string]any, error) {
+	page, err := r.List(ResourceListOptions{Page: 1, PerPage: 100})
+	if err != nil {
+		return nil, err
+	}
+	return page.Data, nil
+}
+
+func (r *Resource) List(options ResourceListOptions) (ResourcePage, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return query.Table(r.DB, r.Driver, r.Table).OrderBy("id", "ASC").AllMaps(ctx)
+
+	page := options.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := options.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	builder := query.Table(r.DB, r.Driver, r.Table)
+
+	if options.Search != "" && len(options.SearchColumns) > 0 {
+		builder.WhereAnyLike(options.SearchColumns, options.Search)
+	}
+
+	filterable := stringSet(options.Filterable)
+	for field, value := range options.Filters {
+		if value == "" || !filterable[field] {
+			continue
+		}
+		builder.WhereEq(field, value)
+	}
+
+	sortField := options.Sort
+	sortable := stringSet(options.Sortable)
+	if sortField == "" || !sortable[sortField] {
+		sortField = "id"
+	}
+
+	order := strings.ToUpper(strings.TrimSpace(options.Order))
+	if order != "DESC" {
+		order = "ASC"
+	}
+
+	total, err := builder.Count(ctx)
+	if err != nil {
+		return ResourcePage{}, err
+	}
+
+	items, err := builder.
+		OrderBy(sortField, order).
+		Limit(perPage).
+		Offset((page - 1) * perPage).
+		AllMaps(ctx)
+	if err != nil {
+		return ResourcePage{}, err
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = int((total + int64(perPage) - 1) / int64(perPage))
+	}
+
+	return ResourcePage{
+		Data: items,
+		Page: page,
+		PerPage: perPage,
+		Total: total,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func stringSet(values []string) map[string]bool {
+	set := make(map[string]bool, len(values))
+	for _, value := range values {
+		if safeIdentifier.MatchString(value) {
+			set[value] = true
+		}
+	}
+	return set
 }
 
 func (r *Resource) Show(id any) (map[string]any, bool, error) {
