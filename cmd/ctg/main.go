@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/arfajhf/copytygo/cli"
-	"github.com/arfajhf/copytygo/example/migrations"
+	"github.com/arfajhf/copytygo/v2/cli"
+	"github.com/arfajhf/copytygo/v2/example/migrations"
 	"os"
 )
 
