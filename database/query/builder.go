@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -75,27 +76,45 @@ func (b *Builder) Count(ctx context.Context) (int64, error) {
 	return n, err
 }
 func (b *Builder) Insert(ctx context.Context, values map[string]any) (sql.Result, error) {
-	cols := make([]string, 0, len(values))
-	args := make([]any, 0, len(values))
-	marks := make([]string, 0, len(values))
-	for k, v := range values {
-		cols = append(cols, k)
-		args = append(args, v)
-	} // deterministic order
-	for i := 0; i < len(cols); i++ {
-		for j := i + 1; j < len(cols); j++ {
-			if cols[j] < cols[i] {
-				cols[i], cols[j] = cols[j], cols[i]
-			}
+	cols, args, marks := b.insertParts(values)
+	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", b.table, strings.Join(cols, ", "), strings.Join(marks, ", "))
+	return b.db.ExecContext(ctx, q, args...)
+}
+
+func (b *Builder) InsertID(ctx context.Context, values map[string]any) (int64, error) {
+	cols, args, marks := b.insertParts(values)
+	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", b.table, strings.Join(cols, ", "), strings.Join(marks, ", "))
+
+	if b.driver == "postgres" {
+		q += " RETURNING id"
+		var id int64
+		if err := b.db.QueryRowContext(ctx, q, args...).Scan(&id); err != nil {
+			return 0, err
 		}
+		return id, nil
 	}
-	args = args[:0]
+
+	result, err := b.db.ExecContext(ctx, q, args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+func (b *Builder) insertParts(values map[string]any) ([]string, []any, []string) {
+	cols := make([]string, 0, len(values))
+	for k := range values {
+		cols = append(cols, k)
+	}
+	sort.Strings(cols)
+
+	args := make([]any, 0, len(cols))
+	marks := make([]string, 0, len(cols))
 	for i, k := range cols {
 		args = append(args, values[k])
 		marks = append(marks, b.placeholder(i+1))
 	}
-	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", b.table, strings.Join(cols, ", "), strings.Join(marks, ", "))
-	return b.db.ExecContext(ctx, q, args...)
+	return cols, args, marks
 }
 func (b *Builder) Update(ctx context.Context, values map[string]any) (sql.Result, error) {
 	cols := make([]string, 0, len(values))
@@ -144,4 +163,66 @@ func (b *Builder) placeholder(n int) string {
 		return fmt.Sprintf("$%d", n)
 	}
 	return "?"
+}
+
+
+func (b *Builder) AllMaps(ctx context.Context) ([]map[string]any, error) {
+	rows, err := b.Rows(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanRows(rows)
+}
+
+func (b *Builder) FirstMap(ctx context.Context) (map[string]any, bool, error) {
+	clone := *b
+	clone.limit = 1
+	rows, err := clone.Rows(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	items, err := scanRows(rows)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(items) == 0 {
+		return nil, false, nil
+	}
+	return items[0], true, nil
+}
+
+func scanRows(rows *sql.Rows) ([]map[string]any, error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]map[string]any, 0)
+	for rows.Next() {
+		values := make([]any, len(columns))
+		pointers := make([]any, len(columns))
+		for i := range values {
+			pointers[i] = &values[i]
+		}
+		if err := rows.Scan(pointers...); err != nil {
+			return nil, err
+		}
+
+		item := make(map[string]any, len(columns))
+		for i, column := range columns {
+			value := values[i]
+			if raw, ok := value.([]byte); ok {
+				value = string(raw)
+			}
+			item[column] = value
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
