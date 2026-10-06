@@ -36,7 +36,7 @@ func NewProject(name string) error {
 		"frontend/src/api.ts":     frontendAPI,
 		"frontend/src/forms.ts":   frontendForms,
 		"frontend/src/main.ts":    frontendMain,
-		"README.md":              "# " + name + "\n\nGenerated with CopyTyGo " + version.StableModule + ".\n",
+		"README.md":              "# " + name + "\n\nGenerated with CopyTyGo " + version.Framework + ".\n",
 	}
 	for p, c := range files {
 		if err := os.WriteFile(filepath.Join(name, p), []byte(c), 0644); err != nil {
