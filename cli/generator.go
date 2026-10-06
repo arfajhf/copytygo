@@ -35,6 +35,7 @@ func MakeControllerWithMode(name, dir string, resource bool) error {
 
 	var body string
 	if resource {
+		resourceName := strings.ToLower(strings.TrimSuffix(name, "Controller")) + "s"
 		body = fmt.Sprintf(`package controllers
 
 import "github.com/arfajhf/copytygo/core"
@@ -42,11 +43,11 @@ import "github.com/arfajhf/copytygo/core"
 type %s struct{}
 
 func (%s) Index(ctx *core.Context) error {
-	return ctx.JSON(core.Map{"data": []any{}})
+	return ctx.MemoryIndex("%s")
 }
 
 func (%s) Show(ctx *core.Context) error {
-	return ctx.JSON(core.Map{"id": ctx.Param("id")})
+	return ctx.MemoryShow("%s", ctx.Param("id"))
 }
 
 func (%s) Store(ctx *core.Context) error {
@@ -56,8 +57,7 @@ func (%s) Store(ctx *core.Context) error {
 		return err
 	}
 
-	return ctx.Status(201).JSON(core.Map{
-		"id":   1,
+	return ctx.MemoryStore("%s", core.Map{
 		"name": ctx.Input("name"),
 	})
 }
@@ -69,16 +69,15 @@ func (%s) Update(ctx *core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(core.Map{
-		"id":   ctx.Param("id"),
+	return ctx.MemoryUpdate("%s", ctx.Param("id"), core.Map{
 		"name": ctx.Input("name"),
 	})
 }
 
 func (%s) Destroy(ctx *core.Context) error {
-	return ctx.Status(204).Text("")
+	return ctx.MemoryDestroy("%s", ctx.Param("id"))
 }
-`, name, name, name, name, name, name)
+`, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
 	} else {
 		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
 	}
