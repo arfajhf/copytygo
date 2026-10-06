@@ -162,6 +162,9 @@ func mysqlDefault(value any) string {
 
 	switch typed := value.(type) {
 
+	case schema.Expression:
+		return string(typed)
+
 	case string:
 		return "'" +
 			strings.ReplaceAll(
