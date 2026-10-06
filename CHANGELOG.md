@@ -29,7 +29,7 @@
 - Added CI configuration for test, vet and CLI build checks.
 - Docker, WSL and VM software remain optional and are not required by Lite Runtime.
 
-## v2.0.0-rc.1
+## v2.0.0
 
 - Started the database-first resource layer for MySQL and PostgreSQL.
 - Added map-based query/model CRUD helpers and portable insert ID handling.
