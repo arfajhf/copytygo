@@ -75,7 +75,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
 	fmt.Println("\nGenerators:")
-	fmt.Println("  make:controller <name>")
+	fmt.Println("  make:controller <name> [--resource]")
 	fmt.Println("  make:model <name>")
 	fmt.Println("  make:migration <name>")
 	fmt.Println("  make:middleware <name>")
