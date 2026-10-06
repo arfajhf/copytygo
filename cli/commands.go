@@ -74,6 +74,7 @@ func RegisterDeveloperCommands(app *CLI) {
 		}
 		return InstallAuth(mode, ".")
 	})
+	app.Command("db:check", DatabaseCheck)
 	app.Command("dev", Dev)
 	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })
