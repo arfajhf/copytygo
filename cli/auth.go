@@ -21,13 +21,17 @@ func InstallAuth(mode, root string) error {
 	middleware := `package auth
 
 import (
-    "net/http"
-    "github.com/arfajhf/copytygo/config"
+    copyauth "github.com/arfajhf/copytygo/auth"
     "github.com/arfajhf/copytygo/core"
-    "github.com/arfajhf/copytygo/security"
 )
 
-func Middleware() core.Middleware { return func(next core.Handler) core.Handler { return func(ctx *core.Context) error { token:=ctx.BearerToken(); if token=="" { return core.NewHTTPError(http.StatusUnauthorized,"Authentication required") }; if _,err:=security.VerifyToken(config.Get("APP_KEY"),token);err!=nil{return core.NewHTTPError(http.StatusUnauthorized,"Invalid authentication token")}; return next(ctx) } } }
+func Middleware() core.Middleware {
+    return copyauth.Middleware()
+}
+
+func RequireRole(roles ...string) core.Middleware {
+    return copyauth.RequireRole(roles...)
+}
 `
 	if err := os.WriteFile(filepath.Join(root, "app", "auth", "user.go"), []byte(model), 0644); err != nil {
 		return err
