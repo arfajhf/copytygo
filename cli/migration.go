@@ -3,10 +3,10 @@ package cli
 import (
 	"fmt"
 
-	"github.com/arfajhf/copytygo/v2/config"
-	"github.com/arfajhf/copytygo/v2/database"
-	"github.com/arfajhf/copytygo/v2/database/drivers"
-	"github.com/arfajhf/copytygo/v2/database/migration"
+	"github.com/arfajhf/copytygo/v3/config"
+	"github.com/arfajhf/copytygo/v3/database"
+	"github.com/arfajhf/copytygo/v3/database/drivers"
+	"github.com/arfajhf/copytygo/v3/database/migration"
 )
 
 type MigrationRegistrar func() error
