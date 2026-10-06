@@ -68,9 +68,9 @@ func (r *Resource) Update(id any, values map[string]any) (map[string]any, bool, 
 		return nil, false, err
 	}
 
-	affected, err := result.RowsAffected()
-	if err == nil && affected == 0 {
-		return nil, false, nil
+	if affected, rowsErr := result.RowsAffected(); rowsErr == nil && affected == 0 {
+		item, ok, findErr := query.Table(r.DB, r.Driver, r.Table).WhereEq("id", id).FirstMap(ctx)
+		return item, ok, findErr
 	}
 
 	item, ok, err := query.Table(r.DB, r.Driver, r.Table).WhereEq("id", id).FirstMap(ctx)
