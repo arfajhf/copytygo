@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/arfajhf/copytygo/v2/database"
+	"github.com/arfajhf/copytygo/v2/database/drivers"
 	"github.com/arfajhf/copytygo/v2/database/query"
 )
 
@@ -15,6 +17,16 @@ type Model struct {
 
 func New(db *sql.DB, driver, table string) *Model {
 	return &Model{DB: db, Driver: driver, Table: table}
+}
+
+func Auto(table string) (*Model, error) {
+	drivers.Register()
+	db, err := database.Connect()
+	if err != nil {
+		return nil, err
+	}
+	cfg := database.LoadConfig()
+	return New(db, cfg.Driver, table), nil
 }
 
 func (m *Model) Query() *query.Builder {
