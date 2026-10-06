@@ -56,13 +56,13 @@
 - Hardened the query builder with identifier/operator validation and empty-write protection.
 - Made shared database connection initialization safe for concurrent requests.
 - Hid Lite Runtime database internals unless `APP_DEBUG=true`.
-- Migrated the v2 Go module path to `github.com/arfajhf/copytygo/v2`.
+- Migrated the v2 Go module path to `github.com/arfajhf/copytygo/v3`.
 - Added v2 unit coverage for resource routing, resource fields, auth middleware/roles, query safety and schema timestamps.
 - Made installed `ctg migrate` load migrations from the current project instead of the framework example package.
 - Added source-based project migration discovery for the CopyTyGo schema DSL.
 - Made generated migration function IDs collision-resistant while keeping legacy registry compatibility.
 
-## v2.1.0-dev
+## v3.0.0-dev
 
 - Added paginated database resource listings with page/per_page metadata.
 - Added safe resource search across generated string/text fields.
