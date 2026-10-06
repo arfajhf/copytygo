@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 func RegisterDeveloperCommands(app *CLI) {
@@ -80,9 +81,23 @@ func RegisterDeveloperCommands(app *CLI) {
 	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })
 	app.Command("build", func(_ []string) error {
-		cmd := exec.Command("go", "build", "-o", "build/app", "./cmd/app")
+		if err := os.MkdirAll("build", 0755); err != nil {
+			return err
+		}
+
+		output := filepath.Join("build", "app")
+		if runtime.GOOS == "windows" {
+			output += ".exe"
+		}
+
+		cmd := exec.Command("go", "build", "-o", output, "./cmd/app")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+
+		fmt.Println("Built:", output)
+		return nil
 	})
 }
