@@ -1,9 +1,14 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/arfajhf/copytygo/v3/config"
 	"github.com/arfajhf/copytygo/v3/version"
@@ -159,10 +164,45 @@ func (app *Application) Run() error {
 	)
 	fmt.Println()
 
-	return http.ListenAndServe(
-		address,
-		app.router,
-	)
+	server := &http.Server{
+		Addr:              address,
+		Handler:           app.router,
+		ReadHeaderTimeout: time.Duration(config.GetInt("SERVER_READ_HEADER_TIMEOUT", 5)) * time.Second,
+		ReadTimeout:       time.Duration(config.GetInt("SERVER_READ_TIMEOUT", 15)) * time.Second,
+		WriteTimeout:      time.Duration(config.GetInt("SERVER_WRITE_TIMEOUT", 30)) * time.Second,
+		IdleTimeout:       time.Duration(config.GetInt("SERVER_IDLE_TIMEOUT", 60)) * time.Second,
+	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		if err == http.ErrServerClosed {
+			return nil
+		}
+		return err
+
+	case <-stop:
+		fmt.Println()
+		fmt.Println("Shutting down gracefully...")
+
+		timeout := time.Duration(config.GetInt("SERVER_SHUTDOWN_TIMEOUT", 10)) * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			return err
+		}
+
+		fmt.Println("Server stopped.")
+		return nil
+	}
 }
 
 func (app *Application) URL(name string, params ...map[string]string) (string, bool) {
