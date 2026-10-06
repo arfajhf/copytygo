@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/arfajhf/copytygo/config"
+	"github.com/arfajhf/copytygo/version"
 )
 
 type Application struct {
@@ -115,7 +116,7 @@ func (app *Application) Run() error {
 	address := host + ":" + port
 
 	fmt.Println()
-	fmt.Println("CopyTyGo v0.1")
+	fmt.Println("CopyTyGo v" + version.Framework)
 	fmt.Println("----------------------------")
 	fmt.Println("Application :", name)
 	fmt.Println("Environment :", environment)

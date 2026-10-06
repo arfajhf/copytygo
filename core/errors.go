@@ -24,3 +24,16 @@ func Errorf(status int, format string, args ...any) *HTTPError {
 		Message: fmt.Sprintf(format, args...),
 	}
 }
+
+
+type ValidationError struct {
+	Fields map[string][]string
+}
+
+func (err *ValidationError) Error() string {
+	return "Validation failed"
+}
+
+func NewValidationError(fields map[string][]string) *ValidationError {
+	return &ValidationError{Fields: fields}
+}

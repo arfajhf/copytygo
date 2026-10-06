@@ -1,4 +1,4 @@
-# CopyTyGo v1.0.0
+# CopyTyGo v1.1.0 RC
 
 CopyTyGo is an opinionated full-stack Go framework with a TypeScript-first frontend workflow. Its goal is simple: keep framework internals explicit and safe while giving application developers a small, convenient API.
 
@@ -64,9 +64,23 @@ The database can keep efficient integer IDs while public URLs avoid exposing seq
 
 ## Status
 
-This repository is the v1 learning/reference implementation. Before public production distribution, add CI builds, release signing, database integration tests and a stable compatibility policy.
+CopyTyGo v1.1 focuses on developer experience and a lightweight development fallback for Windows environments that block freshly generated Go executables. Native Go remains the default runtime; Lite Runtime is a development fallback, not a production replacement.
+
+Use `ctg doctor` to run project and Lite Runtime health checks before reporting an issue.
 
 
 ## Development runtime
 
 `ctg dev` uses native Go by default. On supported Windows Application Control failures, CopyTyGo v1.1 can automatically fall back to its lightweight in-process Lite Runtime. Use `ctg dev --lite` to test the fallback directly. See `docs/DEV_RUNTIME.md`.
+
+
+## v1.1 highlights
+
+```text
+ctg dev
+ctg dev --lite
+ctg doctor
+ctg make:controller Product --resource
+```
+
+Lite Runtime v1.1 includes route hot reload, automatic free-port selection, controller methods, params/query/input/body helpers, declarative validation, and in-memory CRUD resources for development.

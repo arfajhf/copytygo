@@ -22,9 +22,15 @@ func RegisterDeveloperCommands(app *CLI) {
 	})
 	app.Command("make:controller", func(args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf("usage: ctg make:controller <name>")
+			return fmt.Errorf("usage: ctg make:controller <name> [--resource]")
 		}
-		return MakeController(args[0], filepath.Join("app", "controllers"))
+		resource := false
+		for _, arg := range args[1:] {
+			if arg == "--resource" {
+				resource = true
+			}
+		}
+		return MakeControllerWithMode(args[0], filepath.Join("app", "controllers"), resource)
 	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {
@@ -60,6 +66,7 @@ func RegisterDeveloperCommands(app *CLI) {
 		return InstallAuth(mode, ".")
 	})
 	app.Command("dev", Dev)
+	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })
 	app.Command("build", func(_ []string) error {
 		cmd := exec.Command("go", "build", "-o", "build/app", "./cmd/app")

@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 	"os"
-)
 
-const Version = "1.1.0-dev"
+	"github.com/arfajhf/copytygo/version"
+)
 
 type CommandHandler func(args []string) error
 
@@ -42,7 +42,7 @@ func (cli *CLI) Run() error {
 	case "version", "--version", "-v":
 		fmt.Printf(
 			"CopyTyGo v%s\n",
-			Version,
+			version.Framework,
 		)
 
 		return nil
@@ -66,16 +66,17 @@ func (cli *CLI) Run() error {
 }
 
 func (cli *CLI) printHelp() {
-	fmt.Printf("\nCopyTyGo v%s\n\n", Version)
+	fmt.Printf("\nCopyTyGo v%s\n\n", version.Framework)
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
 	fmt.Println("  new <name>                 Create a CopyTyGo project")
 	fmt.Println("  dev [--lite]               Run development server with automatic Lite fallback")
+	fmt.Println("  doctor                     Check project and Lite Runtime health")
 	fmt.Println("  build                      Build application")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
 	fmt.Println("\nGenerators:")
-	fmt.Println("  make:controller <name>")
+	fmt.Println("  make:controller <name> [--resource]")
 	fmt.Println("  make:model <name>")
 	fmt.Println("  make:migration <name>")
 	fmt.Println("  make:middleware <name>")

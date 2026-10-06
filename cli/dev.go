@@ -3,28 +3,51 @@ package cli
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"net"
 	"net/http"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
+	"sync"
 	"strings"
 
 	"github.com/arfajhf/copytygo/config"
+	"github.com/arfajhf/copytygo/validation"
 )
 
 type liteRoute struct {
-	Method      string
-	Path        string
-	ContentType string
-	Status      int
-	Body        string
+	Method         string
+	Path           string
+	ContentType    string
+	Status         int
+	Body           string
+	Validation     map[string]string
+	ResourceAction string
+	Resource       string
+	ResourceID     string
+	ResourceData   string
+}
+
+type liteMemoryBucket struct {
+	NextID int64
+	Items  map[string]map[string]any
+}
+
+var liteMemoryStore = struct {
+	sync.RWMutex
+	Buckets map[string]*liteMemoryBucket
+}{
+	Buckets: make(map[string]*liteMemoryBucket),
 }
 
 func Dev(args []string) error {
@@ -114,24 +137,56 @@ func runLiteDev() error {
 	}
 
 	mux := http.NewServeMux()
-	for _, route := range routes {
-		r := route
-		pattern := r.Method + " " + r.Path
-		mux.HandleFunc(pattern, func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", r.ContentType)
-			w.WriteHeader(r.Status)
-			_, _ = w.Write([]byte(r.Body))
-		})
-	}
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		currentRoutes, reloadErr := discoverLiteRoutes("routes")
+		if reloadErr != nil {
+			http.Error(w, "CopyTyGo Lite reload error: "+reloadErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, route := range currentRoutes {
+			params, matched := matchLitePath(route.Path, req.URL.Path)
+			if route.Method == req.Method && matched {
+				if fields := liteValidateRequest(req, route.Validation); len(fields) > 0 {
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
+					w.WriteHeader(http.StatusUnprocessableEntity)
+					_ = json.NewEncoder(w).Encode(map[string]any{
+						"error": map[string]any{
+							"status":  http.StatusUnprocessableEntity,
+							"message": "Validation failed",
+							"fields":  fields,
+						},
+					})
+					return
+				}
+				if route.ResourceAction != "" {
+					handleLiteMemoryRoute(w, req, route, params)
+					return
+				}
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8"><title>CopyTyGo</title></head><body style="font-family:system-ui;max-width:760px;margin:60px auto;padding:0 20px"><h1>CopyTyGo Lite Runtime</h1><p>Your development server is running without a generated application executable.</p><p>Try <a href="/api/health">/api/health</a>.</p></body></html>`)
+				body := renderLiteBody(route.Body, req, params)
+				w.Header().Set("Content-Type", route.ContentType)
+				w.WriteHeader(route.Status)
+				_, _ = w.Write([]byte(body))
+				return
+			}
+		}
+		if req.Method == http.MethodGet && req.URL.Path == "/" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8"><title>CopyTyGo</title></head><body style="font-family:system-ui;max-width:760px;margin:60px auto;padding:0 20px"><h1>CopyTyGo Lite Runtime</h1><p>Your development server is running without a generated application executable.</p><p>Routes reload automatically on each request during development.</p></body></html>`)
+			return
+		}
+		http.NotFound(w, req)
 	})
 
 	host := config.Get("APP_HOST", "127.0.0.1")
 	port := config.Get("APP_PORT", "8080")
-	address := host + ":" + port
+	listener, address, moved, err := listenLiteAddress(host, port)
+	if err != nil {
+		return err
+	}
+	if moved {
+		fmt.Printf("Port %s is already in use. CopyTyGo switched automatically to %s.\n\n", port, strings.TrimPrefix(address, host+":"))
+	}
 
 	fmt.Println("CopyTyGo Dev")
 	fmt.Println("-------------")
@@ -139,11 +194,215 @@ func runLiteDev() error {
 	fmt.Println("Backend : http://" + address)
 	fmt.Printf("Routes  : %d\n", len(routes))
 	fmt.Println()
-	fmt.Println("Lite Runtime supports simple inline Text/JSON routes.")
-	fmt.Println("Complex controllers, middleware and arbitrary Go packages still use native mode.")
+	fmt.Println("Lite Runtime supports inline Text/JSON routes with automatic route hot reload.")
+	fmt.Println("Complex controllers, middleware, database calls and arbitrary Go packages still use native mode.")
 	fmt.Println()
 
-	return http.ListenAndServe(address, requestLogMiddleware(mux))
+	return http.Serve(listener, requestLogMiddleware(mux))
+}
+
+func liteMemoryBucketFor(resource string) *liteMemoryBucket {
+	liteMemoryStore.Lock()
+	defer liteMemoryStore.Unlock()
+
+	bucket, ok := liteMemoryStore.Buckets[resource]
+	if !ok {
+		bucket = &liteMemoryBucket{
+			NextID: 1,
+			Items:  make(map[string]map[string]any),
+		}
+		liteMemoryStore.Buckets[resource] = bucket
+	}
+	return bucket
+}
+
+func handleLiteMemoryRoute(w http.ResponseWriter, req *http.Request, route liteRoute, params map[string]string) {
+	bucket := liteMemoryBucketFor(route.Resource)
+	id := renderLiteBody(route.ResourceID, req, params)
+
+	switch route.ResourceAction {
+	case "index":
+		liteMemoryStore.RLock()
+		ids := make([]string, 0, len(bucket.Items))
+		for itemID := range bucket.Items {
+			ids = append(ids, itemID)
+		}
+		sort.Slice(ids, func(i, j int) bool {
+			a, _ := strconv.Atoi(ids[i])
+			b, _ := strconv.Atoi(ids[j])
+			return a < b
+		})
+		rows := make([]map[string]any, 0, len(ids))
+		for _, itemID := range ids {
+			row := map[string]any{"id": itemID}
+			for key, value := range bucket.Items[itemID] {
+				row[key] = value
+			}
+			rows = append(rows, row)
+		}
+		liteMemoryStore.RUnlock()
+
+		writeLiteJSON(w, http.StatusOK, map[string]any{"data": rows})
+		return
+
+	case "show":
+		liteMemoryStore.RLock()
+		item, ok := bucket.Items[id]
+		if ok {
+			item = cloneLiteRecord(item)
+		}
+		liteMemoryStore.RUnlock()
+
+		if !ok {
+			writeLiteNotFound(w)
+			return
+		}
+
+		row := map[string]any{"id": id}
+		for key, value := range item {
+			row[key] = value
+		}
+		writeLiteJSON(w, http.StatusOK, row)
+		return
+
+	case "store":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status":  http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+
+		liteMemoryStore.Lock()
+		id := strconv.FormatInt(bucket.NextID, 10)
+		bucket.NextID++
+		bucket.Items[id] = cloneLiteRecord(data)
+		liteMemoryStore.Unlock()
+
+		row := map[string]any{"id": id}
+		for key, value := range data {
+			row[key] = value
+		}
+		writeLiteJSON(w, http.StatusCreated, row)
+		return
+
+	case "update":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status":  http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+
+		liteMemoryStore.Lock()
+		item, exists := bucket.Items[id]
+		if exists {
+			for key, value := range data {
+				item[key] = value
+			}
+			bucket.Items[id] = item
+			item = cloneLiteRecord(item)
+		}
+		liteMemoryStore.Unlock()
+
+		if !exists {
+			writeLiteNotFound(w)
+			return
+		}
+
+		row := map[string]any{"id": id}
+		for key, value := range item {
+			row[key] = value
+		}
+		writeLiteJSON(w, http.StatusOK, row)
+		return
+
+	case "destroy":
+		liteMemoryStore.Lock()
+		_, exists := bucket.Items[id]
+		if exists {
+			delete(bucket.Items, id)
+		}
+		liteMemoryStore.Unlock()
+
+		if !exists {
+			writeLiteNotFound(w)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+		"error": map[string]any{
+			"status":  http.StatusInternalServerError,
+			"message": "Unsupported Lite resource action",
+		},
+	})
+}
+
+func decodeLiteResourceData(template string, req *http.Request, params map[string]string) (map[string]any, bool) {
+	rendered := renderLiteBody(template, req, params)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(rendered), &data); err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
+func cloneLiteRecord(input map[string]any) map[string]any {
+	output := make(map[string]any, len(input))
+	for key, value := range input {
+		output[key] = value
+	}
+	return output
+}
+
+func writeLiteNotFound(w http.ResponseWriter) {
+	writeLiteJSON(w, http.StatusNotFound, map[string]any{
+		"error": map[string]any{
+			"status":  http.StatusNotFound,
+			"message": "Resource not found",
+		},
+	})
+}
+
+func writeLiteJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(data)
+}
+
+func listenLiteAddress(host, preferredPort string) (net.Listener, string, bool, error) {
+	start, err := strconv.Atoi(preferredPort)
+	if err != nil || start < 1 || start > 65535 {
+		return nil, "", false, fmt.Errorf("copytygo lite runtime: invalid APP_PORT %q", preferredPort)
+	}
+
+	for port := start; port <= start+20 && port <= 65535; port++ {
+		address := net.JoinHostPort(host, strconv.Itoa(port))
+		listener, listenErr := net.Listen("tcp", address)
+		if listenErr == nil {
+			return listener, address, port != start, nil
+		}
+	}
+	return nil, "", false, fmt.Errorf("copytygo lite runtime: no free port found from %d to %d", start, minInt(start+20, 65535))
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func requestLogMiddleware(next http.Handler) http.Handler {
@@ -183,6 +442,8 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 		return nil, err
 	}
 
+	controllerVars := discoverControllerVars(file)
+
 	var routes []liteRoute
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -203,21 +464,136 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 		if !ok {
 			return true
 		}
-		handler, ok := call.Args[1].(*ast.FuncLit)
-		if !ok {
+
+		if handler, ok := call.Args[1].(*ast.FuncLit); ok {
+			route, supported := parseLiteHandler(method, routePath, handler)
+			if supported {
+				routes = append(routes, route)
+			}
 			return true
 		}
-		route, ok := parseLiteHandler(method, routePath, handler)
-		if ok {
-			routes = append(routes, route)
+
+		if handler, ok := call.Args[1].(*ast.SelectorExpr); ok {
+			instance, ok := handler.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			controllerType, ok := controllerVars[instance.Name]
+			if !ok {
+				return true
+			}
+			route, supported, controllerErr := parseLiteControllerHandler(
+				filepath.Join("app", "controllers"),
+				controllerType,
+				handler.Sel.Name,
+				method,
+				routePath,
+			)
+			if controllerErr != nil {
+				return true
+			}
+			if supported {
+				routes = append(routes, route)
+			}
 		}
 		return true
 	})
 	return routes, nil
 }
 
+func discoverControllerVars(file *ast.File) map[string]string {
+	out := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		assign, ok := n.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		for i, rhs := range assign.Rhs {
+			if i >= len(assign.Lhs) {
+				break
+			}
+			name, ok := assign.Lhs[i].(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if controllerType, ok := controllerTypeFromExpr(rhs); ok {
+				out[name.Name] = controllerType
+			}
+		}
+		return true
+	})
+	return out
+}
+
+func controllerTypeFromExpr(expr ast.Expr) (string, bool) {
+	if unary, ok := expr.(*ast.UnaryExpr); ok {
+		expr = unary.X
+	}
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return "", false
+	}
+	switch typ := composite.Type.(type) {
+	case *ast.SelectorExpr:
+		return typ.Sel.Name, true
+	case *ast.Ident:
+		return typ.Name, true
+	default:
+		return "", false
+	}
+}
+
+func parseLiteControllerHandler(dir, controllerType, method, httpMethod, routePath string) (liteRoute, bool, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return liteRoute{}, false, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		fset := token.NewFileSet()
+		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil {
+			return liteRoute{}, false, err
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || fn.Name.Name != method || fn.Body == nil {
+				continue
+			}
+			if !receiverMatches(fn, controllerType) {
+				continue
+			}
+			handler := &ast.FuncLit{Body: fn.Body}
+			route, supported := parseLiteHandler(httpMethod, routePath, handler)
+			return route, supported, nil
+		}
+	}
+	return liteRoute{}, false, nil
+}
+
+func receiverMatches(fn *ast.FuncDecl, controllerType string) bool {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return false
+	}
+	expr := fn.Recv.List[0].Type
+	if star, ok := expr.(*ast.StarExpr); ok {
+		expr = star.X
+	}
+	ident, ok := expr.(*ast.Ident)
+	return ok && ident.Name == controllerType
+}
+
 func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, bool) {
-	route := liteRoute{Method: method, Path: path, Status: http.StatusOK}
+	route := liteRoute{
+		Method:     method,
+		Path:       path,
+		Status:     http.StatusOK,
+		Validation: parseLiteValidationRules(handler),
+	}
+
 	for _, stmt := range handler.Body.List {
 		ret, ok := stmt.(*ast.ReturnStmt)
 		if !ok || len(ret.Results) != 1 {
@@ -228,25 +604,128 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			continue
 		}
 		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || len(call.Args) != 1 {
+		if !ok {
 			continue
 		}
+
+		if status, ok := liteStatusFromSelector(sel); ok {
+			route.Status = status
+		}
+
 		switch sel.Sel.Name {
 		case "Text":
-			value, ok := stringLiteral(call.Args[0])
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
+			value, ok := liteStringExpr(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
 			}
 			route.ContentType = "text/plain; charset=utf-8"
 			route.Body = value
 			return route, true
+
 		case "JSON":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
 			body, ok := mapLiteralJSON(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
 			}
 			route.ContentType = "application/json; charset=utf-8"
 			route.Body = body + "\n"
+			return route, true
+
+		case "MemoryIndex":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "index"
+			route.Resource = resource
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryShow":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "show"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryStore":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "store"
+			route.Resource = resource
+			route.ResourceData = data
+			route.Status = http.StatusCreated
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryUpdate":
+			if len(call.Args) != 3 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[2])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "update"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ResourceData = data
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryDestroy":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "destroy"
+			route.Resource = resource
+			route.ResourceID = id
+			route.Status = http.StatusNoContent
 			return route, true
 		}
 	}
@@ -285,6 +764,12 @@ func mapLiteralJSON(expr ast.Expr) (string, bool) {
 		}
 		value, ok := jsonScalar(kv.Value)
 		if !ok {
+			if composite, compositeOK := kv.Value.(*ast.CompositeLit); compositeOK && len(composite.Elts) == 0 {
+				value = "[]"
+				ok = true
+			}
+		}
+		if !ok {
 			return "", false
 		}
 		if !first {
@@ -320,7 +805,239 @@ func jsonScalar(expr ast.Expr) (string, bool) {
 			return v.Name, true
 		}
 	}
+	if value, ok := liteStringExpr(expr); ok {
+		return strconv.Quote(value), true
+	}
 	return "", false
+}
+
+func liteStringExpr(expr ast.Expr) (string, bool) {
+	if value, ok := stringLiteral(expr); ok {
+		return value, true
+	}
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return "", false
+	}
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	if sel.Sel.Name == "Body" && len(call.Args) == 0 {
+		return "{{body}}", true
+	}
+	if len(call.Args) != 1 {
+		return "", false
+	}
+	name, ok := stringLiteral(call.Args[0])
+	if !ok {
+		return "", false
+	}
+	switch sel.Sel.Name {
+	case "Param":
+		return "{{param:" + name + "}}", true
+	case "Query":
+		return "{{query:" + name + "}}", true
+	case "Input":
+		return "{{input:" + name + "}}", true
+	}
+	return "", false
+}
+
+func parseLiteValidationRules(handler *ast.FuncLit) map[string]string {
+	rules := map[string]string{}
+	ast.Inspect(handler.Body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || len(call.Args) != 1 {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "Validate" {
+			return true
+		}
+		composite, ok := call.Args[0].(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		for _, element := range composite.Elts {
+			kv, ok := element.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, keyOK := stringLiteral(kv.Key)
+			value, valueOK := stringLiteral(kv.Value)
+			if keyOK && valueOK {
+				rules[key] = value
+			}
+		}
+		return true
+	})
+	return rules
+}
+
+func liteRequestData(req *http.Request) map[string]string {
+	data := map[string]string{}
+	if req == nil || req.Body == nil {
+		return data
+	}
+
+	raw, err := io.ReadAll(req.Body)
+	if err != nil {
+		return data
+	}
+	req.Body = io.NopCloser(strings.NewReader(string(raw)))
+
+	contentType := strings.ToLower(req.Header.Get("Content-Type"))
+	if strings.Contains(contentType, "application/json") {
+		var decoded map[string]any
+		if json.Unmarshal(raw, &decoded) == nil {
+			for key, value := range decoded {
+				switch v := value.(type) {
+				case string:
+					data[key] = v
+				default:
+					encoded, err := json.Marshal(v)
+					if err == nil {
+						data[key] = string(encoded)
+					}
+				}
+			}
+		}
+		return data
+	}
+
+	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+		if values, err := urlParseQuery(string(raw)); err == nil {
+			for key, items := range values {
+				if len(items) > 0 {
+					data[key] = items[0]
+				}
+			}
+		}
+	}
+	return data
+}
+
+func urlParseQuery(raw string) (map[string][]string, error) {
+	values := make(map[string][]string)
+	for _, part := range strings.Split(raw, "&") {
+		if part == "" {
+			continue
+		}
+		pieces := strings.SplitN(part, "=", 2)
+		key := pieces[0]
+		value := ""
+		if len(pieces) == 2 {
+			value = pieces[1]
+		}
+		values[key] = append(values[key], value)
+	}
+	return values, nil
+}
+
+func liteValidateRequest(req *http.Request, rules map[string]string) map[string][]string {
+	if len(rules) == 0 {
+		return nil
+	}
+	data := liteRequestData(req)
+	v := validation.New(data)
+	for field, ruleList := range rules {
+		for _, rule := range strings.Split(ruleList, "|") {
+			rule = strings.TrimSpace(rule)
+			switch {
+			case rule == "required":
+				v.Required(field)
+			case rule == "email":
+				v.Email(field)
+			case rule == "integer":
+				v.Integer(field)
+			case strings.HasPrefix(rule, "min:"):
+				if n, err := strconv.Atoi(strings.TrimPrefix(rule, "min:")); err == nil {
+					v.Min(field, n)
+				}
+			case strings.HasPrefix(rule, "max:"):
+				if n, err := strconv.Atoi(strings.TrimPrefix(rule, "max:")); err == nil {
+					v.Max(field, n)
+				}
+			case strings.HasPrefix(rule, "oneof:"):
+				v.OneOf(field, strings.Split(strings.TrimPrefix(rule, "oneof:"), ",")...)
+			}
+		}
+	}
+	if v.Valid() {
+		return nil
+	}
+	return map[string][]string(v.Errors())
+}
+
+func liteStatusFromSelector(sel *ast.SelectorExpr) (int, bool) {
+	call, ok := sel.X.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return 0, false
+	}
+	statusSel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || statusSel.Sel.Name != "Status" {
+		return 0, false
+	}
+	lit, ok := call.Args[0].(*ast.BasicLit)
+	if !ok || lit.Kind != token.INT {
+		return 0, false
+	}
+	code, err := strconv.Atoi(lit.Value)
+	if err != nil || code < 100 || code > 599 {
+		return 0, false
+	}
+	return code, true
+}
+
+func matchLitePath(routePath, requestPath string) (map[string]string, bool) {
+	routeParts := strings.Split(strings.Trim(routePath, "/"), "/")
+	requestParts := strings.Split(strings.Trim(requestPath, "/"), "/")
+	if routePath == "/" {
+		routeParts = []string{}
+	}
+	if requestPath == "/" {
+		requestParts = []string{}
+	}
+	if len(routeParts) != len(requestParts) {
+		return nil, false
+	}
+	params := map[string]string{}
+	for i, part := range routeParts {
+		if strings.HasPrefix(part, ":") {
+			name := strings.TrimPrefix(part, ":")
+			if name == "" || requestParts[i] == "" {
+				return nil, false
+			}
+			params[name] = requestParts[i]
+			continue
+		}
+		if part != requestParts[i] {
+			return nil, false
+		}
+	}
+	return params, true
+}
+
+func renderLiteBody(body string, req *http.Request, params map[string]string) string {
+	for key, value := range params {
+		body = strings.ReplaceAll(body, "{{param:"+key+"}}", value)
+	}
+	for key, values := range req.URL.Query() {
+		if len(values) > 0 {
+			body = strings.ReplaceAll(body, "{{query:"+key+"}}", values[0])
+		}
+	}
+	for key, value := range liteRequestData(req) {
+		body = strings.ReplaceAll(body, "{{input:"+key+"}}", value)
+	}
+	if strings.Contains(body, "{{body}}") && req.Body != nil {
+		raw, err := io.ReadAll(req.Body)
+		if err == nil {
+			body = strings.ReplaceAll(body, "{{body}}", string(raw))
+		}
+	}
+	return body
 }
 
 // readFirstLine is intentionally small and dependency-free; it is useful for

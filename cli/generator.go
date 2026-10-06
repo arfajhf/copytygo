@@ -22,13 +22,66 @@ func writeGenerated(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 func MakeController(name, dir string) error {
+	return MakeControllerWithMode(name, dir, false)
+}
+
+func MakeControllerWithMode(name, dir string, resource bool) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid controller name")
 	}
 	if !strings.HasSuffix(name, "Controller") {
 		name += "Controller"
 	}
-	body := fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
+
+	var body string
+	if resource {
+		resourceName := strings.ToLower(strings.TrimSuffix(name, "Controller")) + "s"
+		body = fmt.Sprintf(`package controllers
+
+import "github.com/arfajhf/copytygo/core"
+
+type %s struct{}
+
+func (%s) Index(ctx *core.Context) error {
+	return ctx.MemoryIndex("%s")
+}
+
+func (%s) Show(ctx *core.Context) error {
+	return ctx.MemoryShow("%s", ctx.Param("id"))
+}
+
+func (%s) Store(ctx *core.Context) error {
+	if err := ctx.Validate(map[string]string{
+		"name": "required|min:3",
+	}); err != nil {
+		return err
+	}
+
+	return ctx.MemoryStore("%s", core.Map{
+		"name": ctx.Input("name"),
+	})
+}
+
+func (%s) Update(ctx *core.Context) error {
+	if err := ctx.Validate(map[string]string{
+		"name": "required|min:3",
+	}); err != nil {
+		return err
+	}
+
+	return ctx.MemoryUpdate("%s", ctx.Param("id"), core.Map{
+		"name": ctx.Input("name"),
+	})
+}
+
+func (%s) Destroy(ctx *core.Context) error {
+	return ctx.MemoryDestroy("%s", ctx.Param("id"))
+}
+`, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
+	} else {
+		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
+	}
+
 	return writeGenerated(filepath.Join(dir, strings.ToLower(strings.TrimSuffix(name, "Controller"))+"_controller.go"), body)
 }
 func MakeModel(name, dir string) error {

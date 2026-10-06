@@ -2,7 +2,9 @@ package core
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 )
 
 type Context struct {
@@ -30,6 +32,18 @@ func (ctx *Context) Param(name string) string {
 
 func (ctx *Context) Query(name string) string {
 	return ctx.Request.URL.Query().Get(name)
+}
+
+func (ctx *Context) Body() string {
+	if ctx.Request == nil || ctx.Request.Body == nil {
+		return ""
+	}
+	raw, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		return ""
+	}
+	ctx.Request.Body = io.NopCloser(strings.NewReader(string(raw)))
+	return string(raw)
 }
 
 func (ctx *Context) Status(code int) *Context {
