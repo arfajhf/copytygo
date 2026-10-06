@@ -2,6 +2,7 @@ package cli
 
 import (
     "net/http/httptest"
+    "strings"
     "os"
     "path/filepath"
     "testing"
@@ -82,5 +83,67 @@ func (UserController) Show(ctx *core.Context) error {
     expected := `{"id":"9","search":"book"}` + "\n"
     if body != expected {
         t.Fatalf("expected %q, got %q", expected, body)
+    }
+}
+
+
+func TestLiteInputAndValidation(t *testing.T) {
+    source := `package controllers
+import "github.com/arfajhf/copytygo/core"
+
+type UserController struct{}
+
+func (UserController) Store(ctx *core.Context) error {
+    if err := ctx.Validate(map[string]string{
+        "name": "required|min:3",
+        "email": "required|email",
+    }); err != nil {
+        return err
+    }
+
+    return ctx.Status(201).JSON(core.Map{
+        "name": ctx.Input("name"),
+        "email": ctx.Input("email"),
+    })
+}
+`
+
+    dir := t.TempDir()
+    if err := os.WriteFile(filepath.Join(dir, "user_controller.go"), []byte(source), 0644); err != nil {
+        t.Fatal(err)
+    }
+
+    route, ok, err := parseLiteControllerHandler(dir, "UserController", "Store", "POST", "/users")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if !ok {
+        t.Fatal("expected POST controller to be supported")
+    }
+    if route.Status != 201 {
+        t.Fatalf("expected 201, got %d", route.Status)
+    }
+    if route.Validation["name"] != "required|min:3" {
+        t.Fatalf("missing validation rules: %#v", route.Validation)
+    }
+
+    req := httptest.NewRequest("POST", "/users", strings.NewReader(`{"name":"Fajar","email":"fajar@example.com"}`))
+    req.Header.Set("Content-Type", "application/json")
+
+    if fields := liteValidateRequest(req, route.Validation); len(fields) != 0 {
+        t.Fatalf("unexpected validation errors: %#v", fields)
+    }
+
+    body := renderLiteBody(route.Body, req, nil)
+    expected := `{"name":"Fajar","email":"fajar@example.com"}` + "\n"
+    if body != expected {
+        t.Fatalf("expected %q, got %q", expected, body)
+    }
+
+    bad := httptest.NewRequest("POST", "/users", strings.NewReader(`{"name":"A","email":"wrong"}`))
+    bad.Header.Set("Content-Type", "application/json")
+    fields := liteValidateRequest(bad, route.Validation)
+    if len(fields["name"]) == 0 || len(fields["email"]) == 0 {
+        t.Fatalf("expected name and email errors, got %#v", fields)
     }
 }
