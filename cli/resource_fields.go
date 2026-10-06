@@ -102,7 +102,8 @@ func writeResourceModel(name string, fields []ResourceField) error {
 		))
 	}
 	body.WriteString("\tCreatedAt string `json:\"created_at\"`\n")
-	body.WriteString("\tUpdatedAt string `json:\"updated_at\"`\n")
+	body.WriteString("\tUpdatedAt string `json:"updated_at"`\n")
+	body.WriteString("\tDeletedAt *string `json:"deleted_at,omitempty"`\n")
 	body.WriteString("}\n")
 
 	return writeGenerated(
@@ -149,12 +150,13 @@ func (%s) Index(ctx *core.Context) error {
 	return ctx.DBIndex("%s", core.DBIndexOptions{
 		Searchable: %#v,
 		Filterable: %#v,
-		Sortable:   %#v,
+		Sortable:    %#v,
+		SoftDeletes: true,
 	})
 }
 
 func (%s) Show(ctx *core.Context) error {
-	return ctx.DBShow("%s", ctx.Param("id"))
+	return ctx.DBShow("%s", ctx.Param("id"), core.DBResourceOptions{SoftDeletes: true})
 }
 
 func (%s) Store(ctx *core.Context) error {
@@ -164,7 +166,7 @@ func (%s) Store(ctx *core.Context) error {
 	}
 
 	return ctx.DBStore("%s", core.Map{
-%s	})
+%s	}, core.DBResourceOptions{SoftDeletes: true})
 }
 
 func (%s) Update(ctx *core.Context) error {
@@ -174,11 +176,11 @@ func (%s) Update(ctx *core.Context) error {
 	}
 
 	return ctx.DBUpdate("%s", ctx.Param("id"), core.Map{
-%s	})
+%s	}, core.DBResourceOptions{SoftDeletes: true})
 }
 
 func (%s) Destroy(ctx *core.Context) error {
-	return ctx.DBDestroy("%s", ctx.Param("id"))
+	return ctx.DBDestroy("%s", ctx.Param("id"), core.DBResourceOptions{SoftDeletes: true})
 }
 `,
 		resource,
@@ -229,6 +231,7 @@ func Register%s() error {
 			return schema.Create(%q, func(table *schema.Table) {
 				table.ID()
 %s				table.Timestamps()
+				table.SoftDeletes()
 			})
 		},
 		func() *schema.Blueprint {
