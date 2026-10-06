@@ -50,8 +50,8 @@ func (m *Model) Update(ctx context.Context, id any, values map[string]any) (map[
 	if err != nil {
 		return nil, false, err
 	}
-	if affected, err := result.RowsAffected(); err == nil && affected == 0 {
-		return nil, false, nil
+	if affected, rowsErr := result.RowsAffected(); rowsErr == nil && affected == 0 {
+		return m.Find(ctx, id)
 	}
 	return m.Find(ctx, id)
 }
