@@ -42,6 +42,9 @@ type liteRoute struct {
 	ResourceData   string
 	AuthAction     string
 	AuthRole       string
+	Searchable     []string
+	Filterable     []string
+	Sortable       []string
 }
 
 type liteMemoryBucket struct {
@@ -332,12 +335,29 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 
 	switch route.ResourceAction {
 	case "db:index":
-		items, err := resource.Index()
+		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+		perPage, _ := strconv.Atoi(req.URL.Query().Get("per_page"))
+		filters := make(map[string]string)
+		for _, field := range route.Filterable {
+			filters[field] = req.URL.Query().Get("filter[" + field + "]")
+		}
+
+		result, err := resource.List(database.ResourceListOptions{
+			Page:          page,
+			PerPage:       perPage,
+			Search:        req.URL.Query().Get("q"),
+			SearchColumns: route.Searchable,
+			Sort:          req.URL.Query().Get("sort"),
+			Order:         req.URL.Query().Get("order"),
+			Filters:       filters,
+			Filterable:    route.Filterable,
+			Sortable:      route.Sortable,
+		})
 		if err != nil {
 			writeLiteDatabaseError(w, err)
 			return
 		}
-		writeLiteJSON(w, http.StatusOK, map[string]any{"data": items})
+		writeLiteJSON(w, http.StatusOK, result)
 
 	case "db:show":
 		item, found, err := resource.Show(id)
@@ -951,12 +971,21 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			return route, true
 
 		case "DBIndex":
-			if len(call.Args) != 1 {
+			if len(call.Args) < 1 || len(call.Args) > 2 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
+			}
+			if len(call.Args) == 2 {
+				searchable, filterable, sortable, ok := parseLiteDBIndexOptions(call.Args[1])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.Searchable = searchable
+				route.Filterable = filterable
+				route.Sortable = sortable
 			}
 			route.ResourceAction = "db:index"
 			route.Resource = resource
@@ -1134,6 +1163,63 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 		}
 	}
 	return liteRoute{}, false
+}
+
+func parseLiteDBIndexOptions(expr ast.Expr) ([]string, []string, []string, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	var searchable []string
+	var filterable []string
+	var sortable []string
+
+	for _, element := range composite.Elts {
+		kv, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+
+		values, ok := liteStringSlice(kv.Value)
+		if !ok {
+			return nil, nil, nil, false
+		}
+
+		switch key.Name {
+		case "Searchable":
+			searchable = values
+		case "Filterable":
+			filterable = values
+		case "Sortable":
+			sortable = values
+		}
+	}
+
+	return searchable, filterable, sortable, true
+}
+
+func liteStringSlice(expr ast.Expr) ([]string, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, false
+	}
+
+	values := make([]string, 0, len(composite.Elts))
+	for _, element := range composite.Elts {
+		value, ok := stringLiteral(element)
+		if !ok {
+			return nil, false
+		}
+		values = append(values, value)
+	}
+
+	return values, true
 }
 
 func stringLiteral(expr ast.Expr) (string, bool) {
