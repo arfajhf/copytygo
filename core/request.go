@@ -19,9 +19,17 @@ func (ctx *Context) Input(name string) string {
 
 	switch mediaType {
 	case "application/json":
+		if ctx.Request.Body == nil {
+			return ""
+		}
+		raw, err := io.ReadAll(ctx.Request.Body)
+		if err != nil {
+			return ""
+		}
+		ctx.Request.Body = io.NopCloser(strings.NewReader(string(raw)))
+
 		var data map[string]any
-		decoder := json.NewDecoder(ctx.Request.Body)
-		if err := decoder.Decode(&data); err != nil {
+		if err := json.Unmarshal(raw, &data); err != nil {
 			return ""
 		}
 		value, ok := data[name]
@@ -32,11 +40,11 @@ func (ctx *Context) Input(name string) string {
 		case string:
 			return v
 		default:
-			raw, err := json.Marshal(v)
+			encoded, err := json.Marshal(v)
 			if err != nil {
 				return ""
 			}
-			return string(raw)
+			return string(encoded)
 		}
 	default:
 		if err := ctx.Request.ParseForm(); err != nil {
