@@ -2,7 +2,7 @@ package version
 
 import "runtime/debug"
 
-const Framework = "2.1.0-dev"
+const Framework = "3.0.0-dev"
 const StableModule = "v2.0.0"
 
 func Module() string {
