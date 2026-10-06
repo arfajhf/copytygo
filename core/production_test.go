@@ -15,13 +15,13 @@ func TestJSONNotFoundAndMethodNotAllowed(t *testing.T) {
 
 	notFound := httptest.NewRecorder()
 	app.ServeHTTP(notFound, httptest.NewRequest(http.MethodGet, "/missing", nil))
-	if notFound.Code != http.StatusNotFound || !strings.Contains(notFound.Body.String(), ""status":404") {
+	if notFound.Code != http.StatusNotFound || !strings.Contains(notFound.Body.String(), "\"status\":404") {
 		t.Fatalf("unexpected 404 response: %d %s", notFound.Code, notFound.Body.String())
 	}
 
 	notAllowed := httptest.NewRecorder()
 	app.ServeHTTP(notAllowed, httptest.NewRequest(http.MethodPost, "/users", nil))
-	if notAllowed.Code != http.StatusMethodNotAllowed || !strings.Contains(notAllowed.Body.String(), ""status":405") {
+	if notAllowed.Code != http.StatusMethodNotAllowed || !strings.Contains(notAllowed.Body.String(), "\"status\":405") {
 		t.Fatalf("unexpected 405 response: %d %s", notAllowed.Code, notAllowed.Body.String())
 	}
 }
