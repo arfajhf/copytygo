@@ -115,6 +115,10 @@ func (table *Table) Timestamps() {
 	table.Timestamp("updated_at").DefaultValue(Raw("CURRENT_TIMESTAMP"))
 }
 
+func (table *Table) SoftDeletes() {
+	table.Timestamp("deleted_at").Nullable()
+}
+
 func (table *Table) DateTime(name string) *Column  { return table.addColumn(name, TypeDateTime) }
 func (table *Table) JSON(name string) *Column      { return table.addColumn(name, TypeJSON) }
 func (table *Table) UUID(name string) *Column      { return table.addColumn(name, TypeUUID) }
