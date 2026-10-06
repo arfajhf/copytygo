@@ -12,11 +12,20 @@
 - Added single-role/multi-role auth scaffold.
 - Added security middleware, migration reset/fresh and route listing.
 
-## v1.1.0-dev
+## v1.1.0-rc.1
 
-- Reworked `ctg dev` into a runtime orchestrator.
+- Reworked `ctg dev` into a runtime orchestrator with native-first execution.
 - Added automatic Windows Application Control detection and Lite Runtime fallback.
-- Added `ctg dev --lite` to force the lightweight in-process development runtime.
-- Lite Runtime is dependency-free and currently supports simple inline `ctx.JSON(core.Map{...})` and `ctx.Text(...)` routes.
-- Native runtime remains the default for full Go compatibility.
-- Docker, WSL, and VM software are not required by Lite Runtime.
+- Added `ctg dev --lite` for direct lightweight development.
+- Added route hot reload and automatic free-port fallback.
+- Added Lite support for GET, POST, PUT, PATCH and DELETE.
+- Added route params, query params, raw body access and `ctx.Input()`.
+- Added declarative validation with structured 422 responses.
+- Added controller method resolution in Lite Runtime.
+- Added `ctg make:controller <Name> --resource`.
+- Added in-memory resource CRUD for Native and Lite Runtime.
+- Added centralized version reporting across CLI and application banners.
+- Added `ctg doctor` for one-command project and Lite Runtime health checks.
+- Added CI configuration for test, vet and CLI build checks.
+- Docker, WSL and VM software remain optional and are not required by Lite Runtime.
+
