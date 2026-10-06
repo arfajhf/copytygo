@@ -75,6 +75,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("  build                      Build application")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
+	fmt.Println("  update [version]           Update CLI and project dependency")
 	fmt.Println("\nGenerators:")
 	fmt.Println("  make:controller <name> [--resource|--memory-resource]")
 	fmt.Println("  make:resource <name>        Create model + DB controller + migration")
