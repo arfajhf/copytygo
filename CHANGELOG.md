@@ -56,7 +56,7 @@
 - Hardened the query builder with identifier/operator validation and empty-write protection.
 - Made shared database connection initialization safe for concurrent requests.
 - Hid Lite Runtime database internals unless `APP_DEBUG=true`.
-- Migrated the v2 Go module path to `github.com/arfajhf/copytygo/v3`.
+- Migrated the v2 Go module path to `github.com/arfajhf/copytygo/v2`.
 - Added v2 unit coverage for resource routing, resource fields, auth middleware/roles, query safety and schema timestamps.
 - Made installed `ctg migrate` load migrations from the current project instead of the framework example package.
 - Added source-based project migration discovery for the CopyTyGo schema DSL.
@@ -70,6 +70,18 @@
 - Added query parameters for q, sort, order and filter[field].
 - Added numeric, boolean and UUID validation rules.
 - Added type-aware resource validation for decimal, boolean and UUID fields.
-- Added Lite Runtime support for v2.1 resource list options.
+- Added Lite Runtime support for v3 resource list options.
 - Added tests for extended validation and multi-column search.
+- Added production HTTP server timeouts and graceful shutdown.
+- Added consistent JSON 404 and 405 responses.
+- Added request IDs and structured request logging.
+- Added production diagnostics through `ctg doctor --production`.
+- Added automatic `updated_at` values for resource updates.
+- Added generated soft deletes with `deleted_at`.
+- Added Lite Runtime parsing/execution support for generated soft-delete resources.
+- Added soft-delete support to the project migration source loader.
+- Hardened signed auth tokens with minimum secret length, subject checks, issued-at and expiration validation.
+- Protected destructive migration commands in production behind `--force`.
+- Added generated production server timeout settings and richer health responses.
+- Added production-focused tests for JSON errors, request IDs and signed tokens.
 
