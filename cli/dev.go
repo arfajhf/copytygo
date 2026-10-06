@@ -16,7 +16,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
+	"sync"
 	"strings"
 
 	"github.com/arfajhf/copytygo/config"
@@ -24,12 +26,28 @@ import (
 )
 
 type liteRoute struct {
-	Method      string
-	Path        string
-	ContentType string
-	Status      int
-	Body        string
-	Validation  map[string]string
+	Method         string
+	Path           string
+	ContentType    string
+	Status         int
+	Body           string
+	Validation     map[string]string
+	ResourceAction string
+	Resource       string
+	ResourceID     string
+	ResourceData   string
+}
+
+type liteMemoryBucket struct {
+	NextID int64
+	Items  map[string]map[string]any
+}
+
+var liteMemoryStore = struct {
+	sync.RWMutex
+	Buckets map[string]*liteMemoryBucket
+}{
+	Buckets: make(map[string]*liteMemoryBucket),
 }
 
 func Dev(args []string) error {
@@ -140,6 +158,11 @@ func runLiteDev() error {
 					})
 					return
 				}
+				if route.ResourceAction != "" {
+					handleLiteMemoryRoute(w, req, route, params)
+					return
+				}
+
 				body := renderLiteBody(route.Body, req, params)
 				w.Header().Set("Content-Type", route.ContentType)
 				w.WriteHeader(route.Status)
