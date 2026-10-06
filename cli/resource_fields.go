@@ -102,8 +102,8 @@ func writeResourceModel(name string, fields []ResourceField) error {
 		))
 	}
 	body.WriteString("\tCreatedAt string `json:\"created_at\"`\n")
-	body.WriteString("\tUpdatedAt string `json:"updated_at"`\n")
-	body.WriteString("\tDeletedAt *string `json:"deleted_at,omitempty"`\n")
+	body.WriteString("\tUpdatedAt string `json:\"updated_at\"`\n")
+	body.WriteString("\tDeletedAt *string `json:\"deleted_at,omitempty\"`\n")
 	body.WriteString("}\n")
 
 	return writeGenerated(
