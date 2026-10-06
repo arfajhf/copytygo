@@ -62,7 +62,7 @@
 - Added source-based project migration discovery for the CopyTyGo schema DSL.
 - Made generated migration function IDs collision-resistant while keeping legacy registry compatibility.
 
-## v3.0.0-dev
+## v3.0.0-rc.1
 
 - Added paginated database resource listings with page/per_page metadata.
 - Added safe resource search across generated string/text fields.
