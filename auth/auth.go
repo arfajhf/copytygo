@@ -5,9 +5,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/arfajhf/copytygo/config"
-	"github.com/arfajhf/copytygo/core"
-	"github.com/arfajhf/copytygo/security"
+	"github.com/arfajhf/copytygo/v2/config"
+	"github.com/arfajhf/copytygo/v2/core"
+	"github.com/arfajhf/copytygo/v2/security"
 )
 
 const ClaimsContextKey = "copytygo.auth.claims"
