@@ -1,0 +1,89 @@
+name: CopyTyGo Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "version/version.go"
+      - ".github/workflows/release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read framework version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's/^const Framework = "\([^"]*\)"/\1/p' version/version.go)"
+
+          if [ -z "$VERSION" ]; then
+            echo "Unable to read Framework version from version/version.go"
+            exit 1
+          fi
+
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid semantic version: $VERSION"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check existing tag and release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag
+        if: steps.existing.outputs.tag_exists != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "CopyTyGo $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub release
+        if: steps.existing.outputs.release_exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          gh release create "$TAG"             --title "CopyTyGo v$VERSION"             --generate-notes
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "CopyTyGo release workflow finished."
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "Tag: ${{ steps.version.outputs.tag }}"
