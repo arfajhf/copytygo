@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v2/validation"
+	"github.com/arfajhf/copytygo/v3/validation"
 )
 
 func (ctx *Context) Input(name string) string {
