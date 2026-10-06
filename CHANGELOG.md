@@ -62,3 +62,14 @@
 - Added source-based project migration discovery for the CopyTyGo schema DSL.
 - Made generated migration function IDs collision-resistant while keeping legacy registry compatibility.
 
+## v2.1.0-dev
+
+- Added paginated database resource listings with page/per_page metadata.
+- Added safe resource search across generated string/text fields.
+- Added generated filter and sort allowlists for resource endpoints.
+- Added query parameters for q, sort, order and filter[field].
+- Added numeric, boolean and UUID validation rules.
+- Added type-aware resource validation for decimal, boolean and UUID fields.
+- Added Lite Runtime support for v2.1 resource list options.
+- Added tests for extended validation and multi-column search.
+
