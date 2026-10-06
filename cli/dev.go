@@ -201,6 +201,187 @@ func runLiteDev() error {
 	return http.Serve(listener, requestLogMiddleware(mux))
 }
 
+func liteMemoryBucketFor(resource string) *liteMemoryBucket {
+	liteMemoryStore.Lock()
+	defer liteMemoryStore.Unlock()
+
+	bucket, ok := liteMemoryStore.Buckets[resource]
+	if !ok {
+		bucket = &liteMemoryBucket{
+			NextID: 1,
+			Items:  make(map[string]map[string]any),
+		}
+		liteMemoryStore.Buckets[resource] = bucket
+	}
+	return bucket
+}
+
+func handleLiteMemoryRoute(w http.ResponseWriter, req *http.Request, route liteRoute, params map[string]string) {
+	bucket := liteMemoryBucketFor(route.Resource)
+	id := renderLiteBody(route.ResourceID, req, params)
+
+	switch route.ResourceAction {
+	case "index":
+		liteMemoryStore.RLock()
+		ids := make([]string, 0, len(bucket.Items))
+		for itemID := range bucket.Items {
+			ids = append(ids, itemID)
+		}
+		sort.Slice(ids, func(i, j int) bool {
+			a, _ := strconv.Atoi(ids[i])
+			b, _ := strconv.Atoi(ids[j])
+			return a < b
+		})
+		rows := make([]map[string]any, 0, len(ids))
+		for _, itemID := range ids {
+			row := map[string]any{"id": itemID}
+			for key, value := range bucket.Items[itemID] {
+				row[key] = value
+			}
+			rows = append(rows, row)
+		}
+		liteMemoryStore.RUnlock()
+
+		writeLiteJSON(w, http.StatusOK, map[string]any{"data": rows})
+		return
+
+	case "show":
+		liteMemoryStore.RLock()
+		item, ok := bucket.Items[id]
+		if ok {
+			item = cloneLiteRecord(item)
+		}
+		liteMemoryStore.RUnlock()
+
+		if !ok {
+			writeLiteNotFound(w)
+			return
+		}
+
+		row := map[string]any{"id": id}
+		for key, value := range item {
+			row[key] = value
+		}
+		writeLiteJSON(w, http.StatusOK, row)
+		return
+
+	case "store":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status":  http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+
+		liteMemoryStore.Lock()
+		id := strconv.FormatInt(bucket.NextID, 10)
+		bucket.NextID++
+		bucket.Items[id] = cloneLiteRecord(data)
+		liteMemoryStore.Unlock()
+
+		row := map[string]any{"id": id}
+		for key, value := range data {
+			row[key] = value
+		}
+		writeLiteJSON(w, http.StatusCreated, row)
+		return
+
+	case "update":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status":  http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+
+		liteMemoryStore.Lock()
+		item, exists := bucket.Items[id]
+		if exists {
+			for key, value := range data {
+				item[key] = value
+			}
+			bucket.Items[id] = item
+			item = cloneLiteRecord(item)
+		}
+		liteMemoryStore.Unlock()
+
+		if !exists {
+			writeLiteNotFound(w)
+			return
+		}
+
+		row := map[string]any{"id": id}
+		for key, value := range item {
+			row[key] = value
+		}
+		writeLiteJSON(w, http.StatusOK, row)
+		return
+
+	case "destroy":
+		liteMemoryStore.Lock()
+		_, exists := bucket.Items[id]
+		if exists {
+			delete(bucket.Items, id)
+		}
+		liteMemoryStore.Unlock()
+
+		if !exists {
+			writeLiteNotFound(w)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+		"error": map[string]any{
+			"status":  http.StatusInternalServerError,
+			"message": "Unsupported Lite resource action",
+		},
+	})
+}
+
+func decodeLiteResourceData(template string, req *http.Request, params map[string]string) (map[string]any, bool) {
+	rendered := renderLiteBody(template, req, params)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(rendered), &data); err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
+func cloneLiteRecord(input map[string]any) map[string]any {
+	output := make(map[string]any, len(input))
+	for key, value := range input {
+		output[key] = value
+	}
+	return output
+}
+
+func writeLiteNotFound(w http.ResponseWriter) {
+	writeLiteJSON(w, http.StatusNotFound, map[string]any{
+		"error": map[string]any{
+			"status":  http.StatusNotFound,
+			"message": "Resource not found",
+		},
+	})
+}
+
+func writeLiteJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(data)
+}
+
 func listenLiteAddress(host, preferredPort string) (net.Listener, string, bool, error) {
 	start, err := strconv.Atoi(preferredPort)
 	if err != nil || start < 1 || start > 65535 {
