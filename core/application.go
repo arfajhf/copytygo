@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/arfajhf/copytygo/config"
-	"github.com/arfajhf/copytygo/version"
+	"github.com/arfajhf/copytygo/v2/config"
+	"github.com/arfajhf/copytygo/v2/version"
 )
 
 type Application struct {
