@@ -580,13 +580,59 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 			return true
 		}
 		method := strings.ToUpper(selector.Sel.Name)
+		routePath, ok := stringLiteral(call.Args[0])
+		if !ok {
+			return true
+		}
+
+		if method == "RESOURCE" {
+			instance, ok := call.Args[1].(*ast.Ident)
+			if !ok {
+				return true
+			}
+			controllerType, ok := controllerVars[instance.Name]
+			if !ok {
+				return true
+			}
+			base := strings.TrimRight(routePath, "/")
+			if base == "" {
+				base = "/"
+			}
+			member := base
+			if member == "/" {
+				member = ""
+			}
+			member += "/:id"
+
+			definitions := []struct {
+				Method string
+				Path   string
+				Handler string
+			}{
+				{"GET", base, "Index"},
+				{"GET", member, "Show"},
+				{"POST", base, "Store"},
+				{"PUT", member, "Update"},
+				{"DELETE", member, "Destroy"},
+			}
+			for _, definition := range definitions {
+				route, supported, controllerErr := parseLiteControllerHandler(
+					filepath.Join("app", "controllers"),
+					controllerType,
+					definition.Handler,
+					definition.Method,
+					definition.Path,
+				)
+				if controllerErr == nil && supported {
+					routes = append(routes, route)
+				}
+			}
+			return true
+		}
+
 		switch method {
 		case "GET", "POST", "PUT", "PATCH", "DELETE":
 		default:
-			return true
-		}
-		routePath, ok := stringLiteral(call.Args[0])
-		if !ok {
 			return true
 		}
 
