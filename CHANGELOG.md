@@ -29,3 +29,16 @@
 - Added CI configuration for test, vet and CLI build checks.
 - Docker, WSL and VM software remain optional and are not required by Lite Runtime.
 
+## v2.0.0-dev
+
+- Started the database-first resource layer for MySQL and PostgreSQL.
+- Added map-based query/model CRUD helpers and portable insert ID handling.
+- Added database-backed HTTP resource helpers: `DBIndex`, `DBShow`, `DBStore`, `DBUpdate`, and `DBDestroy`.
+- Added database resource execution inside Lite Runtime.
+- Added one-line REST resource routing with `app.Resource(...)`.
+- Added `ctg make:resource <Name>` for model + DB controller + migration generation.
+- Kept explicit `--memory-resource` mode for temporary development CRUD.
+- Added `ctg db:check` for database health diagnostics.
+- Added reusable auth middleware, claims context, user ID helpers, and role guards.
+- Began v2 context value support for middleware and application state.
+
