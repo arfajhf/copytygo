@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/arfajhf/copytygo/v2/config"
-	"github.com/arfajhf/copytygo/v2/database"
-	"github.com/arfajhf/copytygo/v2/database/drivers"
+	"github.com/arfajhf/copytygo/v3/config"
+	"github.com/arfajhf/copytygo/v3/database"
+	"github.com/arfajhf/copytygo/v3/database/drivers"
 )
 
 func databaseResource(table string) (*database.Resource, error) {
