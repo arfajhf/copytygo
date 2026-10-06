@@ -1,6 +1,6 @@
 package migration
 
-import "github.com/arfajhf/copytygo/database/schema"
+import "github.com/arfajhf/copytygo/v2/database/schema"
 
 type BlueprintFactory func() *schema.Blueprint
 
