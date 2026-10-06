@@ -407,11 +407,12 @@ func receiverMatches(fn *ast.FuncDecl, controllerType string) bool {
 
 func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, bool) {
 	route := liteRoute{
-		Method: method,
-		Path: path,
-		Status: http.StatusOK,
+		Method:     method,
+		Path:       path,
+		Status:     http.StatusOK,
 		Validation: parseLiteValidationRules(handler),
 	}
+
 	for _, stmt := range handler.Body.List {
 		ret, ok := stmt.(*ast.ReturnStmt)
 		if !ok || len(ret.Results) != 1 {
@@ -422,14 +423,19 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			continue
 		}
 		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || len(call.Args) != 1 {
+		if !ok {
 			continue
 		}
+
 		if status, ok := liteStatusFromSelector(sel); ok {
 			route.Status = status
 		}
+
 		switch sel.Sel.Name {
 		case "Text":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
 			value, ok := liteStringExpr(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
@@ -437,13 +443,108 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ContentType = "text/plain; charset=utf-8"
 			route.Body = value
 			return route, true
+
 		case "JSON":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
 			body, ok := mapLiteralJSON(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
 			}
 			route.ContentType = "application/json; charset=utf-8"
 			route.Body = body + "\n"
+			return route, true
+
+		case "MemoryIndex":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "index"
+			route.Resource = resource
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryShow":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "show"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryStore":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "store"
+			route.Resource = resource
+			route.ResourceData = data
+			route.Status = http.StatusCreated
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryUpdate":
+			if len(call.Args) != 3 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[2])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "update"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ResourceData = data
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "MemoryDestroy":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "destroy"
+			route.Resource = resource
+			route.ResourceID = id
+			route.Status = http.StatusNoContent
 			return route, true
 		}
 	}
