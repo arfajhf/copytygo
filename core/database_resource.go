@@ -43,14 +43,14 @@ type DBIndexOptions struct {
 }
 
 func (ctx *Context) DBIndex(table string, configs ...DBIndexOptions) error {
-	resource, err := databaseResource(table, config.SoftDeletes)
-	if err != nil {
-		return err
-	}
-
 	var config DBIndexOptions
 	if len(configs) > 0 {
 		config = configs[0]
+	}
+
+	resource, err := databaseResource(table, config.SoftDeletes)
+	if err != nil {
+		return err
 	}
 
 	page, _ := strconv.Atoi(ctx.Query("page"))
