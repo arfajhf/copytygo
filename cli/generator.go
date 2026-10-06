@@ -42,6 +42,8 @@ func MakeControllerWithMode(name, dir, mode string) error {
 
 import "github.com/arfajhf/copytygo/core"
 
+// copytygo:resource %s
+
 type %s struct{}
 
 func (%s) Index(ctx *core.Context) error {
@@ -79,7 +81,7 @@ func (%s) Update(ctx *core.Context) error {
 func (%s) Destroy(ctx *core.Context) error {
 	return ctx.DBDestroy("%s", ctx.Param("id"))
 }
-`, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
+`, resourceName, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
 
 	case "memory":
 		body = fmt.Sprintf(`package controllers
