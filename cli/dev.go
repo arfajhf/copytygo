@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"net"
 	"net/http"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -389,6 +390,8 @@ func liteStringExpr(expr ast.Expr) (string, bool) {
 		return "{{param:" + name + "}}", true
 	case "Query":
 		return "{{query:" + name + "}}", true
+	case "Body":
+		return "{{body}}", true
 	}
 	return "", false
 }
@@ -449,6 +452,12 @@ func renderLiteBody(body string, req *http.Request, params map[string]string) st
 	for key, values := range req.URL.Query() {
 		if len(values) > 0 {
 			body = strings.ReplaceAll(body, "{{query:"+key+"}}", values[0])
+		}
+	}
+	if strings.Contains(body, "{{body}}") && req.Body != nil {
+		raw, err := io.ReadAll(req.Body)
+		if err == nil {
+			body = strings.ReplaceAll(body, "{{body}}", string(raw))
 		}
 	}
 	return body
