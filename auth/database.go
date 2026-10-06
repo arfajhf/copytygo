@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,6 +12,12 @@ import (
 	"github.com/arfajhf/copytygo/database/drivers"
 	"github.com/arfajhf/copytygo/database/query"
 	"github.com/arfajhf/copytygo/security"
+)
+
+var (
+	ErrInvalidCredentials  = errors.New("copytygo: invalid credentials")
+	ErrEmailRegistered     = errors.New("copytygo: email already registered")
+	ErrInvalidRegistration = errors.New("copytygo: name and email are required")
 )
 
 type User struct {
@@ -31,7 +38,7 @@ func Register(name, email, password, role string) (Session, error) {
 	role = strings.TrimSpace(role)
 
 	if name == "" || email == "" {
-		return Session{}, fmt.Errorf("copytygo: name and email are required")
+		return Session{}, ErrInvalidRegistration
 	}
 
 	drivers.Register()
@@ -50,7 +57,7 @@ func Register(name, email, password, role string) (Session, error) {
 		return Session{}, err
 	}
 	if found && existing != nil {
-		return Session{}, fmt.Errorf("copytygo: email already registered")
+		return Session{}, ErrEmailRegistered
 	}
 
 	hashed, err := security.HashPassword(password)
@@ -109,12 +116,12 @@ func Login(email, password string) (Session, error) {
 		return Session{}, err
 	}
 	if !found {
-		return Session{}, fmt.Errorf("copytygo: invalid credentials")
+		return Session{}, ErrInvalidCredentials
 	}
 
 	hashed := stringValue(row["password"])
 	if hashed == "" || !security.VerifyPassword(password, hashed) {
-		return Session{}, fmt.Errorf("copytygo: invalid credentials")
+		return Session{}, ErrInvalidCredentials
 	}
 
 	user := User{
