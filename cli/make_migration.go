@@ -17,6 +17,21 @@ func MakeMigration(
 	name string,
 	directory string,
 ) error {
+	return makeMigration(name, directory, false)
+}
+
+func MakeResourceMigration(
+	name string,
+	directory string,
+) error {
+	return makeMigration(name, directory, true)
+}
+
+func makeMigration(
+	name string,
+	directory string,
+	resource bool,
+) error {
 
 	name = strings.TrimSpace(
 		strings.ToLower(name),
@@ -79,6 +94,13 @@ func MakeMigration(
 		timestamp+"_"+name,
 		tableName,
 	)
+	if resource {
+		content = resourceMigrationTemplate(
+			functionID,
+			timestamp+"_"+name,
+			tableName,
+		)
+	}
 
 	if err := os.WriteFile(
 		path,
@@ -170,6 +192,49 @@ func Register%s() error {
 
 					// Add your columns here.
 
+					table.Timestamps()
+				},
+			)
+		},
+
+		func() *schema.Blueprint {
+			return schema.Drop(
+				%q,
+			)
+		},
+	)
+}
+`,
+		functionID,
+		migrationName,
+		tableName,
+		tableName,
+	)
+}
+
+
+func resourceMigrationTemplate(
+	functionID string,
+	migrationName string,
+	tableName string,
+) string {
+	return fmt.Sprintf(`package migrations
+
+import (
+	"github.com/arfajhf/copytygo/database/migration"
+	"github.com/arfajhf/copytygo/database/schema"
+)
+
+func Register%s() error {
+	return migration.Register(
+		%q,
+
+		func() *schema.Blueprint {
+			return schema.Create(
+				%q,
+				func(table *schema.Table) {
+					table.ID()
+					table.String("name")
 					table.Timestamps()
 				},
 			)
