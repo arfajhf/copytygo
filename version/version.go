@@ -3,7 +3,7 @@ package version
 import "runtime/debug"
 
 const Framework = "3.0.0-dev"
-const StableModule = "v2.0.0"
+const StableModule = "v3.0.0"
 
 func Module() string {
 	info, ok := debug.ReadBuildInfo()
