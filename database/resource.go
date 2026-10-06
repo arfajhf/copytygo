@@ -56,7 +56,7 @@ func (r *Resource) WithSoftDeletes() *Resource {
 }
 
 func (r *Resource) query() *query.Builder {
-	builder := r.query()
+	builder := query.Table(r.DB, r.Driver, r.Table)
 	if r.softDelete {
 		builder.WhereNull("deleted_at")
 	}
