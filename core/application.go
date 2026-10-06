@@ -26,6 +26,10 @@ func (app *Application) Use(middlewares ...Middleware) *Application {
 
 func (app *Application) Routes() []*Route { return app.router.Routes() }
 
+func (app *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	app.router.ServeHTTP(w, r)
+}
+
 func (app *Application) Get(
 	path string,
 	handler Handler,
