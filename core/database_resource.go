@@ -2,6 +2,7 @@ package core
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/arfajhf/copytygo/v2/config"
 	"github.com/arfajhf/copytygo/v2/database"
@@ -23,18 +24,47 @@ func databaseResource(table string) (*database.Resource, error) {
 	)
 }
 
-func (ctx *Context) DBIndex(table string) error {
+type DBIndexOptions struct {
+	Searchable []string
+	Filterable []string
+	Sortable   []string
+}
+
+func (ctx *Context) DBIndex(table string, configs ...DBIndexOptions) error {
 	resource, err := databaseResource(table)
 	if err != nil {
 		return err
 	}
 
-	items, err := resource.Index()
+	var config DBIndexOptions
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+
+	page, _ := strconv.Atoi(ctx.Query("page"))
+	perPage, _ := strconv.Atoi(ctx.Query("per_page"))
+
+	filters := make(map[string]string)
+	for _, field := range config.Filterable {
+		filters[field] = ctx.Query("filter[" + field + "]")
+	}
+
+	result, err := resource.List(database.ResourceListOptions{
+		Page:          page,
+		PerPage:       perPage,
+		Search:        ctx.Query("q"),
+		SearchColumns: config.Searchable,
+		Sort:          ctx.Query("sort"),
+		Order:         ctx.Query("order"),
+		Filters:       filters,
+		Filterable:    config.Filterable,
+		Sortable:      config.Sortable,
+	})
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(Map{"data": items})
+	return ctx.JSON(result)
 }
 
 func (ctx *Context) DBShow(table, id string) error {
