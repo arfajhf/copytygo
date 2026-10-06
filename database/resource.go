@@ -165,6 +165,10 @@ func (r *Resource) Update(id any, values map[string]any) (map[string]any, bool, 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	if _, exists := values["updated_at"]; !exists {
+		values["updated_at"] = time.Now().UTC()
+	}
+
 	result, err := query.Table(r.DB, r.Driver, r.Table).WhereEq("id", id).Update(ctx, values)
 	if err != nil {
 		return nil, false, err
