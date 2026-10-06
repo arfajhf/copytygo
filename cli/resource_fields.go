@@ -282,6 +282,12 @@ func validationRuleForResourceField(field ResourceField) string {
 	switch field.Type {
 	case "integer", "bigint":
 		rules = append(rules, "integer")
+	case "decimal":
+		rules = append(rules, "numeric")
+	case "boolean":
+		rules = append(rules, "boolean")
+	case "uuid":
+		rules = append(rules, "uuid")
 	}
 	return strings.Join(rules, "|")
 }
