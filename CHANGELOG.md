@@ -41,4 +41,10 @@
 - Added `ctg db:check` for database health diagnostics.
 - Added reusable auth middleware, claims context, user ID helpers, and role guards.
 - Began v2 context value support for middleware and application state.
+- Added `ctg update [version]` to update both the CLI and project dependency.
+- Added generated resource route registry so `ctg make:resource` auto-registers REST resources.
+- Added database-backed auth registration/login services and auth user migration generation.
+- Upgraded the TypeScript starter with a reusable API client, bearer-token support, and Vite API proxying.
+- Expanded `ctg route:list` to show routes created by `app.Resource(...)`.
+- Expanded `ctg doctor` with resource-route, migration-registry, security, and optional live database checks via `--db`.
 
