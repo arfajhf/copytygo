@@ -354,6 +354,18 @@ func (router *Router) handleError(
 	err error,
 ) {
 
+	if validationError, ok := err.(*ValidationError); ok {
+		ctx.Status(http.StatusUnprocessableEntity)
+		_ = ctx.JSON(Map{
+			"error": Map{
+				"status":  http.StatusUnprocessableEntity,
+				"message": "Validation failed",
+				"fields":  validationError.Fields,
+			},
+		})
+		return
+	}
+
 	if httpError, ok := err.(*HTTPError); ok {
 
 		ctx.Status(httpError.Status)
