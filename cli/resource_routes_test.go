@@ -34,7 +34,7 @@ func TestGenerateResourceRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	web := "package routes\n\nimport \"github.com/arfajhf/copytygo/core\"\n\nfunc Register(app *core.Application) {\n}\n"
+	web := "package routes\n\nimport \"github.com/arfajhf/copytygo/v2/core\"\n\nfunc Register(app *core.Application) {\n}\n"
 	if err := os.WriteFile(
 		filepath.Join(root, "routes", "web.go"),
 		[]byte(web),
