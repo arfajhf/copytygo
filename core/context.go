@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 )
 
@@ -30,6 +31,17 @@ func (ctx *Context) Param(name string) string {
 
 func (ctx *Context) Query(name string) string {
 	return ctx.Request.URL.Query().Get(name)
+}
+
+func (ctx *Context) Body() string {
+	if ctx.Request == nil || ctx.Request.Body == nil {
+		return ""
+	}
+	raw, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		return ""
+	}
+	return string(raw)
 }
 
 func (ctx *Context) Status(code int) *Context {
