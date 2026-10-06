@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
+	"strings"
 )
 
 func InstallAuth(mode, root string) error {
@@ -39,6 +41,70 @@ func RequireRole(roles ...string) core.Middleware {
 	if err := os.WriteFile(filepath.Join(root, "app", "auth", "middleware.go"), []byte(middleware), 0644); err != nil {
 		return err
 	}
+
+	if err := makeAuthMigration(mode, filepath.Join(root, "database", "migrations")); err != nil {
+		return err
+	}
+
 	fmt.Printf("Auth scaffold installed (%s role).\n", mode)
 	return nil
+}
+
+func makeAuthMigration(mode, directory string) error {
+	if err := os.MkdirAll(directory, 0755); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.Contains(entry.Name(), "create_users_table") && filepath.Ext(entry.Name()) == ".go" {
+			return nil
+		}
+	}
+
+	now := time.Now()
+	timestamp := now.Format("20060102_150405")
+	functionID := now.Format("20060102150405")
+	filename := timestamp + "_create_users_table.go"
+	path := filepath.Join(directory, filename)
+
+	roleColumn := ""
+	if mode == "multi" {
+		roleColumn = "\t\t\t\t\ttable.String(\"role\").DefaultValue(\"user\")\n"
+	}
+
+	content := fmt.Sprintf(`package migrations
+
+import (
+	"github.com/arfajhf/copytygo/database/migration"
+	"github.com/arfajhf/copytygo/database/schema"
+)
+
+func Register%s() error {
+	return migration.Register(
+		%q,
+		func() *schema.Blueprint {
+			return schema.Create("users", func(table *schema.Table) {
+				table.ID()
+				table.String("name")
+				table.String("email").Unique()
+				table.String("password")
+%s				table.Timestamps()
+			})
+		},
+		func() *schema.Blueprint {
+			return schema.Drop("users")
+		},
+	)
+}
+`, functionID, timestamp+"_create_users_table", roleColumn)
+
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return err
+	}
+
+	return GenerateMigrationRegistry(directory)
 }
