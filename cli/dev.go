@@ -21,10 +21,10 @@ import (
 	"sync"
 	"strings"
 
-	"github.com/arfajhf/copytygo/config"
-	"github.com/arfajhf/copytygo/database"
-	"github.com/arfajhf/copytygo/database/drivers"
-	"github.com/arfajhf/copytygo/validation"
+	"github.com/arfajhf/copytygo/v2/config"
+	"github.com/arfajhf/copytygo/v2/database"
+	"github.com/arfajhf/copytygo/v2/database/drivers"
+	"github.com/arfajhf/copytygo/v2/validation"
 )
 
 type liteRoute struct {
