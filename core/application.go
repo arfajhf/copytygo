@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/arfajhf/copytygo/config"
 	"github.com/arfajhf/copytygo/version"
@@ -78,6 +79,33 @@ func (app *Application) Delete(
 		path,
 		handler,
 	)
+}
+
+type ResourceController interface {
+	Index(*Context) error
+	Show(*Context) error
+	Store(*Context) error
+	Update(*Context) error
+	Destroy(*Context) error
+}
+
+func (app *Application) Resource(path string, controller ResourceController) *Application {
+	base := strings.TrimRight(path, "/")
+	if base == "" {
+		base = "/"
+	}
+	member := base
+	if member == "/" {
+		member = ""
+	}
+	member += "/:id"
+
+	app.Get(base, controller.Index)
+	app.Get(member, controller.Show)
+	app.Post(base, controller.Store)
+	app.Put(member, controller.Update)
+	app.Delete(member, controller.Destroy)
+	return app
 }
 
 func (app *Application) Group(
