@@ -23,8 +23,8 @@ func InstallAuth(mode, root string) error {
 	middleware := `package auth
 
 import (
-    copyauth "github.com/arfajhf/copytygo/v2/auth"
-    "github.com/arfajhf/copytygo/v2/core"
+    copyauth "github.com/arfajhf/copytygo/v2/v2/auth"
+    "github.com/arfajhf/copytygo/v2/v2/core"
 )
 
 func Middleware() core.Middleware {
@@ -84,8 +84,8 @@ func makeAuthMigration(mode, directory string) error {
 	content := fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v2/database/migration"
-	"github.com/arfajhf/copytygo/v2/database/schema"
+	"github.com/arfajhf/copytygo/v2/v2/database/migration"
+	"github.com/arfajhf/copytygo/v2/v2/database/schema"
 )
 
 func Register%s() error {
@@ -132,8 +132,8 @@ func generateAuthRoutes(root string) error {
 package routes
 
 import (
-	copyauth "github.com/arfajhf/copytygo/v2/auth"
-	"github.com/arfajhf/copytygo/v2/core"
+	copyauth "github.com/arfajhf/copytygo/v2/v2/auth"
+	"github.com/arfajhf/copytygo/v2/v2/core"
 )
 
 func RegisterAuth(app *core.Application) {
