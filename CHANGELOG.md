@@ -58,4 +58,7 @@
 - Hid Lite Runtime database internals unless `APP_DEBUG=true`.
 - Migrated the v2 Go module path to `github.com/arfajhf/copytygo/v2`.
 - Added v2 unit coverage for resource routing, resource fields, auth middleware/roles, query safety and schema timestamps.
+- Made installed `ctg migrate` load migrations from the current project instead of the framework example package.
+- Added source-based project migration discovery for the CopyTyGo schema DSL.
+- Made generated migration function IDs collision-resistant while keeping legacy registry compatibility.
 
