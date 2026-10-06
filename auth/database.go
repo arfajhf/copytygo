@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/database"
-	"github.com/arfajhf/copytygo/database/drivers"
-	"github.com/arfajhf/copytygo/database/query"
-	"github.com/arfajhf/copytygo/security"
+	"github.com/arfajhf/copytygo/v2/database"
+	"github.com/arfajhf/copytygo/v2/database/drivers"
+	"github.com/arfajhf/copytygo/v2/database/query"
+	"github.com/arfajhf/copytygo/v2/security"
 )
 
 var (
