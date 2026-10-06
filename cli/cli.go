@@ -71,7 +71,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("\nProject:")
 	fmt.Println("  new <name>                 Create a CopyTyGo project")
 	fmt.Println("  dev [--lite]               Run development server with automatic Lite fallback")
-	fmt.Println("  doctor                     Check project and Lite Runtime health")
+	fmt.Println("  doctor [--db]              Check project, runtime, security and optional DB")
 	fmt.Println("  build                      Build application")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
