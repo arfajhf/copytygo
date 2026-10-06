@@ -2,6 +2,7 @@ package cli
 
 import (
     "net/http/httptest"
+    "net/http"
     "strings"
     "os"
     "path/filepath"
@@ -145,5 +146,81 @@ func (UserController) Store(ctx *core.Context) error {
     fields := liteValidateRequest(bad, route.Validation)
     if len(fields["name"]) == 0 || len(fields["email"]) == 0 {
         t.Fatalf("expected name and email errors, got %#v", fields)
+    }
+}
+
+
+func TestLiteMemoryCRUD(t *testing.T) {
+    liteMemoryStore.Lock()
+    liteMemoryStore.Buckets = make(map[string]*liteMemoryBucket)
+    liteMemoryStore.Unlock()
+
+    store := liteRoute{
+        Method: "POST",
+        Path: "/products",
+        ResourceAction: "store",
+        Resource: "products",
+        ResourceData: `{"name":"{{input:name}}"}`,
+    }
+
+    createReq := httptest.NewRequest("POST", "/products", strings.NewReader(`{"name":"Keyboard"}`))
+    createReq.Header.Set("Content-Type", "application/json")
+    createRec := httptest.NewRecorder()
+    handleLiteMemoryRoute(createRec, createReq, store, nil)
+
+    if createRec.Code != http.StatusCreated {
+        t.Fatalf("expected 201, got %d body=%s", createRec.Code, createRec.Body.String())
+    }
+
+    indexRec := httptest.NewRecorder()
+    handleLiteMemoryRoute(indexRec, httptest.NewRequest("GET", "/products", nil), liteRoute{
+        ResourceAction: "index",
+        Resource: "products",
+    }, nil)
+    if indexRec.Code != http.StatusOK || !strings.Contains(indexRec.Body.String(), "Keyboard") {
+        t.Fatalf("unexpected index response: %d %s", indexRec.Code, indexRec.Body.String())
+    }
+
+    showRec := httptest.NewRecorder()
+    handleLiteMemoryRoute(showRec, httptest.NewRequest("GET", "/products/1", nil), liteRoute{
+        ResourceAction: "show",
+        Resource: "products",
+        ResourceID: "{{param:id}}",
+    }, map[string]string{"id":"1"})
+    if showRec.Code != http.StatusOK || !strings.Contains(showRec.Body.String(), "Keyboard") {
+        t.Fatalf("unexpected show response: %d %s", showRec.Code, showRec.Body.String())
+    }
+
+    updateReq := httptest.NewRequest("PUT", "/products/1", strings.NewReader(`{"name":"Mouse"}`))
+    updateReq.Header.Set("Content-Type", "application/json")
+    updateRec := httptest.NewRecorder()
+    handleLiteMemoryRoute(updateRec, updateReq, liteRoute{
+        ResourceAction: "update",
+        Resource: "products",
+        ResourceID: "{{param:id}}",
+        ResourceData: `{"name":"{{input:name}}"}`,
+    }, map[string]string{"id":"1"})
+    if updateRec.Code != http.StatusOK || !strings.Contains(updateRec.Body.String(), "Mouse") {
+        t.Fatalf("unexpected update response: %d %s", updateRec.Code, updateRec.Body.String())
+    }
+
+    deleteRec := httptest.NewRecorder()
+    handleLiteMemoryRoute(deleteRec, httptest.NewRequest("DELETE", "/products/1", nil), liteRoute{
+        ResourceAction: "destroy",
+        Resource: "products",
+        ResourceID: "{{param:id}}",
+    }, map[string]string{"id":"1"})
+    if deleteRec.Code != http.StatusNoContent {
+        t.Fatalf("expected 204, got %d", deleteRec.Code)
+    }
+
+    missingRec := httptest.NewRecorder()
+    handleLiteMemoryRoute(missingRec, httptest.NewRequest("GET", "/products/1", nil), liteRoute{
+        ResourceAction: "show",
+        Resource: "products",
+        ResourceID: "{{param:id}}",
+    }, map[string]string{"id":"1"})
+    if missingRec.Code != http.StatusNotFound {
+        t.Fatalf("expected 404 after delete, got %d", missingRec.Code)
     }
 }
