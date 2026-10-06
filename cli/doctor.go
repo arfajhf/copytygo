@@ -239,14 +239,14 @@ func doctorSecurity() error {
 		return fmt.Errorf("password hashing verification failed")
 	}
 
-	token, err := security.SignToken("doctor-secret", security.Claims{
+	token, err := security.SignToken("copytygo-doctor-secret-0123456789abcdef", security.Claims{
 		Subject:   "doctor",
 		ExpiresAt: time.Now().Add(time.Minute).Unix(),
 	})
 	if err != nil {
 		return err
 	}
-	claims, err := security.VerifyToken("doctor-secret", token)
+	claims, err := security.VerifyToken("copytygo-doctor-secret-0123456789abcdef", token)
 	if err != nil || claims.Subject != "doctor" {
 		return fmt.Errorf("token verification failed")
 	}
