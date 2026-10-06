@@ -60,3 +60,30 @@ app.Get("/users/:id", func(ctx *core.Context) error {
 ```
 
 Controllers, arbitrary application logic, middleware execution, request binding/validation, database calls and general Go expressions still require Native Runtime while Lite support is expanded.
+
+
+### Controller methods
+
+Lite Runtime can now resolve simple controller instances declared in route files.
+
+```go
+import "myapp/app/controllers"
+
+func Register(app *core.Application) {
+    userController := controllers.UserController{}
+    app.Get("/users/:id", userController.Show)
+}
+```
+
+The controller method can use the same Lite-compatible response subset:
+
+```go
+func (UserController) Show(ctx *core.Context) error {
+    return ctx.JSON(core.Map{
+        "id": ctx.Param("id"),
+        "q":  ctx.Query("q"),
+    })
+}
+```
+
+Controller methods that execute arbitrary Go logic, database calls, middleware chains or unsupported expressions still require Native Runtime.
