@@ -1,121 +1,58 @@
 # CopyTyGo Development Runtime
 
-`ctg dev` prefers the native Go runtime because it provides complete Go compatibility.
-
-On Windows systems where Application Control blocks the temporary application executable, CopyTyGo detects the policy error and automatically falls back to Lite Runtime.
+CopyTyGo v2 keeps native Go as the primary development and production runtime.
 
 ```text
 ctg dev
   -> native Go runtime
-       -> success: application runs normally
-       -> Windows execution policy block: Lite Runtime
+       -> success: run the application normally
+       -> supported Windows Application Control block: Lite Runtime
 ```
 
-You can test Lite Runtime directly with:
+Force Lite Runtime with:
 
 ```powershell
 ctg dev --lite
 ```
 
-## Lite Runtime v1.1 scope
+## Lite Runtime v2
 
-Lite Runtime runs inside the already-installed `ctg` process and does not create a project executable. It currently discovers route declarations from `routes/*.go` and supports simple inline handlers returning:
+Lite Runtime executes inside the installed `ctg` process so Windows does not need to execute a newly generated application binary.
 
-```go
-ctx.Text("hello")
+Supported development flows include:
+
+- GET, POST, PUT, PATCH and DELETE routes
+- route parameters and query parameters
+- `ctx.Body()` and `ctx.Input()`
+- declarative validation
+- controller methods
+- `app.Resource(...)`
+- generated resource CRUD
+- MySQL/PostgreSQL resource CRUD
+- generated auth register/login/me routes
+- HTTP status responses
+- route hot reload
+- automatic free-port fallback
+
+Generated database resources can therefore keep working when native development execution is blocked.
+
+## Native-only Go behavior
+
+Lite Runtime is intentionally not a general Go interpreter. Arbitrary application expressions, custom package execution, complex service orchestration and unsupported middleware behavior still belong to Native Runtime.
+
+Production continues to use:
+
+```powershell
+ctg build
 ```
 
-or static scalar JSON maps:
+which produces a normal Go application.
 
-```go
-ctx.JSON(core.Map{"framework": "CopyTyGo", "status": "ok"})
+## Diagnostics
+
+```powershell
+ctg doctor
+ctg doctor --db
 ```
 
-Controllers, arbitrary Go packages, dynamic expressions, database calls, middleware execution and other general Go behavior require Native Runtime. CopyTyGo intentionally reports unsupported Lite behavior instead of pretending it is equivalent to compiled Go.
-
-Lite Runtime is a development fallback, not a production runtime. `ctg build` continues to produce a normal native Go application.
-
-
-### Current v1.1 development support
-
-Lite Runtime now understands:
-
-- GET, POST, PUT, PATCH and DELETE inline routes
-- route parameters using CopyTyGo syntax such as `/users/:id`
-- `ctx.Param("id")` inside Text/JSON responses
-- `ctx.Query("q")` inside Text/JSON responses
-- chained status responses such as `ctx.Status(201).JSON(...)`
-- automatic free-port selection when the configured port is busy
-- route hot reload without restarting `ctg dev --lite`
-
-Example:
-
-```go
-app.Get("/users/:id", func(ctx *core.Context) error {
-    return ctx.JSON(core.Map{
-        "id": ctx.Param("id"),
-        "q":  ctx.Query("q"),
-    })
-})
-```
-
-Controllers, arbitrary application logic, middleware execution, request binding/validation, database calls and general Go expressions still require Native Runtime while Lite support is expanded.
-
-
-### Controller methods
-
-Lite Runtime can now resolve simple controller instances declared in route files.
-
-```go
-import "myapp/app/controllers"
-
-func Register(app *core.Application) {
-    userController := controllers.UserController{}
-    app.Get("/users/:id", userController.Show)
-}
-```
-
-The controller method can use the same Lite-compatible response subset:
-
-```go
-func (UserController) Show(ctx *core.Context) error {
-    return ctx.JSON(core.Map{
-        "id": ctx.Param("id"),
-        "q":  ctx.Query("q"),
-    })
-}
-```
-
-Controller methods that execute arbitrary Go logic, database calls, middleware chains or unsupported expressions still require Native Runtime.
-
-
-### POST input and validation
-
-For controllers that should run in both Native and Lite development modes, CopyTyGo now supports direct input access:
-
-```go
-func (UserController) Store(ctx *core.Context) error {
-    if err := ctx.Validate(map[string]string{
-        "name":  "required|min:3",
-        "email": "required|email",
-    }); err != nil {
-        return err
-    }
-
-    return ctx.Status(201).JSON(core.Map{
-        "name":  ctx.Input("name"),
-        "email": ctx.Input("email"),
-    })
-}
-```
-
-Supported validation rules in this stage:
-
-- `required`
-- `email`
-- `integer`
-- `min:n`
-- `max:n`
-- `oneof:a,b,c`
-
-Native Runtime still keeps full `ctx.Bind(&target)` support for arbitrary Go structs. Lite Runtime intentionally does not attempt to interpret arbitrary struct binding yet; `ctx.Input` plus declarative validation is the portable development path for v1.1.
+Use `--db` when the project is configured with a live MySQL or PostgreSQL database.
