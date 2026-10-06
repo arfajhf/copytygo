@@ -87,3 +87,35 @@ func (UserController) Show(ctx *core.Context) error {
 ```
 
 Controller methods that execute arbitrary Go logic, database calls, middleware chains or unsupported expressions still require Native Runtime.
+
+
+### POST input and validation
+
+For controllers that should run in both Native and Lite development modes, CopyTyGo now supports direct input access:
+
+```go
+func (UserController) Store(ctx *core.Context) error {
+    if err := ctx.Validate(map[string]string{
+        "name":  "required|min:3",
+        "email": "required|email",
+    }); err != nil {
+        return err
+    }
+
+    return ctx.Status(201).JSON(core.Map{
+        "name":  ctx.Input("name"),
+        "email": ctx.Input("email"),
+    })
+}
+```
+
+Supported validation rules in this stage:
+
+- `required`
+- `email`
+- `integer`
+- `min:n`
+- `max:n`
+- `oneof:a,b,c`
+
+Native Runtime still keeps full `ctx.Bind(&target)` support for arbitrary Go structs. Lite Runtime intentionally does not attempt to interpret arbitrary struct binding yet; `ctx.Input` plus declarative validation is the portable development path for v1.1.
