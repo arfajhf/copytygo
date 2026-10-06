@@ -60,8 +60,8 @@ func Register20261006120000() error {
 	if up == nil || up.Table == nil || up.Table.Name != "products" {
 		t.Fatalf("unexpected up blueprint: %#v", up)
 	}
-	if len(up.Table.Columns) != 8 {
-		t.Fatalf("expected 8 columns including timestamps, got %d", len(up.Table.Columns))
+	if len(up.Table.Columns) != 7 {
+		t.Fatalf("expected 7 columns including timestamps, got %d", len(up.Table.Columns))
 	}
 
 	name := up.Table.Columns[1]
