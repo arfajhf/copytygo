@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type Context struct {
@@ -41,6 +42,7 @@ func (ctx *Context) Body() string {
 	if err != nil {
 		return ""
 	}
+	ctx.Request.Body = io.NopCloser(strings.NewReader(string(raw)))
 	return string(raw)
 }
 
