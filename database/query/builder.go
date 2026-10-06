@@ -93,6 +93,30 @@ func (b *Builder) WhereEq(column string, value any) *Builder {
 	return b.Where(column, "=", value)
 }
 
+func (b *Builder) WhereNull(column string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if !validIdentifier(column) {
+		b.err = fmt.Errorf("copytygo: invalid column name %q", column)
+		return b
+	}
+	b.where = append(b.where, column+" IS NULL")
+	return b
+}
+
+func (b *Builder) WhereNotNull(column string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if !validIdentifier(column) {
+		b.err = fmt.Errorf("copytygo: invalid column name %q", column)
+		return b
+	}
+	b.where = append(b.where, column+" IS NOT NULL")
+	return b
+}
+
 func (b *Builder) WhereAnyLike(columns []string, value string) *Builder {
 	if b.err != nil {
 		return b
