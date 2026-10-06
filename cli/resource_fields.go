@@ -192,7 +192,7 @@ func writeResourceMigration(name string, fields []ResourceField) error {
 	table := strings.ToLower(name) + "s"
 	now := time.Now()
 	timestamp := now.Format("20060102_150405")
-	functionID := now.Format("20060102150405")
+	functionID := migrationFunctionID(now.Format("20060102150405"), "create_"+table+"_table")
 	migrationName := timestamp + "_create_" + table + "_table"
 	path := filepath.Join(directory, migrationName+".go")
 
