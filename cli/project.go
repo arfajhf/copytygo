@@ -24,7 +24,7 @@ func NewProject(name string) error {
 	}
 	key, _ := GenerateKey()
 	files := map[string]string{
-		"go.mod":                 "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v2/v2 " + version.StableModule + "\n",
+		"go.mod":                 "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v2 " + version.StableModule + "\n",
 		".env":                   "APP_NAME=" + name + "\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=" + key + "\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=" + name + "\nDB_USERNAME=root\nDB_PASSWORD=\n",
 		".env.example":           "APP_NAME=CopyTyGo\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=copytygo\nDB_USERNAME=root\nDB_PASSWORD=\n",
 		"cmd/app/main.go":        strings.ReplaceAll(projectMain, "{{MODULE}}", name),
