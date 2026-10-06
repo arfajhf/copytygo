@@ -85,3 +85,10 @@ func Find(name string) (Migration, bool) {
 
 	return item, exists
 }
+
+
+func ResetRegistry() {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	registry = make(map[string]Migration)
+}

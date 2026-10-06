@@ -53,16 +53,25 @@ func GenerateMigrationRegistry(
 			continue
 		}
 
-		functionID :=
-			matches[1] + matches[2]
+		timestampID := matches[1] + matches[2]
+		newFunction := "Register" + migrationFunctionID(timestampID, matches[3])
+		oldFunction := "Register" + timestampID
+
+		functionName := newFunction
+		raw, readErr := os.ReadFile(filepath.Join(directory, name))
+		if readErr != nil {
+			return readErr
+		}
+		if !strings.Contains(string(raw), "func "+newFunction+"(") &&
+			strings.Contains(string(raw), "func "+oldFunction+"(") {
+			functionName = oldFunction
+		}
 
 		migrations = append(
 			migrations,
 			migrationRegistryEntry{
 				Filename: name,
-
-				Function: "Register" +
-					functionID,
+				Function: functionName,
 			},
 		)
 	}

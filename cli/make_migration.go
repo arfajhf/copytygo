@@ -17,6 +17,21 @@ func MakeMigration(
 	name string,
 	directory string,
 ) error {
+	return makeMigration(name, directory, false)
+}
+
+func MakeResourceMigration(
+	name string,
+	directory string,
+) error {
+	return makeMigration(name, directory, true)
+}
+
+func makeMigration(
+	name string,
+	directory string,
+	resource bool,
+) error {
 
 	name = strings.TrimSpace(
 		strings.ToLower(name),
@@ -68,8 +83,9 @@ func MakeMigration(
 		)
 	}
 
-	functionID := now.Format(
-		"20060102150405",
+	functionID := migrationFunctionID(
+		now.Format("20060102150405"),
+		name,
 	)
 
 	tableName := detectTableName(name)
@@ -79,6 +95,13 @@ func MakeMigration(
 		timestamp+"_"+name,
 		tableName,
 	)
+	if resource {
+		content = resourceMigrationTemplate(
+			functionID,
+			timestamp+"_"+name,
+			tableName,
+		)
+	}
 
 	if err := os.WriteFile(
 		path,
@@ -154,8 +177,8 @@ func migrationTemplate(
 	return fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/database/migration"
-	"github.com/arfajhf/copytygo/database/schema"
+	"github.com/arfajhf/copytygo/v2/database/migration"
+	"github.com/arfajhf/copytygo/v2/database/schema"
 )
 
 func Register%s() error {
@@ -188,4 +211,68 @@ func Register%s() error {
 		tableName,
 		tableName,
 	)
+}
+
+
+func resourceMigrationTemplate(
+	functionID string,
+	migrationName string,
+	tableName string,
+) string {
+	return fmt.Sprintf(`package migrations
+
+import (
+	"github.com/arfajhf/copytygo/v2/database/migration"
+	"github.com/arfajhf/copytygo/v2/database/schema"
+)
+
+func Register%s() error {
+	return migration.Register(
+		%q,
+
+		func() *schema.Blueprint {
+			return schema.Create(
+				%q,
+				func(table *schema.Table) {
+					table.ID()
+					table.String("name")
+					table.Timestamps()
+				},
+			)
+		},
+
+		func() *schema.Blueprint {
+			return schema.Drop(
+				%q,
+			)
+		},
+	)
+}
+`,
+		functionID,
+		migrationName,
+		tableName,
+		tableName,
+	)
+}
+
+
+func migrationFunctionID(timestamp, name string) string {
+	var builder strings.Builder
+	upperNext := true
+
+	for _, r := range name {
+		if r == '_' || r == '-' || r == ' ' {
+			upperNext = true
+			continue
+		}
+
+		if upperNext && r >= 'a' && r <= 'z' {
+			r = r - 'a' + 'A'
+		}
+		builder.WriteRune(r)
+		upperNext = false
+	}
+
+	return timestamp + builder.String()
 }

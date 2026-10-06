@@ -2,6 +2,8 @@ package schema
 
 type ColumnType string
 
+type Expression string
+
 const (
 	TypeID        ColumnType = "id"
 	TypeString    ColumnType = "string"
@@ -46,4 +48,9 @@ func (column *Column) DefaultValue(value any) *Column {
 	column.Default = value
 
 	return column
+}
+
+
+func Raw(value string) Expression {
+	return Expression(value)
 }

@@ -2,15 +2,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/arfajhf/copytygo/cli"
-	"github.com/arfajhf/copytygo/example/migrations"
 	"os"
+
+	"github.com/arfajhf/copytygo/v2/cli"
 )
 
 func main() {
 	app := cli.New()
 	cli.RegisterDeveloperCommands(app)
-	cli.RegisterMigrationCommands(app, "example/.env", migrations.Register)
+	cli.RegisterMigrationCommands(
+		app,
+		".env",
+		func() error {
+			return cli.RegisterProjectMigrations("database/migrations")
+		},
+	)
+
 	if err := app.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)

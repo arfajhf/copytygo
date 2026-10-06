@@ -111,8 +111,8 @@ func (table *Table) Timestamp(name string) *Column {
 }
 
 func (table *Table) Timestamps() {
-	table.Timestamp("created_at")
-	table.Timestamp("updated_at")
+	table.Timestamp("created_at").DefaultValue(Raw("CURRENT_TIMESTAMP"))
+	table.Timestamp("updated_at").DefaultValue(Raw("CURRENT_TIMESTAMP"))
 }
 
 func (table *Table) DateTime(name string) *Column  { return table.addColumn(name, TypeDateTime) }

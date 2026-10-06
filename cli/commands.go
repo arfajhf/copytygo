@@ -22,15 +22,24 @@ func RegisterDeveloperCommands(app *CLI) {
 	})
 	app.Command("make:controller", func(args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf("usage: ctg make:controller <name> [--resource]")
+			return fmt.Errorf("usage: ctg make:controller <name> [--resource|--memory-resource]")
 		}
-		resource := false
+		mode := ""
 		for _, arg := range args[1:] {
-			if arg == "--resource" {
-				resource = true
+			switch arg {
+			case "--resource":
+				mode = "resource"
+			case "--memory-resource":
+				mode = "memory"
 			}
 		}
-		return MakeControllerWithMode(args[0], filepath.Join("app", "controllers"), resource)
+		return MakeControllerWithMode(args[0], filepath.Join("app", "controllers"), mode)
+	})
+	app.Command("make:resource", func(args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("usage: ctg make:resource <name> [field:type ...]")
+		}
+		return MakeResourceWithFields(args[0], args[1:])
 	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {
@@ -65,6 +74,8 @@ func RegisterDeveloperCommands(app *CLI) {
 		}
 		return InstallAuth(mode, ".")
 	})
+	app.Command("db:check", DatabaseCheck)
+	app.Command("update", Update)
 	app.Command("dev", Dev)
 	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })

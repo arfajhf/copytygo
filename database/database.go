@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	connection *sql.DB
+	connection   *sql.DB
+	connectionMu sync.Mutex
 
 	driversMu sync.RWMutex
 	drivers   = make(map[string]Driver)
@@ -23,6 +24,9 @@ func RegisterDriver(driver Driver) {
 }
 
 func Connect() (*sql.DB, error) {
+	connectionMu.Lock()
+	defer connectionMu.Unlock()
+
 	if connection != nil {
 		return connection, nil
 	}
@@ -92,6 +96,9 @@ func Connection() (*sql.DB, error) {
 }
 
 func Close() error {
+	connectionMu.Lock()
+	defer connectionMu.Unlock()
+
 	if connection == nil {
 		return nil
 	}

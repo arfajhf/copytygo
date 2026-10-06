@@ -5,9 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/arfajhf/copytygo/version"
+	"github.com/arfajhf/copytygo/v2/security"
+	"github.com/arfajhf/copytygo/v2/version"
 )
 
 type doctorCheck struct {
@@ -15,17 +18,27 @@ type doctorCheck struct {
 	Err  error
 }
 
-func Doctor(_ []string) error {
+func Doctor(args []string) error {
 	fmt.Printf("CopyTyGo Doctor v%s\n", version.Framework)
 	fmt.Println("------------------------------")
 
 	checks := []doctorCheck{
-		{Name: "go.mod", Err: doctorFileContains("go.mod", "github.com/arfajhf/copytygo")},
+		{Name: "go.mod", Err: doctorFileContains("go.mod", "github.com/arfajhf/copytygo/v2")},
 		{Name: ".env", Err: doctorFileExists(".env")},
 		{Name: "routes", Err: doctorRoutes()},
 		{Name: "Lite params/query", Err: doctorLiteParams()},
 		{Name: "Lite validation", Err: doctorLiteValidation()},
 		{Name: "Lite CRUD memory", Err: doctorLiteCRUD()},
+		{Name: "resource routes", Err: doctorResourceRoutes()},
+		{Name: "migration registry", Err: doctorMigrationRegistry()},
+		{Name: "security", Err: doctorSecurity()},
+	}
+
+	for _, arg := range args {
+		if arg == "--db" {
+			checks = append(checks, doctorCheck{Name: "database", Err: databaseHealthCheck()})
+			break
+		}
 	}
 
 	failed := 0
@@ -162,5 +175,73 @@ func doctorLiteCRUD() error {
 		return fmt.Errorf("delete returned %d", remove.Code)
 	}
 
+	return nil
+}
+
+
+func doctorResourceRoutes() error {
+	if _, err := os.Stat(filepath.Join("routes", "resources.go")); err != nil {
+		// Projects without generated resources are still healthy.
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	raw, err := os.ReadFile(filepath.Join("routes", "resources.go"))
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(string(raw), "RegisterGeneratedResources") {
+		return fmt.Errorf("generated resource route registry is invalid")
+	}
+	return nil
+}
+
+func doctorMigrationRegistry() error {
+	path := filepath.Join("database", "migrations")
+	if _, err := os.Stat(path); err != nil {
+		return err
+	}
+
+	registry := filepath.Join(path, "registry.go")
+	if _, err := os.Stat(registry); err != nil {
+		// Empty projects may not have migrations yet.
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	raw, err := os.ReadFile(registry)
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(string(raw), "RegisterGenerated") {
+		return fmt.Errorf("migration registry is invalid")
+	}
+	return nil
+}
+
+func doctorSecurity() error {
+	hash, err := security.HashPassword("copytygo-doctor-password")
+	if err != nil {
+		return err
+	}
+	if !security.VerifyPassword("copytygo-doctor-password", hash) {
+		return fmt.Errorf("password hashing verification failed")
+	}
+
+	token, err := security.SignToken("doctor-secret", security.Claims{
+		Subject:   "doctor",
+		ExpiresAt: time.Now().Add(time.Minute).Unix(),
+	})
+	if err != nil {
+		return err
+	}
+	claims, err := security.VerifyToken("doctor-secret", token)
+	if err != nil || claims.Subject != "doctor" {
+		return fmt.Errorf("token verification failed")
+	}
 	return nil
 }

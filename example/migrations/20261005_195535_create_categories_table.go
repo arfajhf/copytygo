@@ -1,8 +1,8 @@
 package migrations
 
 import (
-	"github.com/arfajhf/copytygo/database/migration"
-	"github.com/arfajhf/copytygo/database/schema"
+	"github.com/arfajhf/copytygo/v2/database/migration"
+	"github.com/arfajhf/copytygo/v2/database/schema"
 )
 
 func Register20261005195535() error {

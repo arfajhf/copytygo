@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arfajhf/copytygo/database/schema"
+	"github.com/arfajhf/copytygo/v2/database/schema"
 )
 
 type MySQL struct{}
@@ -161,6 +161,9 @@ func compileMySQLColumn(
 func mysqlDefault(value any) string {
 
 	switch typed := value.(type) {
+
+	case schema.Expression:
+		return string(typed)
 
 	case string:
 		return "'" +

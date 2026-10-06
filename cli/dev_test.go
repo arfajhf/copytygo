@@ -12,7 +12,7 @@ import (
 func TestDiscoverLiteRoutes(t *testing.T) {
     dir := t.TempDir()
     source := `package routes
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
 func Register(app *core.Application) {
     app.Get("/api/health", func(ctx *core.Context) error {
         return ctx.JSON(core.Map{"framework":"CopyTyGo","status":"ok","ready":true})
@@ -54,7 +54,7 @@ func TestLiteParamsAndQuery(t *testing.T) {
 func TestLiteControllerHandler(t *testing.T) {
     dir := t.TempDir()
     source := `package controllers
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
 
 type UserController struct{}
 
@@ -90,7 +90,7 @@ func (UserController) Show(ctx *core.Context) error {
 
 func TestLiteInputAndValidation(t *testing.T) {
     source := `package controllers
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
 
 type UserController struct{}
 
@@ -223,4 +223,43 @@ func TestLiteMemoryCRUD(t *testing.T) {
     if missingRec.Code != http.StatusNotFound {
         t.Fatalf("expected 404 after delete, got %d", missingRec.Code)
     }
+}
+
+
+func TestLiteDiscoversGeneratedAuthRoutes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "auth.go")
+	source := `package routes
+
+import (
+	copyauth "github.com/arfajhf/copytygo/v2/auth"
+	"github.com/arfajhf/copytygo/v2/core"
+)
+
+func RegisterAuth(app *core.Application) {
+	copyauth.Routes(app, "user")
+}
+`
+
+	if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	routes, err := parseLiteRouteFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(routes) != 3 {
+		t.Fatalf("expected 3 auth routes, got %d", len(routes))
+	}
+
+	if routes[0].Path != "/api/auth/register" || routes[0].AuthAction != "register" || routes[0].AuthRole != "user" {
+		t.Fatalf("unexpected register route: %#v", routes[0])
+	}
+	if routes[1].Path != "/api/auth/login" || routes[1].AuthAction != "login" {
+		t.Fatalf("unexpected login route: %#v", routes[1])
+	}
+	if routes[2].Path != "/api/auth/me" || routes[2].AuthAction != "me" {
+		t.Fatalf("unexpected me route: %#v", routes[2])
+	}
 }

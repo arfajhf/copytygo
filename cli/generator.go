@@ -22,10 +22,10 @@ func writeGenerated(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 func MakeController(name, dir string) error {
-	return MakeControllerWithMode(name, dir, false)
+	return MakeControllerWithMode(name, dir, "")
 }
 
-func MakeControllerWithMode(name, dir string, resource bool) error {
+func MakeControllerWithMode(name, dir, mode string) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid controller name")
 	}
@@ -34,11 +34,59 @@ func MakeControllerWithMode(name, dir string, resource bool) error {
 	}
 
 	var body string
-	if resource {
-		resourceName := strings.ToLower(strings.TrimSuffix(name, "Controller")) + "s"
+	resourceName := strings.ToLower(strings.TrimSuffix(name, "Controller")) + "s"
+
+	switch mode {
+	case "resource":
 		body = fmt.Sprintf(`package controllers
 
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
+
+// copytygo:resource %s
+
+type %s struct{}
+
+func (%s) Index(ctx *core.Context) error {
+	return ctx.DBIndex("%s")
+}
+
+func (%s) Show(ctx *core.Context) error {
+	return ctx.DBShow("%s", ctx.Param("id"))
+}
+
+func (%s) Store(ctx *core.Context) error {
+	if err := ctx.Validate(map[string]string{
+		"name": "required|min:3",
+	}); err != nil {
+		return err
+	}
+
+	return ctx.DBStore("%s", core.Map{
+		"name": ctx.Input("name"),
+	})
+}
+
+func (%s) Update(ctx *core.Context) error {
+	if err := ctx.Validate(map[string]string{
+		"name": "required|min:3",
+	}); err != nil {
+		return err
+	}
+
+	return ctx.DBUpdate("%s", ctx.Param("id"), core.Map{
+		"name": ctx.Input("name"),
+	})
+}
+
+func (%s) Destroy(ctx *core.Context) error {
+	return ctx.DBDestroy("%s", ctx.Param("id"))
+}
+`, resourceName, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
+
+	case "memory":
+		body = fmt.Sprintf(`package controllers
+
+import "github.com/arfajhf/copytygo/v2/core"
 
 type %s struct{}
 
@@ -56,10 +104,7 @@ func (%s) Store(ctx *core.Context) error {
 	}); err != nil {
 		return err
 	}
-
-	return ctx.MemoryStore("%s", core.Map{
-		"name": ctx.Input("name"),
-	})
+	return ctx.MemoryStore("%s", core.Map{"name": ctx.Input("name")})
 }
 
 func (%s) Update(ctx *core.Context) error {
@@ -68,22 +113,25 @@ func (%s) Update(ctx *core.Context) error {
 	}); err != nil {
 		return err
 	}
-
-	return ctx.MemoryUpdate("%s", ctx.Param("id"), core.Map{
-		"name": ctx.Input("name"),
-	})
+	return ctx.MemoryUpdate("%s", ctx.Param("id"), core.Map{"name": ctx.Input("name")})
 }
 
 func (%s) Destroy(ctx *core.Context) error {
 	return ctx.MemoryDestroy("%s", ctx.Param("id"))
 }
 `, name, name, resourceName, name, resourceName, name, resourceName, name, resourceName, name, resourceName)
-	} else {
-		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
+
+	default:
+		body = fmt.Sprintf("package controllers\n\nimport \"github.com/arfajhf/copytygo/v2/core\"\n\ntype %s struct{}\n\nfunc (%s) Index(ctx *core.Context) error {\n\treturn ctx.JSON(core.Map{\"data\": []any{}})\n}\n", name, name)
 	}
 
 	return writeGenerated(filepath.Join(dir, strings.ToLower(strings.TrimSuffix(name, "Controller"))+"_controller.go"), body)
 }
+
+func MakeResource(name string) error {
+	return MakeResourceWithFields(name, nil)
+}
+
 func MakeModel(name, dir string) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid model name")
@@ -95,7 +143,7 @@ func MakeMiddleware(name, dir string) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid middleware name")
 	}
-	body := fmt.Sprintf("package middleware\n\nimport \"github.com/arfajhf/copytygo/core\"\n\nfunc %s() core.Middleware {\n\treturn func(next core.Handler) core.Handler {\n\t\treturn func(ctx *core.Context) error { return next(ctx) }\n\t}\n}\n", name)
+	body := fmt.Sprintf("package middleware\n\nimport \"github.com/arfajhf/copytygo/v2/core\"\n\nfunc %s() core.Middleware {\n\treturn func(next core.Handler) core.Handler {\n\t\treturn func(ctx *core.Context) error { return next(ctx) }\n\t}\n}\n", name)
 	return writeGenerated(filepath.Join(dir, strings.ToLower(name)+".go"), body)
 }
 func MakeService(name, dir string) error {

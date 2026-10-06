@@ -21,8 +21,12 @@ import (
 	"sync"
 	"strings"
 
-	"github.com/arfajhf/copytygo/config"
-	"github.com/arfajhf/copytygo/validation"
+	copyauth "github.com/arfajhf/copytygo/v2/auth"
+	"github.com/arfajhf/copytygo/v2/config"
+	"github.com/arfajhf/copytygo/v2/database"
+	"github.com/arfajhf/copytygo/v2/database/drivers"
+	"github.com/arfajhf/copytygo/v2/security"
+	"github.com/arfajhf/copytygo/v2/validation"
 )
 
 type liteRoute struct {
@@ -36,6 +40,8 @@ type liteRoute struct {
 	Resource       string
 	ResourceID     string
 	ResourceData   string
+	AuthAction     string
+	AuthRole       string
 }
 
 type liteMemoryBucket struct {
@@ -158,6 +164,14 @@ func runLiteDev() error {
 					})
 					return
 				}
+				if route.AuthAction != "" {
+					handleLiteAuthRoute(w, req, route)
+					return
+				}
+				if strings.HasPrefix(route.ResourceAction, "db:") {
+					handleLiteDatabaseRoute(w, req, route, params)
+					return
+				}
 				if route.ResourceAction != "" {
 					handleLiteMemoryRoute(w, req, route, params)
 					return
@@ -199,6 +213,217 @@ func runLiteDev() error {
 	fmt.Println()
 
 	return http.Serve(listener, requestLogMiddleware(mux))
+}
+
+func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRoute) {
+	data := liteRequestData(req)
+
+	switch route.AuthAction {
+	case "register":
+		session, err := copyauth.Register(
+			data["name"],
+			data["email"],
+			data["password"],
+			route.AuthRole,
+		)
+		if err != nil {
+			switch {
+			case errors.Is(err, copyauth.ErrEmailRegistered):
+				writeLiteJSON(w, http.StatusConflict, map[string]any{
+					"error": map[string]any{
+						"status": http.StatusConflict,
+						"message": "Email already registered",
+					},
+				})
+			case errors.Is(err, copyauth.ErrInvalidRegistration):
+				writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+					"error": map[string]any{
+						"status": http.StatusBadRequest,
+						"message": "Invalid registration data",
+					},
+				})
+			default:
+				writeLiteDatabaseError(w, err)
+			}
+			return
+		}
+		writeLiteJSON(w, http.StatusCreated, session)
+
+	case "login":
+		session, err := copyauth.Login(data["email"], data["password"])
+		if err != nil {
+			if errors.Is(err, copyauth.ErrInvalidCredentials) {
+				writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
+					"error": map[string]any{
+						"status": http.StatusUnauthorized,
+						"message": "Invalid credentials",
+					},
+				})
+				return
+			}
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, session)
+
+	case "me":
+		const prefix = "Bearer "
+		header := req.Header.Get("Authorization")
+		if !strings.HasPrefix(header, prefix) {
+			writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusUnauthorized,
+					"message": "Authentication required",
+				},
+			})
+			return
+		}
+
+		claims, err := security.VerifyToken(
+			config.Get("APP_KEY"),
+			strings.TrimPrefix(header, prefix),
+		)
+		if err != nil {
+			writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusUnauthorized,
+					"message": "Invalid authentication token",
+				},
+			})
+			return
+		}
+
+		writeLiteJSON(w, http.StatusOK, map[string]any{
+			"id": claims.Subject,
+			"role": claims.Role,
+			"name": claims.Data["name"],
+			"email": claims.Data["email"],
+			"exp": claims.ExpiresAt,
+		})
+	}
+}
+
+func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route liteRoute, params map[string]string) {
+	drivers.Register()
+
+	db, err := database.Connect()
+	if err != nil {
+		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]any{
+				"status": http.StatusInternalServerError,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	resource, err := database.NewResource(db, config.Get("DB_DRIVER", "mysql"), route.Resource)
+	if err != nil {
+		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]any{
+				"status": http.StatusInternalServerError,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	id := renderLiteBody(route.ResourceID, req, params)
+
+	switch route.ResourceAction {
+	case "db:index":
+		items, err := resource.Index()
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, map[string]any{"data": items})
+
+	case "db:show":
+		item, found, err := resource.Show(id)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		if !found {
+			writeLiteNotFound(w)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, item)
+
+	case "db:store":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+		item, err := resource.Store(data)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		writeLiteJSON(w, http.StatusCreated, item)
+
+	case "db:update":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+		item, found, err := resource.Update(id, data)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		if !found {
+			writeLiteNotFound(w)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, item)
+
+	case "db:destroy":
+		deleted, err := resource.Destroy(id)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		if !deleted {
+			writeLiteNotFound(w)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]any{
+				"status": http.StatusInternalServerError,
+				"message": "Unsupported Lite database action",
+			},
+		})
+	}
+}
+
+func writeLiteDatabaseError(w http.ResponseWriter, err error) {
+	message := "Database operation failed"
+	if config.GetBool("APP_DEBUG", false) {
+		message = err.Error()
+	}
+	writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+		"error": map[string]any{
+			"status": http.StatusInternalServerError,
+			"message": message,
+		},
+	})
 }
 
 func liteMemoryBucketFor(resource string) *liteMemoryBucket {
@@ -454,14 +679,102 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 		if !ok || len(call.Args) < 2 {
 			return true
 		}
+		if selector.Sel.Name == "Routes" && len(call.Args) == 2 {
+			if appIdent, ok := call.Args[0].(*ast.Ident); ok && appIdent.Name == "app" {
+				defaultRole, roleOK := stringLiteral(call.Args[1])
+				if roleOK {
+					routes = append(routes,
+						liteRoute{
+							Method: "POST",
+							Path: "/api/auth/register",
+							Status: http.StatusCreated,
+							ContentType: "application/json; charset=utf-8",
+							Validation: map[string]string{
+								"name": "required|min:3",
+								"email": "required|email",
+								"password": "required|min:8",
+							},
+							AuthAction: "register",
+							AuthRole: defaultRole,
+						},
+						liteRoute{
+							Method: "POST",
+							Path: "/api/auth/login",
+							Status: http.StatusOK,
+							ContentType: "application/json; charset=utf-8",
+							Validation: map[string]string{
+								"email": "required|email",
+								"password": "required|min:8",
+							},
+							AuthAction: "login",
+						},
+						liteRoute{
+							Method: "GET",
+							Path: "/api/auth/me",
+							Status: http.StatusOK,
+							ContentType: "application/json; charset=utf-8",
+							AuthAction: "me",
+						},
+					)
+					return true
+				}
+			}
+		}
+
 		method := strings.ToUpper(selector.Sel.Name)
+		routePath, ok := stringLiteral(call.Args[0])
+		if !ok {
+			return true
+		}
+
+		if method == "RESOURCE" {
+			instance, ok := call.Args[1].(*ast.Ident)
+			if !ok {
+				return true
+			}
+			controllerType, ok := controllerVars[instance.Name]
+			if !ok {
+				return true
+			}
+			base := strings.TrimRight(routePath, "/")
+			if base == "" {
+				base = "/"
+			}
+			member := base
+			if member == "/" {
+				member = ""
+			}
+			member += "/:id"
+
+			definitions := []struct {
+				Method string
+				Path   string
+				Handler string
+			}{
+				{"GET", base, "Index"},
+				{"GET", member, "Show"},
+				{"POST", base, "Store"},
+				{"PUT", member, "Update"},
+				{"DELETE", member, "Destroy"},
+			}
+			for _, definition := range definitions {
+				route, supported, controllerErr := parseLiteControllerHandler(
+					filepath.Join("app", "controllers"),
+					controllerType,
+					definition.Handler,
+					definition.Method,
+					definition.Path,
+				)
+				if controllerErr == nil && supported {
+					routes = append(routes, route)
+				}
+			}
+			return true
+		}
+
 		switch method {
 		case "GET", "POST", "PUT", "PATCH", "DELETE":
 		default:
-			return true
-		}
-		routePath, ok := stringLiteral(call.Args[0])
-		if !ok {
 			return true
 		}
 
@@ -635,6 +948,97 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			}
 			route.ContentType = "application/json; charset=utf-8"
 			route.Body = body + "\n"
+			return route, true
+
+		case "DBIndex":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:index"
+			route.Resource = resource
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBShow":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:show"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBStore":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:store"
+			route.Resource = resource
+			route.ResourceData = data
+			route.Status = http.StatusCreated
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBUpdate":
+			if len(call.Args) != 3 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[2])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:update"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ResourceData = data
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBDestroy":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:destroy"
+			route.Resource = resource
+			route.ResourceID = id
+			route.Status = http.StatusNoContent
 			return route, true
 
 		case "MemoryIndex":

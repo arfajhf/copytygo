@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arfajhf/copytygo/database/schema"
+	"github.com/arfajhf/copytygo/v2/database/schema"
 )
 
 type PostgreSQL struct{}
@@ -160,6 +160,9 @@ func compilePostgresColumn(
 func postgresDefault(value any) string {
 
 	switch typed := value.(type) {
+
+	case schema.Expression:
+		return string(typed)
 
 	case string:
 		return "'" +
