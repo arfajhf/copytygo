@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arfajhf/copytygo/v3/config"
 	"github.com/arfajhf/copytygo/v3/security"
 	"github.com/arfajhf/copytygo/v3/version"
 )
@@ -35,9 +36,15 @@ func Doctor(args []string) error {
 	}
 
 	for _, arg := range args {
-		if arg == "--db" {
+		switch arg {
+		case "--db":
 			checks = append(checks, doctorCheck{Name: "database", Err: databaseHealthCheck()})
-			break
+		case "--production":
+			checks = append(checks,
+				doctorCheck{Name: "production env", Err: doctorProductionEnv()},
+				doctorCheck{Name: "production debug", Err: doctorProductionDebug()},
+				doctorCheck{Name: "production key", Err: doctorProductionKey()},
+			)
 		}
 	}
 
@@ -242,6 +249,41 @@ func doctorSecurity() error {
 	claims, err := security.VerifyToken("doctor-secret", token)
 	if err != nil || claims.Subject != "doctor" {
 		return fmt.Errorf("token verification failed")
+	}
+	return nil
+}
+
+
+func doctorProductionEnv() error {
+	if err := config.LoadEnv(".env"); err != nil {
+		return err
+	}
+	if strings.ToLower(strings.TrimSpace(config.Get("APP_ENV"))) != "production" {
+		return fmt.Errorf("APP_ENV must be production")
+	}
+	return nil
+}
+
+func doctorProductionDebug() error {
+	if err := config.LoadEnv(".env"); err != nil {
+		return err
+	}
+	if config.GetBool("APP_DEBUG", false) {
+		return fmt.Errorf("APP_DEBUG must be false in production")
+	}
+	return nil
+}
+
+func doctorProductionKey() error {
+	if err := config.LoadEnv(".env"); err != nil {
+		return err
+	}
+	key := strings.TrimSpace(config.Get("APP_KEY"))
+	if key == "" {
+		return fmt.Errorf("APP_KEY is required")
+	}
+	if len(key) < 32 {
+		return fmt.Errorf("APP_KEY is too short; generate a new key with ctg key:generate")
 	}
 	return nil
 }
