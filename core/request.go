@@ -177,6 +177,12 @@ func (ctx *Context) Validate(rules map[string]string) error {
 				v.Email(field)
 			case rule == "integer":
 				v.Integer(field)
+			case rule == "numeric":
+				v.Numeric(field)
+			case rule == "boolean":
+				v.Boolean(field)
+			case rule == "uuid":
+				v.UUID(field)
 			case strings.HasPrefix(rule, "min:"):
 				if n, err := strconv.Atoi(strings.TrimPrefix(rule, "min:")); err == nil {
 					v.Min(field, n)
