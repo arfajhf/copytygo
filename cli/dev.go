@@ -374,11 +374,17 @@ func liteStringExpr(expr ast.Expr) (string, bool) {
 		return value, true
 	}
 	call, ok := expr.(*ast.CallExpr)
-	if !ok || len(call.Args) != 1 {
+	if !ok {
 		return "", false
 	}
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
+		return "", false
+	}
+	if sel.Sel.Name == "Body" && len(call.Args) == 0 {
+		return "{{body}}", true
+	}
+	if len(call.Args) != 1 {
 		return "", false
 	}
 	name, ok := stringLiteral(call.Args[0])
@@ -390,8 +396,6 @@ func liteStringExpr(expr ast.Expr) (string, bool) {
 		return "{{param:" + name + "}}", true
 	case "Query":
 		return "{{query:" + name + "}}", true
-	case "Body":
-		return "{{body}}", true
 	}
 	return "", false
 }
