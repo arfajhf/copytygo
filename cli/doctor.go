@@ -18,7 +18,7 @@ type doctorCheck struct {
 	Err  error
 }
 
-func Doctor(_ []string) error {
+func Doctor(args []string) error {
 	fmt.Printf("CopyTyGo Doctor v%s\n", version.Framework)
 	fmt.Println("------------------------------")
 
@@ -32,6 +32,13 @@ func Doctor(_ []string) error {
 		{Name: "resource routes", Err: doctorResourceRoutes()},
 		{Name: "migration registry", Err: doctorMigrationRegistry()},
 		{Name: "security", Err: doctorSecurity()},
+	}
+
+	for _, arg := range args {
+		if arg == "--db" {
+			checks = append(checks, doctorCheck{Name: "database", Err: databaseHealthCheck()})
+			break
+		}
 	}
 
 	failed := 0
