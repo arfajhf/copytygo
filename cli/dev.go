@@ -21,9 +21,11 @@ import (
 	"sync"
 	"strings"
 
+	copyauth "github.com/arfajhf/copytygo/v2/auth"
 	"github.com/arfajhf/copytygo/v2/config"
 	"github.com/arfajhf/copytygo/v2/database"
 	"github.com/arfajhf/copytygo/v2/database/drivers"
+	"github.com/arfajhf/copytygo/v2/security"
 	"github.com/arfajhf/copytygo/v2/validation"
 )
 
@@ -38,6 +40,8 @@ type liteRoute struct {
 	Resource       string
 	ResourceID     string
 	ResourceData   string
+	AuthAction     string
+	AuthRole       string
 }
 
 type liteMemoryBucket struct {
@@ -160,6 +164,10 @@ func runLiteDev() error {
 					})
 					return
 				}
+				if route.AuthAction != "" {
+					handleLiteAuthRoute(w, req, route)
+					return
+				}
 				if strings.HasPrefix(route.ResourceAction, "db:") {
 					handleLiteDatabaseRoute(w, req, route, params)
 					return
@@ -205,6 +213,94 @@ func runLiteDev() error {
 	fmt.Println()
 
 	return http.Serve(listener, requestLogMiddleware(mux))
+}
+
+func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRoute) {
+	data := liteRequestData(req)
+
+	switch route.AuthAction {
+	case "register":
+		session, err := copyauth.Register(
+			data["name"],
+			data["email"],
+			data["password"],
+			route.AuthRole,
+		)
+		if err != nil {
+			switch {
+			case errors.Is(err, copyauth.ErrEmailRegistered):
+				writeLiteJSON(w, http.StatusConflict, map[string]any{
+					"error": map[string]any{
+						"status": http.StatusConflict,
+						"message": "Email already registered",
+					},
+				})
+			case errors.Is(err, copyauth.ErrInvalidRegistration):
+				writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+					"error": map[string]any{
+						"status": http.StatusBadRequest,
+						"message": "Invalid registration data",
+					},
+				})
+			default:
+				writeLiteDatabaseError(w, err)
+			}
+			return
+		}
+		writeLiteJSON(w, http.StatusCreated, session)
+
+	case "login":
+		session, err := copyauth.Login(data["email"], data["password"])
+		if err != nil {
+			if errors.Is(err, copyauth.ErrInvalidCredentials) {
+				writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
+					"error": map[string]any{
+						"status": http.StatusUnauthorized,
+						"message": "Invalid credentials",
+					},
+				})
+				return
+			}
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, session)
+
+	case "me":
+		const prefix = "Bearer "
+		header := req.Header.Get("Authorization")
+		if !strings.HasPrefix(header, prefix) {
+			writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusUnauthorized,
+					"message": "Authentication required",
+				},
+			})
+			return
+		}
+
+		claims, err := security.VerifyToken(
+			config.Get("APP_KEY"),
+			strings.TrimPrefix(header, prefix),
+		)
+		if err != nil {
+			writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusUnauthorized,
+					"message": "Invalid authentication token",
+				},
+			})
+			return
+		}
+
+		writeLiteJSON(w, http.StatusOK, map[string]any{
+			"id": claims.Subject,
+			"role": claims.Role,
+			"name": claims.Data["name"],
+			"email": claims.Data["email"],
+			"exp": claims.ExpiresAt,
+		})
+	}
 }
 
 func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route liteRoute, params map[string]string) {
@@ -583,6 +679,48 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 		if !ok || len(call.Args) < 2 {
 			return true
 		}
+		if selector.Sel.Name == "Routes" && len(call.Args) == 2 {
+			if appIdent, ok := call.Args[0].(*ast.Ident); ok && appIdent.Name == "app" {
+				defaultRole, roleOK := stringLiteral(call.Args[1])
+				if roleOK {
+					routes = append(routes,
+						liteRoute{
+							Method: "POST",
+							Path: "/api/auth/register",
+							Status: http.StatusCreated,
+							ContentType: "application/json; charset=utf-8",
+							Validation: map[string]string{
+								"name": "required|min:3",
+								"email": "required|email",
+								"password": "required|min:8",
+							},
+							AuthAction: "register",
+							AuthRole: defaultRole,
+						},
+						liteRoute{
+							Method: "POST",
+							Path: "/api/auth/login",
+							Status: http.StatusOK,
+							ContentType: "application/json; charset=utf-8",
+							Validation: map[string]string{
+								"email": "required|email",
+								"password": "required|min:8",
+							},
+							AuthAction: "login",
+						},
+						liteRoute{
+							Method: "GET",
+							Path: "/api/auth/me",
+							Status: http.StatusOK,
+							ContentType: "application/json; charset=utf-8",
+							AuthAction: "me",
+						},
+					)
+					return true
+				}
+			}
+		}
+
 		method := strings.ToUpper(selector.Sel.Name)
 		routePath, ok := stringLiteral(call.Args[0])
 		if !ok {
