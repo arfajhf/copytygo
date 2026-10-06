@@ -146,6 +146,10 @@ func MakeResource(name string) error {
 		return err
 	}
 
+	if err := GenerateResourceRoutes("."); err != nil {
+		return fmt.Errorf("copytygo: resource files created, but route generation failed: %w", err)
+	}
+
 	fmt.Println()
 	fmt.Printf("Resource %s created.\n", name)
 	fmt.Println("Register it with:")
