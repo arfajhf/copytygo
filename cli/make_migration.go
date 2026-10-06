@@ -83,8 +83,9 @@ func makeMigration(
 		)
 	}
 
-	functionID := now.Format(
-		"20060102150405",
+	functionID := migrationFunctionID(
+		now.Format("20060102150405"),
+		name,
 	)
 
 	tableName := detectTableName(name)
@@ -253,4 +254,25 @@ func Register%s() error {
 		tableName,
 		tableName,
 	)
+}
+
+
+func migrationFunctionID(timestamp, name string) string {
+	var builder strings.Builder
+	upperNext := true
+
+	for _, r := range name {
+		if r == '_' || r == '-' || r == ' ' {
+			upperNext = true
+			continue
+		}
+
+		if upperNext && r >= 'a' && r <= 'z' {
+			r = r - 'a' + 'A'
+		}
+		builder.WriteRune(r)
+		upperNext = false
+	}
+
+	return timestamp + builder.String()
 }
