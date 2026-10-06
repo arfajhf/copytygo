@@ -9,6 +9,43 @@ import (
 	"strings"
 )
 
+func (ctx *Context) Input(name string) string {
+	if ctx.Request == nil {
+		return ""
+	}
+
+	contentType := ctx.Request.Header.Get("Content-Type")
+	mediaType, _, _ := mime.ParseMediaType(contentType)
+
+	switch mediaType {
+	case "application/json":
+		var data map[string]any
+		decoder := json.NewDecoder(ctx.Request.Body)
+		if err := decoder.Decode(&data); err != nil {
+			return ""
+		}
+		value, ok := data[name]
+		if !ok || value == nil {
+			return ""
+		}
+		switch v := value.(type) {
+		case string:
+			return v
+		default:
+			raw, err := json.Marshal(v)
+			if err != nil {
+				return ""
+			}
+			return string(raw)
+		}
+	default:
+		if err := ctx.Request.ParseForm(); err != nil {
+			return ""
+		}
+		return ctx.Request.FormValue(name)
+	}
+}
+
 func (ctx *Context) Bind(target any) error {
 	contentType := ctx.Request.Header.Get("Content-Type")
 
