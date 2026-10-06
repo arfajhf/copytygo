@@ -223,6 +223,8 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 		return nil, err
 	}
 
+	controllerVars := discoverControllerVars(file)
+
 	var routes []liteRoute
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -243,17 +245,126 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 		if !ok {
 			return true
 		}
-		handler, ok := call.Args[1].(*ast.FuncLit)
-		if !ok {
+
+		if handler, ok := call.Args[1].(*ast.FuncLit); ok {
+			route, supported := parseLiteHandler(method, routePath, handler)
+			if supported {
+				routes = append(routes, route)
+			}
 			return true
 		}
-		route, ok := parseLiteHandler(method, routePath, handler)
-		if ok {
-			routes = append(routes, route)
+
+		if handler, ok := call.Args[1].(*ast.SelectorExpr); ok {
+			instance, ok := handler.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			controllerType, ok := controllerVars[instance.Name]
+			if !ok {
+				return true
+			}
+			route, supported, controllerErr := parseLiteControllerHandler(
+				filepath.Join("app", "controllers"),
+				controllerType,
+				handler.Sel.Name,
+				method,
+				routePath,
+			)
+			if controllerErr != nil {
+				return true
+			}
+			if supported {
+				routes = append(routes, route)
+			}
 		}
 		return true
 	})
 	return routes, nil
+}
+
+func discoverControllerVars(file *ast.File) map[string]string {
+	out := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		assign, ok := n.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		for i, rhs := range assign.Rhs {
+			if i >= len(assign.Lhs) {
+				break
+			}
+			name, ok := assign.Lhs[i].(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if controllerType, ok := controllerTypeFromExpr(rhs); ok {
+				out[name.Name] = controllerType
+			}
+		}
+		return true
+	})
+	return out
+}
+
+func controllerTypeFromExpr(expr ast.Expr) (string, bool) {
+	if unary, ok := expr.(*ast.UnaryExpr); ok {
+		expr = unary.X
+	}
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return "", false
+	}
+	switch typ := composite.Type.(type) {
+	case *ast.SelectorExpr:
+		return typ.Sel.Name, true
+	case *ast.Ident:
+		return typ.Name, true
+	default:
+		return "", false
+	}
+}
+
+func parseLiteControllerHandler(dir, controllerType, method, httpMethod, routePath string) (liteRoute, bool, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return liteRoute{}, false, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		fset := token.NewFileSet()
+		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil {
+			return liteRoute{}, false, err
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || fn.Name.Name != method || fn.Body == nil {
+				continue
+			}
+			if !receiverMatches(fn, controllerType) {
+				continue
+			}
+			handler := &ast.FuncLit{Body: fn.Body}
+			route, supported := parseLiteHandler(httpMethod, routePath, handler)
+			return route, supported, nil
+		}
+	}
+	return liteRoute{}, false, nil
+}
+
+func receiverMatches(fn *ast.FuncDecl, controllerType string) bool {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return false
+	}
+	expr := fn.Recv.List[0].Type
+	if star, ok := expr.(*ast.StarExpr); ok {
+		expr = star.X
+	}
+	ident, ok := expr.(*ast.Ident)
+	return ok && ident.Name == controllerType
 }
 
 func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, bool) {
