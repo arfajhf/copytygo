@@ -61,6 +61,16 @@ func RequestLogger() Middleware {
 			err := next(ctx)
 
 			status := writer.status
+			if status == 0 && err != nil {
+				switch typed := err.(type) {
+				case *ValidationError:
+					status = http.StatusUnprocessableEntity
+				case *HTTPError:
+					status = typed.Status
+				default:
+					status = http.StatusInternalServerError
+				}
+			}
 			if status == 0 {
 				status = ctx.statusCode
 			}
