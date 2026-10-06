@@ -29,6 +29,7 @@ func Register20261006120000() error {
 				table.Text("description").Nullable()
 				table.Boolean("active").DefaultValue(true)
 				table.Timestamps()
+				table.SoftDeletes()
 			})
 		},
 		func() *schema.Blueprint {
@@ -60,8 +61,8 @@ func Register20261006120000() error {
 	if up == nil || up.Table == nil || up.Table.Name != "products" {
 		t.Fatalf("unexpected up blueprint: %#v", up)
 	}
-	if len(up.Table.Columns) != 7 {
-		t.Fatalf("expected 7 columns including timestamps, got %d", len(up.Table.Columns))
+	if len(up.Table.Columns) != 8 {
+		t.Fatalf("expected 8 columns including timestamps and deleted_at, got %d", len(up.Table.Columns))
 	}
 
 	name := up.Table.Columns[1]
@@ -77,6 +78,11 @@ func Register20261006120000() error {
 	active := up.Table.Columns[4]
 	if !active.HasDefault || active.Default != true {
 		t.Fatalf("expected active default true: %#v", active)
+	}
+
+	deletedAt := up.Table.Columns[7]
+	if deletedAt.Name != "deleted_at" || !deletedAt.IsNullable {
+		t.Fatalf("expected nullable deleted_at column: %#v", deletedAt)
 	}
 
 	down := items[0].Down()
