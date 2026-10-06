@@ -4,8 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
+)
+
+var identifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*package query
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"regexp"
+	"sort"
+	"strings"
+)
+
 )
 
 type Builder struct {
@@ -17,24 +31,59 @@ type Builder struct {
 	order         string
 	limit         int
 	offset        int
+	err           error
 }
 
 func Table(db *sql.DB, driver, table string) *Builder {
-	return &Builder{db: db, driver: driver, table: table, columns: []string{"*"}}
+	builder := &Builder{db: db, driver: driver, table: table, columns: []string{"*"}}
+	if db == nil {
+		builder.err = fmt.Errorf("copytygo: query database connection is nil")
+	} else if !validIdentifier(table) {
+		builder.err = fmt.Errorf("copytygo: invalid table name %q", table)
+	}
+	return builder
 }
 func (b *Builder) Select(columns ...string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	for _, column := range columns {
+		if column != "*" && !validIdentifier(column) {
+			b.err = fmt.Errorf("copytygo: invalid column name %q", column)
+			return b
+		}
+	}
 	if len(columns) > 0 {
 		b.columns = columns
 	}
 	return b
 }
 func (b *Builder) Where(column, operator string, value any) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if !validIdentifier(column) {
+		b.err = fmt.Errorf("copytygo: invalid column name %q", column)
+		return b
+	}
+	operator = strings.ToUpper(strings.TrimSpace(operator))
+	if !validOperator(operator) {
+		b.err = fmt.Errorf("copytygo: unsupported query operator %q", operator)
+		return b
+	}
 	b.args = append(b.args, value)
 	b.where = append(b.where, fmt.Sprintf("%s %s %s", column, operator, b.placeholder(len(b.args))))
 	return b
 }
 func (b *Builder) WhereEq(column string, value any) *Builder { return b.Where(column, "=", value) }
 func (b *Builder) OrderBy(column, direction string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if !validIdentifier(column) {
+		b.err = fmt.Errorf("copytygo: invalid order column %q", column)
+		return b
+	}
 	direction = strings.ToUpper(direction)
 	if direction != "DESC" {
 		direction = "ASC"
@@ -61,10 +110,16 @@ func (b *Builder) SQL() (string, []any) {
 	return q, b.args
 }
 func (b *Builder) Rows(ctx context.Context) (*sql.Rows, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
 	q, args := b.SQL()
 	return b.db.QueryContext(ctx, q, args...)
 }
 func (b *Builder) Count(ctx context.Context) (int64, error) {
+	if b.err != nil {
+		return 0, b.err
+	}
 	clone := *b
 	clone.columns = []string{"COUNT(*)"}
 	clone.order = ""
@@ -76,12 +131,18 @@ func (b *Builder) Count(ctx context.Context) (int64, error) {
 	return n, err
 }
 func (b *Builder) Insert(ctx context.Context, values map[string]any) (sql.Result, error) {
+	if err := b.validateWriteValues(values); err != nil {
+		return nil, err
+	}
 	cols, args, marks := b.insertParts(values)
 	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", b.table, strings.Join(cols, ", "), strings.Join(marks, ", "))
 	return b.db.ExecContext(ctx, q, args...)
 }
 
 func (b *Builder) InsertID(ctx context.Context, values map[string]any) (int64, error) {
+	if err := b.validateWriteValues(values); err != nil {
+		return 0, err
+	}
 	cols, args, marks := b.insertParts(values)
 	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", b.table, strings.Join(cols, ", "), strings.Join(marks, ", "))
 
@@ -117,6 +178,9 @@ func (b *Builder) insertParts(values map[string]any) ([]string, []any, []string)
 	return cols, args, marks
 }
 func (b *Builder) Update(ctx context.Context, values map[string]any) (sql.Result, error) {
+	if err := b.validateWriteValues(values); err != nil {
+		return nil, err
+	}
 	cols := make([]string, 0, len(values))
 	for k := range values {
 		cols = append(cols, k)
@@ -152,6 +216,9 @@ func (b *Builder) Update(ctx context.Context, values map[string]any) (sql.Result
 	return b.db.ExecContext(ctx, q, args...)
 }
 func (b *Builder) Delete(ctx context.Context) (sql.Result, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
 	q := "DELETE FROM " + b.table
 	if len(b.where) > 0 {
 		q += " WHERE " + strings.Join(b.where, " AND ")
@@ -225,4 +292,33 @@ func scanRows(rows *sql.Rows) ([]map[string]any, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+
+func (b *Builder) validateWriteValues(values map[string]any) error {
+	if b.err != nil {
+		return b.err
+	}
+	if len(values) == 0 {
+		return fmt.Errorf("copytygo: write values cannot be empty")
+	}
+	for column := range values {
+		if !validIdentifier(column) {
+			return fmt.Errorf("copytygo: invalid column name %q", column)
+		}
+	}
+	return nil
+}
+
+func validIdentifier(value string) bool {
+	return identifierPattern.MatchString(value)
+}
+
+func validOperator(operator string) bool {
+	switch operator {
+	case "=", "!=", "<>", ">", ">=", "<", "<=", "LIKE":
+		return true
+	default:
+		return false
+	}
 }
