@@ -66,6 +66,7 @@ func RegisterDeveloperCommands(app *CLI) {
 		return InstallAuth(mode, ".")
 	})
 	app.Command("dev", Dev)
+	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })
 	app.Command("build", func(_ []string) error {
 		cmd := exec.Command("go", "build", "-o", "build/app", "./cmd/app")
