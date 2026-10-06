@@ -126,6 +126,33 @@ func (%s) Destroy(ctx *core.Context) error {
 	return writeGenerated(filepath.Join(dir, strings.ToLower(strings.TrimSuffix(name, "Controller"))+"_controller.go"), body)
 }
 
+func MakeResource(name string) error {
+	if !safeName.MatchString(name) {
+		return fmt.Errorf("invalid resource name")
+	}
+
+	if err := MakeModel(name, filepath.Join("app", "models")); err != nil {
+		return err
+	}
+
+	if err := MakeControllerWithMode(name, filepath.Join("app", "controllers"), "resource"); err != nil {
+		return err
+	}
+
+	table := strings.ToLower(name) + "s"
+	if err := MakeMigration("create_"+table+"_table", filepath.Join("database", "migrations")); err != nil {
+		return err
+	}
+
+	fmt.Println()
+	fmt.Printf("Resource %s created.\n", name)
+	fmt.Println("Register it with:")
+	fmt.Printf("app.Resource(\"/%s\", controllers.%sController{})\n", table, name)
+	fmt.Println()
+
+	return nil
+}
+
 func MakeModel(name, dir string) error {
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid model name")
