@@ -45,6 +45,7 @@ type liteRoute struct {
 	Searchable     []string
 	Filterable     []string
 	Sortable       []string
+	SoftDeletes    bool
 }
 
 type liteMemoryBucket struct {
@@ -329,6 +330,9 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 			},
 		})
 		return
+	}
+	if route.SoftDeletes {
+		resource.WithSoftDeletes()
 	}
 
 	id := renderLiteBody(route.ResourceID, req, params)
@@ -979,13 +983,14 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 				return liteRoute{}, false
 			}
 			if len(call.Args) == 2 {
-				searchable, filterable, sortable, ok := parseLiteDBIndexOptions(call.Args[1])
+				searchable, filterable, sortable, softDeletes, ok := parseLiteDBIndexOptions(call.Args[1])
 				if !ok {
 					return liteRoute{}, false
 				}
 				route.Searchable = searchable
 				route.Filterable = filterable
 				route.Sortable = sortable
+				route.SoftDeletes = softDeletes
 			}
 			route.ResourceAction = "db:index"
 			route.Resource = resource
@@ -993,7 +998,7 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			return route, true
 
 		case "DBShow":
-			if len(call.Args) != 2 {
+			if len(call.Args) < 2 || len(call.Args) > 3 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -1007,11 +1012,18 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ResourceAction = "db:show"
 			route.Resource = resource
 			route.ResourceID = id
+			if len(call.Args) == 3 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[2])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.ContentType = "application/json; charset=utf-8"
 			return route, true
 
 		case "DBStore":
-			if len(call.Args) != 2 {
+			if len(call.Args) < 2 || len(call.Args) > 3 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -1025,12 +1037,19 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ResourceAction = "db:store"
 			route.Resource = resource
 			route.ResourceData = data
+			if len(call.Args) == 3 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[2])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.Status = http.StatusCreated
 			route.ContentType = "application/json; charset=utf-8"
 			return route, true
 
 		case "DBUpdate":
-			if len(call.Args) != 3 {
+			if len(call.Args) < 3 || len(call.Args) > 4 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -1049,11 +1068,18 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.Resource = resource
 			route.ResourceID = id
 			route.ResourceData = data
+			if len(call.Args) == 4 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[3])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.ContentType = "application/json; charset=utf-8"
 			return route, true
 
 		case "DBDestroy":
-			if len(call.Args) != 2 {
+			if len(call.Args) < 2 || len(call.Args) > 3 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -1067,6 +1093,13 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ResourceAction = "db:destroy"
 			route.Resource = resource
 			route.ResourceID = id
+			if len(call.Args) == 3 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[2])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.Status = http.StatusNoContent
 			return route, true
 
@@ -1165,15 +1198,16 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 	return liteRoute{}, false
 }
 
-func parseLiteDBIndexOptions(expr ast.Expr) ([]string, []string, []string, bool) {
+func parseLiteDBIndexOptions(expr ast.Expr) ([]string, []string, []string, bool, bool) {
 	composite, ok := expr.(*ast.CompositeLit)
 	if !ok {
-		return nil, nil, nil, false
+		return nil, nil, nil, false, false
 	}
 
 	var searchable []string
 	var filterable []string
 	var sortable []string
+	softDeletes := false
 
 	for _, element := range composite.Elts {
 		kv, ok := element.(*ast.KeyValueExpr)
@@ -1186,9 +1220,18 @@ func parseLiteDBIndexOptions(expr ast.Expr) ([]string, []string, []string, bool)
 			continue
 		}
 
+		if key.Name == "SoftDeletes" {
+			ident, ok := kv.Value.(*ast.Ident)
+			if !ok || (ident.Name != "true" && ident.Name != "false") {
+				return nil, nil, nil, false, false
+			}
+			softDeletes = ident.Name == "true"
+			continue
+		}
+
 		values, ok := liteStringSlice(kv.Value)
 		if !ok {
-			return nil, nil, nil, false
+			return nil, nil, nil, false, false
 		}
 
 		switch key.Name {
@@ -1201,7 +1244,30 @@ func parseLiteDBIndexOptions(expr ast.Expr) ([]string, []string, []string, bool)
 		}
 	}
 
-	return searchable, filterable, sortable, true
+	return searchable, filterable, sortable, softDeletes, true
+}
+
+func parseLiteDBResourceOptions(expr ast.Expr) (bool, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return false, false
+	}
+	for _, element := range composite.Elts {
+		kv, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok || key.Name != "SoftDeletes" {
+			continue
+		}
+		ident, ok := kv.Value.(*ast.Ident)
+		if !ok || (ident.Name != "true" && ident.Name != "false") {
+			return false, false
+		}
+		return ident.Name == "true", true
+	}
+	return false, true
 }
 
 func liteStringSlice(expr ast.Expr) ([]string, bool) {
