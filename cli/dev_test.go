@@ -47,3 +47,40 @@ func TestLiteParamsAndQuery(t *testing.T) {
         t.Fatalf("expected %s, got %s", expected, body)
     }
 }
+
+
+func TestLiteControllerHandler(t *testing.T) {
+    dir := t.TempDir()
+    source := `package controllers
+import "github.com/arfajhf/copytygo/core"
+
+type UserController struct{}
+
+func (UserController) Show(ctx *core.Context) error {
+    return ctx.JSON(core.Map{
+        "id": ctx.Param("id"),
+        "search": ctx.Query("q"),
+    })
+}
+`
+    if err := os.WriteFile(filepath.Join(dir, "user_controller.go"), []byte(source), 0644); err != nil {
+        t.Fatal(err)
+    }
+    route, ok, err := parseLiteControllerHandler(dir, "UserController", "Show", "GET", "/users/:id")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if !ok {
+        t.Fatal("expected controller handler to be supported")
+    }
+    req := httptest.NewRequest("GET", "/users/9?q=book", nil)
+    params, matched := matchLitePath(route.Path, "/users/9")
+    if !matched {
+        t.Fatal("expected controller route to match")
+    }
+    body := renderLiteBody(route.Body, req, params)
+    expected := `{"id":"9","search":"book"}` + "\n"
+    if body != expected {
+        t.Fatalf("expected %q, got %q", expected, body)
+    }
+}
