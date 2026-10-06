@@ -12,7 +12,7 @@ import (
 func TestDiscoverLiteRoutes(t *testing.T) {
     dir := t.TempDir()
     source := `package routes
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
 func Register(app *core.Application) {
     app.Get("/api/health", func(ctx *core.Context) error {
         return ctx.JSON(core.Map{"framework":"CopyTyGo","status":"ok","ready":true})
@@ -54,7 +54,7 @@ func TestLiteParamsAndQuery(t *testing.T) {
 func TestLiteControllerHandler(t *testing.T) {
     dir := t.TempDir()
     source := `package controllers
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
 
 type UserController struct{}
 
@@ -90,7 +90,7 @@ func (UserController) Show(ctx *core.Context) error {
 
 func TestLiteInputAndValidation(t *testing.T) {
     source := `package controllers
-import "github.com/arfajhf/copytygo/core"
+import "github.com/arfajhf/copytygo/v2/core"
 
 type UserController struct{}
 
