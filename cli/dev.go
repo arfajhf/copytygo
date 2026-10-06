@@ -318,10 +318,14 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 }
 
 func writeLiteDatabaseError(w http.ResponseWriter, err error) {
+	message := "Database operation failed"
+	if config.GetBool("APP_DEBUG", false) {
+		message = err.Error()
+	}
 	writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
 		"error": map[string]any{
 			"status": http.StatusInternalServerError,
-			"message": err.Error(),
+			"message": message,
 		},
 	})
 }
