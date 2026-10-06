@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arfajhf/copytygo/v2/core"
+	"github.com/arfajhf/copytygo/v3/core"
 )
 
 func TestRoutesRegisterAuthEndpoints(t *testing.T) {
