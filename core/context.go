@@ -13,6 +13,7 @@ type Context struct {
 
 	params     map[string]string
 	statusCode int
+	values     map[string]any
 }
 
 type Map map[string]any
@@ -23,6 +24,7 @@ func newContext(w http.ResponseWriter, r *http.Request) *Context {
 		Request:    r,
 		params:     make(map[string]string),
 		statusCode: http.StatusOK,
+		values:     make(map[string]any),
 	}
 }
 
@@ -131,3 +133,32 @@ func (ctx *Context) Cookie(name string) (string, bool) {
 }
 func (ctx *Context) SetCookie(cookie *http.Cookie) { http.SetCookie(ctx.Response, cookie) }
 func (ctx *Context) NoContent(status int) error    { ctx.Response.WriteHeader(status); return nil }
+
+
+func (ctx *Context) Set(key string, value any) {
+	if ctx.values == nil {
+		ctx.values = make(map[string]any)
+	}
+	ctx.values[key] = value
+}
+
+func (ctx *Context) Get(key string) (any, bool) {
+	if ctx.values == nil {
+		return nil, false
+	}
+	value, ok := ctx.values[key]
+	return value, ok
+}
+
+func ContextValue[T any](ctx *Context, key string) (T, bool) {
+	var zero T
+	value, ok := ctx.Get(key)
+	if !ok {
+		return zero, false
+	}
+	typed, ok := value.(T)
+	if !ok {
+		return zero, false
+	}
+	return typed, true
+}
