@@ -37,9 +37,9 @@ func RegisterDeveloperCommands(app *CLI) {
 	})
 	app.Command("make:resource", func(args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf("usage: ctg make:resource <name>")
+			return fmt.Errorf("usage: ctg make:resource <name> [field:type ...]")
 		}
-		return MakeResource(args[0])
+		return MakeResourceWithFields(args[0], args[1:])
 	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {
