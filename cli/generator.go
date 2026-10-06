@@ -140,7 +140,7 @@ func MakeResource(name string) error {
 	}
 
 	table := strings.ToLower(name) + "s"
-	if err := MakeMigration("create_"+table+"_table", filepath.Join("database", "migrations")); err != nil {
+	if err := MakeResourceMigration("create_"+table+"_table", filepath.Join("database", "migrations")); err != nil {
 		return err
 	}
 
