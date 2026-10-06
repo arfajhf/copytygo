@@ -78,7 +78,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("  update [version]           Update CLI and project dependency")
 	fmt.Println("\nGenerators:")
 	fmt.Println("  make:controller <name> [--resource|--memory-resource]")
-	fmt.Println("  make:resource <name>        Create model + DB controller + migration")
+	fmt.Println("  make:resource <name> [field:type ...]")
 	fmt.Println("  make:model <name>")
 	fmt.Println("  make:migration <name>")
 	fmt.Println("  make:middleware <name>")
