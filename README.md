@@ -1,4 +1,4 @@
-# CopyTyGo v1.1.0 RC
+# CopyTyGo v1.1.0
 
 CopyTyGo is an opinionated full-stack Go framework with a TypeScript-first frontend workflow. Its goal is simple: keep framework internals explicit and safe while giving application developers a small, convenient API.
 
