@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"github.com/arfajhf/copytygo/config"
+	"github.com/arfajhf/copytygo/database"
+	"github.com/arfajhf/copytygo/database/drivers"
 	"github.com/arfajhf/copytygo/validation"
 )
 
@@ -158,6 +160,10 @@ func runLiteDev() error {
 					})
 					return
 				}
+				if strings.HasPrefix(route.ResourceAction, "db:") {
+					handleLiteDatabaseRoute(w, req, route, params)
+					return
+				}
 				if route.ResourceAction != "" {
 					handleLiteMemoryRoute(w, req, route, params)
 					return
@@ -199,6 +205,125 @@ func runLiteDev() error {
 	fmt.Println()
 
 	return http.Serve(listener, requestLogMiddleware(mux))
+}
+
+func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route liteRoute, params map[string]string) {
+	drivers.Register()
+
+	db, err := database.Connect()
+	if err != nil {
+		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]any{
+				"status": http.StatusInternalServerError,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	resource, err := database.NewResource(db, config.Get("DB_DRIVER", "mysql"), route.Resource)
+	if err != nil {
+		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]any{
+				"status": http.StatusInternalServerError,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	id := renderLiteBody(route.ResourceID, req, params)
+
+	switch route.ResourceAction {
+	case "db:index":
+		items, err := resource.Index()
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, map[string]any{"data": items})
+
+	case "db:show":
+		item, found, err := resource.Show(id)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		if !found {
+			writeLiteNotFound(w)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, item)
+
+	case "db:store":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+		item, err := resource.Store(data)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		writeLiteJSON(w, http.StatusCreated, item)
+
+	case "db:update":
+		data, ok := decodeLiteResourceData(route.ResourceData, req, params)
+		if !ok {
+			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"status": http.StatusBadRequest,
+					"message": "Invalid resource data",
+				},
+			})
+			return
+		}
+		item, found, err := resource.Update(id, data)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		if !found {
+			writeLiteNotFound(w)
+			return
+		}
+		writeLiteJSON(w, http.StatusOK, item)
+
+	case "db:destroy":
+		deleted, err := resource.Destroy(id)
+		if err != nil {
+			writeLiteDatabaseError(w, err)
+			return
+		}
+		if !deleted {
+			writeLiteNotFound(w)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": map[string]any{
+				"status": http.StatusInternalServerError,
+				"message": "Unsupported Lite database action",
+			},
+		})
+	}
+}
+
+func writeLiteDatabaseError(w http.ResponseWriter, err error) {
+	writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
+		"error": map[string]any{
+			"status": http.StatusInternalServerError,
+			"message": err.Error(),
+		},
+	})
 }
 
 func liteMemoryBucketFor(resource string) *liteMemoryBucket {
@@ -635,6 +760,97 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			}
 			route.ContentType = "application/json; charset=utf-8"
 			route.Body = body + "\n"
+			return route, true
+
+		case "DBIndex":
+			if len(call.Args) != 1 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:index"
+			route.Resource = resource
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBShow":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:show"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBStore":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:store"
+			route.Resource = resource
+			route.ResourceData = data
+			route.Status = http.StatusCreated
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBUpdate":
+			if len(call.Args) != 3 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			data, ok := mapLiteralJSON(call.Args[2])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:update"
+			route.Resource = resource
+			route.ResourceID = id
+			route.ResourceData = data
+			route.ContentType = "application/json; charset=utf-8"
+			return route, true
+
+		case "DBDestroy":
+			if len(call.Args) != 2 {
+				return liteRoute{}, false
+			}
+			resource, ok := stringLiteral(call.Args[0])
+			if !ok {
+				return liteRoute{}, false
+			}
+			id, ok := liteStringExpr(call.Args[1])
+			if !ok {
+				return liteRoute{}, false
+			}
+			route.ResourceAction = "db:destroy"
+			route.Resource = resource
+			route.ResourceID = id
+			route.Status = http.StatusNoContent
 			return route, true
 
 		case "MemoryIndex":
