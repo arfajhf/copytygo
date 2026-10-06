@@ -29,7 +29,7 @@
 - Added CI configuration for test, vet and CLI build checks.
 - Docker, WSL and VM software remain optional and are not required by Lite Runtime.
 
-## v2.0.0-dev
+## v2.0.0-rc.1
 
 - Started the database-first resource layer for MySQL and PostgreSQL.
 - Added map-based query/model CRUD helpers and portable insert ID handling.
@@ -47,4 +47,15 @@
 - Upgraded the TypeScript starter with a reusable API client, bearer-token support, and Vite API proxying.
 - Expanded `ctg route:list` to show routes created by `app.Resource(...)`.
 - Expanded `ctg doctor` with resource-route, migration-registry, security, and optional live database checks via `--db`.
+- Added typed resource fields to `ctg make:resource`, including nullable `?` syntax.
+- Added ready-to-use auth HTTP routes for register, login and current-user lookup.
+- Added Lite Runtime support for generated auth routes.
+- Added typed auth errors and single-role/multi-role schema alignment.
+- Added `core.Application` support for the standard `http.Handler` interface.
+- Added automatic model connection with `model.Auto(...)`.
+- Hardened the query builder with identifier/operator validation and empty-write protection.
+- Made shared database connection initialization safe for concurrent requests.
+- Hid Lite Runtime database internals unless `APP_DEBUG=true`.
+- Migrated the v2 Go module path to `github.com/arfajhf/copytygo/v2`.
+- Added v2 unit coverage for resource routing, resource fields, auth middleware/roles, query safety and schema timestamps.
 
