@@ -72,7 +72,7 @@ func makeAuthMigration(mode, directory string) error {
 
 	now := time.Now()
 	timestamp := now.Format("20060102_150405")
-	functionID := now.Format("20060102150405")
+	functionID := migrationFunctionID(now.Format("20060102150405"), "create_users_table")
 	filename := timestamp + "_create_users_table.go"
 	path := filepath.Join(directory, filename)
 
