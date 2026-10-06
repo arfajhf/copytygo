@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/arfajhf/copytygo/database/query"
+	"github.com/arfajhf/copytygo/v2/database/query"
 )
 
 type Model struct {
