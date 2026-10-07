@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "version/version.go"
+      - ".github/workflows/release.yml"
 
 permissions:
   contents: write
@@ -95,35 +96,34 @@ jobs:
 
           echo "head_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Protect published releases
-        if: >
-          steps.existing.outputs.release_exists == 'true' &&
-          steps.existing.outputs.tag_sha != '' &&
-          steps.existing.outputs.tag_sha != steps.existing.outputs.head_sha
+      - name: Validate existing immutable tag
+        if: steps.existing.outputs.tag_exists == 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
+          TAG_SHA: ${{ steps.existing.outputs.tag_sha }}
         shell: bash
         run: |
-          echo "Release $TAG already exists but its tag does not point to this commit."
-          echo "Refusing to rewrite a published release tag."
-          exit 1
+          # A failed release may be retried after changing this workflow only.
+          # Go module tags must never move, even before a GitHub release exists.
+          git merge-base --is-ancestor "$TAG_SHA" "$GITHUB_SHA"
+          if ! git diff --quiet "$TAG_SHA" "$GITHUB_SHA" -- . ':!.github/workflows/release.yml'; then
+            echo "Refusing release: $TAG differs from main outside the release workflow."
+            echo "Use a new framework version; existing Go module tags are immutable."
+            exit 1
+          fi
 
-      - name: Create or repair tag
+      - name: Create tag
         if: >
           steps.existing.outputs.release_exists != 'true' &&
-          (
-            steps.existing.outputs.tag_exists != 'true' ||
-            steps.existing.outputs.tag_sha != steps.existing.outputs.head_sha
-          )
+          steps.existing.outputs.tag_exists != 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git tag -f -a "$TAG" "$GITHUB_SHA" -m "CopyTyGo $TAG"
-          git push --force origin "refs/tags/$TAG"
+          git tag -a "$TAG" "$GITHUB_SHA" -m "CopyTyGo $TAG"
+          git push origin "refs/tags/$TAG"
 
       - name: Verify installation from release tag
         if: steps.existing.outputs.release_exists != 'true'
@@ -173,7 +173,8 @@ jobs:
             exit 1
           fi
           grep -q 'CopyTyGo' "$TMP/welcome.html"
-          curl -fsS http://127.0.0.1:18083/__copytygo | grep -q 'CopyTyGo'
+          curl -fsS http://127.0.0.1:18083/__copytygo > "$TMP/studio.html"
+          grep -q 'CopyTyGo' "$TMP/studio.html"
 
       - name: Create GitHub release
         if: steps.existing.outputs.release_exists != 'true'
