@@ -76,3 +76,17 @@ func Remember[T any](store Store, key string, ttl time.Duration, load func() (T,
 	store.Set(key, value, ttl)
 	return value, nil
 }
+
+
+func (m *Memory) Len() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now()
+	for key, item := range m.items {
+		if !item.expiresAt.IsZero() && now.After(item.expiresAt) {
+			delete(m.items, key)
+		}
+	}
+	return len(m.items)
+}
