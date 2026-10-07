@@ -122,10 +122,7 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"\nDB_USERNAME=" + dbUser +
 		"\nDB_PASSWORD=" +
 		"\nQUEUE_DRIVER=memory" +
-		"\nQUEUE_DRIVER=memory" +
 		"\nQUEUE_WORKERS=1" +
-		"\nQUEUE_POLL_SECONDS=1" +
-		"\nQUEUE_BACKOFF_SECONDS=1" +
 		"\nQUEUE_POLL_SECONDS=1" +
 		"\nQUEUE_BACKOFF_SECONDS=1" +
 		"\nSTORAGE_PATH=storage/app" +
@@ -154,7 +151,10 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"\nDB_DATABASE=copytygo" +
 		"\nDB_USERNAME=" + dbUser +
 		"\nDB_PASSWORD=" +
+		"\nQUEUE_DRIVER=memory" +
 		"\nQUEUE_WORKERS=1" +
+		"\nQUEUE_POLL_SECONDS=1" +
+		"\nQUEUE_BACKOFF_SECONDS=1" +
 		"\nSTORAGE_PATH=storage/app" +
 		"\nMAIL_HOST=127.0.0.1" +
 		"\nMAIL_PORT=1025" +
