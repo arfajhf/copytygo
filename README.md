@@ -6,14 +6,14 @@ CopyTyGo is a full-stack Go framework focused on productive application developm
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> Stable release: `v4.0.4`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
+> Stable release: `v4.0.5`. Go 1.27.1 or newer is required. Node.js 22+ is needed for frontend development and builds.
 
 ## Quick start
 
 Install the final v4 CLI, then create a project:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.4
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.5
 ctg new
 ```
 
@@ -226,7 +226,7 @@ GET      /account
 POST     /logout
 ```
 
-Browser forms use encrypted HttpOnly cookie sessions, CSRF protection, password confirmation, and inline validation messages. Production cookies require HTTPS. These pages run in Native Runtime and do not require a frontend build.
+The TypeScript frontend provides login/register, role-aware dashboards and Users CRUD. Go handles JSON endpoints, encrypted HttpOnly sessions, CSRF, validation and permissions. `ctg dev` starts native Go + Vite automatically; `ctg build` compiles both. Production cookies require HTTPS.
 
 JSON API routes remain available:
 
@@ -236,7 +236,7 @@ POST /api/auth/login
 GET  /api/auth/me
 ```
 
-Edit `routes/auth.go` for routes, `app/auth/web.go` for the default registration role, and `app/auth/views/*.html` for the UI. Restart `ctg dev` after changing embedded views. Read [the authentication guide](docs/AUTHENTICATION.md) for setup, customization and upgrades.
+Edit `frontend/src/auth/*.ts` and `style.css` for the UI, `routes/auth.go` for JSON routes, and `app/auth/web.go` for the default registration role. TypeScript changes reload through Vite; restart `ctg dev` after Go changes. Read [the authentication guide](docs/AUTHENTICATION.md) for setup, customization and upgrades.
 
 For multi-role auth, register your first account, then promote it from your own terminal inside the project:
 
@@ -324,6 +324,8 @@ Production always uses the native application binary:
 ```powershell
 ctg build
 ```
+
+For auth projects, `ctg build` packages the compiled TypeScript frontend alongside Go. Deploy the complete `build/` directory and start the binary from that directory. Production does not require Node.js. See [authentication setup and deployment](docs/AUTHENTICATION.md).
 
 ## Visual and CLI generators
 

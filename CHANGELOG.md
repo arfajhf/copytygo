@@ -1,5 +1,16 @@
 # Changelog
 
+## v4.0.5
+
+- Moved the default auth UI into TypeScript under frontend/src/auth: welcome, login/register, role dashboards, account and admin Users CRUD.
+- Kept Go responsible for JSON session APIs, fresh database authorization, encrypted HttpOnly cookies and CSRF.
+- Started Vite automatically alongside native Go in ctg dev and compiled both in ctg build; production serves compiled assets without Node.js.
+- Migrated unchanged v4.0.3/v4.0.4 HTML starters on reinstall while preserving customized source and existing migrations.
+- Preserved TypeScript, React, Vue and API-only presets and added JSON auth/database and frontend serving regression coverage.
+- Moved the welcome navbar outside the centered welcome content to the top edge of the page.
+- Matched the dashboard navbar with a full-width white bar, application branding on the left, and login/register actions on the right.
+- Kept the welcome card centered independently and adapted navbar spacing for small screens and long application names.
+
 ## v4.0.4
 
 - Replaced default welcome, auth, Studio and frontend starter branding with the supplied CopyTyGo logo.

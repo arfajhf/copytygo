@@ -323,7 +323,7 @@ func Register(app *core.Application) {
 }
 `
 const frontendPackage = `{"name":"copytygo-frontend","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"devDependencies":{"@types/node":"^24.0.0","typescript":"^5.9.0","vite":"^6.0.0"}}`
-const frontendTSConfig = `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"types":["vite/client","node"],"outDir":"dist"},"include":["src","vite.config.ts"]}`
+const frontendTSConfig = `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"types":["vite/client","node"],"noEmit":true},"include":["src","vite.config.ts"]}`
 const frontendViteConfig = `import { defineConfig } from "vite";
 
 export default defineConfig({

@@ -106,8 +106,8 @@ var welcomeTemplate = template.Must(template.New("copytygo-welcome").Parse(`<!do
 <title>{{.AppName}} · CopyTyGo</title><link rel="icon" href="{{.LogoURL}}">
 <style>
 :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e7edf7;background:#08101f}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#15213a 0,#08101f 42%,#050a13 100%);display:grid;place-items:center;padding:28px}
-.navbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:48px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:#e7edf7;font-weight:750}.brand img{width:46px;height:46px;object-fit:contain;background:#fff;padding:5px;border-radius:10px}.navbar nav{display:flex;gap:10px;flex-wrap:wrap}.shell{width:min(1040px,100%)}.badge{display:inline-flex;gap:8px;align-items:center;padding:7px 11px;border:1px solid #293955;border-radius:999px;color:#a9bbd7;font-size:13px;background:#0d1729cc}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#15213a 0,#08101f 42%,#050a13 100%);display:flex;flex-direction:column}
+.navbar{width:100%;background:#fff;border-bottom:1px solid #e0e9ed}.nav-inner{max-width:1236px;margin:auto;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;gap:20px}.brand{display:flex;align-items:center;gap:12px;min-width:0;text-decoration:none;color:#173449;font-weight:750}.brand span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.brand img{width:43px;height:43px;object-fit:contain;flex-shrink:0}.navbar nav{display:flex;gap:10px;flex-shrink:0}.welcome{flex:1;display:grid;place-items:center;padding:48px 28px}.shell{width:min(1040px,100%)}.badge{display:inline-flex;gap:8px;align-items:center;padding:7px 11px;border:1px solid #293955;border-radius:999px;color:#a9bbd7;font-size:13px;background:#0d1729cc}
 .dot{width:8px;height:8px;border-radius:50%;background:#59d98e;box-shadow:0 0 18px #59d98e}
 .card{margin-top:16px;border:1px solid #24324a;border-radius:24px;background:#0c1525d9;box-shadow:0 28px 90px #0008;overflow:hidden}
 .hero{padding:58px 54px 40px}.mark{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#80a7ff;font-weight:700}h1{font-size:clamp(42px,7vw,76px);line-height:.98;margin:16px 0;color:#f8fbff;letter-spacing:-.055em}
@@ -115,14 +115,15 @@ var welcomeTemplate = template.Must(template.New("copytygo-welcome").Parse(`<!do
 a.btn{padding:12px 16px;border-radius:11px;text-decoration:none;font-weight:650;font-size:14px;border:1px solid #314461;color:#dce8fb;background:#111e32}
 a.primary{background:#f4f7fb;color:#0c1525;border-color:#f4f7fb}.grid{border-top:1px solid #24324a;display:grid;grid-template-columns:repeat(3,1fr)}
 .stat{padding:22px 28px}.stat+.stat{border-left:1px solid #24324a}.label{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#657894}.value{margin-top:8px;font-weight:700;color:#dce8fb}
-.foot{margin-top:14px;text-align:center;color:#526680;font-size:12px}@media(max-width:700px){.navbar{align-items:flex-start;margin-bottom:28px}.navbar .btn{padding:10px;font-size:12px}.brand{font-size:14px;gap:7px}.brand img{width:34px;height:34px}.hero{padding:38px 26px 30px}.grid{grid-template-columns:1fr}.stat+.stat{border-left:0;border-top:1px solid #24324a}}
+.navbar a.btn{background:#fff;border-color:#d9e4e8;color:#3c5668;border-radius:8px}.navbar a.primary{background:#087e88;border-color:#087e88;color:#fff}.foot{margin-top:14px;text-align:center;color:#526680;font-size:12px}@media(max-width:700px){.nav-inner{padding:15px 20px;gap:12px}.welcome{padding:32px 20px}.navbar .btn{padding:10px;font-size:12px}.brand{font-size:14px;gap:7px}.brand img{width:34px;height:34px}.hero{padding:38px 26px 30px}.grid{grid-template-columns:1fr}.stat+.stat{border-left:0;border-top:1px solid #24324a}}
 </style>
 </head>
-<body><main class="shell">
-<header class="navbar"><a class="brand" href="/"><img src="{{.LogoURL}}" alt="CopyTyGo logo">CopyTyGo</a><nav aria-label="Account">
+<body>
+<header class="navbar"><div class="nav-inner"><a class="brand" href="/"><img src="{{.LogoURL}}" alt="CopyTyGo logo"><span>{{.AppName}}</span></a><nav aria-label="Account">
 {{if .LoginURL}}<a class="btn" href="{{.LoginURL}}">Log in</a>{{end}}
 {{if .RegisterURL}}<a class="btn primary" href="{{.RegisterURL}}">Register</a>{{end}}
-</nav></header>
+</nav></div></header>
+<main class="welcome"><div class="shell">
 <div class="badge"><span class="dot"></span>Your application is running</div>
 <section class="card">
 <div class="hero">
@@ -140,4 +141,4 @@ a.primary{background:#f4f7fb;color:#0c1525;border-color:#f4f7fb}.grid{border-top
 <div class="stat"><div class="label">Runtime</div><div class="value">Go</div></div>
 </div></section>
 <div class="foot">CopyTyGo · Developer-first Go framework</div>
-</main></body></html>`))
+</div></main></body></html>`))

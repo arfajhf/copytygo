@@ -93,9 +93,10 @@ jobs:
             go test ./...
             mkdir -p build
             go build -o build/auth-app ./cmd/app
-            test -f app/auth/views/dashboard.html
-            test -f app/auth/views/users.html
-            grep -q 'pages.Dashboard' routes/auth.go
+            test -f frontend/src/auth/views.ts
+            test -f frontend/src/auth/api.ts
+            test ! -d app/auth/views
+            grep -q 'sessions.Dashboard' routes/auth.go
             cd ..
           done
 
@@ -135,12 +136,14 @@ jobs:
           cp build/ctg "$TMP/ctg"
           cd "$TMP"
 
-          printf 'mysql\nnone\n${{ matrix.frontend }}\nyes\n' | ./ctg new frontend-smoke --interactive
+          printf 'mysql\nmulti\n${{ matrix.frontend }}\nyes\n' | ./ctg new frontend-smoke --interactive
 
           cd frontend-smoke/frontend
           npm install --no-audit --no-fund
-          npm run build
+          npm run build -- --config vite.auth.config.ts
           test -f public/logo.png
+          test -f dist/auth.html
+          test ! -d ../app/auth/views
 
 
   mysql-integration:
@@ -229,6 +232,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -386,6 +394,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Auth installation failed" }
             go mod tidy
             if ($LASTEXITCODE -ne 0) { throw "Auth dependencies failed" }
+            Push-Location frontend
+            npm install --no-audit --no-fund
+            if ($LASTEXITCODE -ne 0) { throw "Frontend dependency installation failed" }
+            Pop-Location
             Set-EnvValue "APP_PORT" "18085"
             $authOut = Join-Path $tmp "dev-native-auth.out"
             $authDev = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $authOut -RedirectStandardError (Join-Path $tmp "dev-native-auth.err")
@@ -393,10 +405,13 @@ jobs:
               Wait-Http "http://127.0.0.1:18085/" 200 | Out-Null
               Wait-Http "http://127.0.0.1:18085/__copytygo" 200 | Out-Null
               $authWelcome = Wait-Http "http://127.0.0.1:18085/" 200
-              if ($authWelcome.Content -notmatch 'href="/login"' -or $authWelcome.Content -notmatch 'href="/register"') { throw "Welcome auth buttons were missing" }
+              if ($authWelcome.Content -notmatch '/src/auth/main.ts') { throw "Welcome TypeScript entry was missing" }
               $loginPage = Wait-Http "http://127.0.0.1:18085/login" 200
               $registerPage = Wait-Http "http://127.0.0.1:18085/register" 200
-              if ($loginPage.Content -notmatch 'autocomplete="current-password"' -or $registerPage.Content -notmatch 'name="password_confirmation"') { throw "Native auth forms were missing" }
+              if ($loginPage.Content -notmatch '/src/auth/main.ts' -or $registerPage.Content -notmatch '/src/auth/main.ts') { throw "Native TypeScript auth entry was missing" }
+              $ts = Wait-Http "http://127.0.0.1:18085/src/auth/main.ts" 200
+              if ($ts.Content -notmatch "getSession") { throw "TypeScript frontend was not served through Native" }
+              Wait-Http "http://127.0.0.1:18085/api/session" 200 | Out-Null
               Wait-Http "http://127.0.0.1:18085/api/auth/me" 401 | Out-Null
               foreach ($endpoint in @("login", "register")) {
                 $response = Invoke-WebRequest -Uri ("http://127.0.0.1:18085/api/auth/" + $endpoint) -Method Post -Body '{}' -ContentType 'application/json' -SkipHttpErrorCheck

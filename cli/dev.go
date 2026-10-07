@@ -64,13 +64,19 @@ func Dev(args []string) error {
 }
 
 func runNativeDev() error {
+	env, cleanup, err := startAuthFrontend()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
 	cmd := exec.Command("go", "run", "./cmd/app")
+	cmd.Env = env
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = &stderr
 	cmd.Stdin = os.Stdin
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err == nil {
 		return nil
 	}

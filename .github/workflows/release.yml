@@ -72,6 +72,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Inspect tag and release
         id: existing
         env:
@@ -175,6 +180,37 @@ jobs:
           grep -q 'CopyTyGo' "$TMP/welcome.html"
           curl -fsS http://127.0.0.1:18083/__copytygo > "$TMP/studio.html"
           grep -q 'CopyTyGo' "$TMP/studio.html"
+
+          # Verify the published tag's TS auth scaffold and production bundle.
+          kill "$APP_PID"
+          wait "$APP_PID" || true
+          "$CTG" install:auth multi
+          test ! -d app/auth/views
+          test -f frontend/src/auth/views.ts
+          "$CTG" build
+          test -f build/frontend/dist/auth.html
+          AUTH_APP_KEY="$(sed -n 's/^APP_KEY=//p' .env)"
+          (cd build && APP_ENV=production APP_PORT=18084 APP_KEY="$AUTH_APP_KEY" exec ./app) > "$TMP/auth-application.log" 2>&1 &
+          APP_PID=$!
+          READY=false
+          for attempt in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:18084/login > "$TMP/auth.html"; then
+              READY=true
+              break
+            fi
+            sleep 0.5
+          done
+          if [ "$READY" != true ]; then
+            cat "$TMP/auth-application.log"
+            exit 1
+          fi
+          AUTH_SCRIPT="$(sed -n 's/.*src="\([^"]*assets\/auth[^"]*\.js\)".*/\1/p' "$TMP/auth.html")"
+          test -n "$AUTH_SCRIPT"
+          curl -fsS "http://127.0.0.1:18084$AUTH_SCRIPT" > "$TMP/auth.js"
+          grep -q '/api/session' "$TMP/auth.js"
+          curl -fsS http://127.0.0.1:18084/api/session > "$TMP/session.json"
+          jq -e '.csrf != "" and .user == null' "$TMP/session.json"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18084/__copytygo)" = "404"
 
       - name: Create GitHub release
         if: steps.existing.outputs.release_exists != 'true'
