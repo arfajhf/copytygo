@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/arfajhf/copytygo/v4/config"
+	copycontainer "github.com/arfajhf/copytygo/v4/container"
 	"github.com/arfajhf/copytygo/v4/version"
 	"github.com/arfajhf/copytygo/v4/logging"
 )
@@ -25,12 +26,14 @@ type backgroundRegistration struct {
 type Application struct {
 	router     *Router
 	background []backgroundRegistration
+	Services   *copycontainer.Container
 }
 
 func New() *Application {
 	return &Application{
 		router:     NewRouter(),
 		background: make([]backgroundRegistration, 0),
+		Services:   copycontainer.New(),
 	}
 }
 
@@ -51,6 +54,13 @@ func (app *Application) Background(name string, task BackgroundTask) *Applicatio
 }
 
 func (app *Application) Routes() []*Route { return app.router.Routes() }
+
+func (app *Application) Resolve(name string) (any, error) {
+	if app.Services == nil {
+		return nil, fmt.Errorf("copytygo: application service container is unavailable")
+	}
+	return app.Services.Resolve(name)
+}
 
 func (app *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	app.router.ServeHTTP(w, r)
