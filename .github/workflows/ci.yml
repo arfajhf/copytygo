@@ -48,3 +48,25 @@ jobs:
           GOARCH: amd64
           CGO_ENABLED: "0"
         run: go build -o build/ctg.exe ./cmd/ctg
+
+      - name: Smoke test generated application
+        shell: bash
+        run: |
+          ROOT="$GITHUB_WORKSPACE"
+          TMP="$(mktemp -d)"
+          cp build/ctg "$TMP/ctg"
+          cd "$TMP"
+
+          ./ctg new smoke-app
+          cd smoke-app
+
+          go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
+          go mod tidy
+          go test ./...
+          go build -o build/smoke-app ./cmd/app
+
+          test -f build/smoke-app
+          test -f app/jobs/registry.go
+          test -f routes/web.go
+          grep -q 'queue.AttachConfigured(app)' cmd/app/main.go
+          grep -q 'studio.Register(app)' cmd/app/main.go
