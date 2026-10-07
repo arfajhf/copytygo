@@ -12,20 +12,41 @@ import (
 
 	"github.com/arfajhf/copytygo/v4/config"
 	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v4/logging"
 )
 
+type BackgroundTask func(context.Context) error
+
+type backgroundRegistration struct {
+	name string
+	run  BackgroundTask
+}
+
 type Application struct {
-	router *Router
+	router     *Router
+	background []backgroundRegistration
 }
 
 func New() *Application {
 	return &Application{
-		router: NewRouter(),
+		router:     NewRouter(),
+		background: make([]backgroundRegistration, 0),
 	}
 }
 
 func (app *Application) Use(middlewares ...Middleware) *Application {
 	app.router.Use(middlewares...)
+	return app
+}
+
+func (app *Application) Background(name string, task BackgroundTask) *Application {
+	if task == nil {
+		return app
+	}
+	if strings.TrimSpace(name) == "" {
+		name = "background"
+	}
+	app.background = append(app.background, backgroundRegistration{name: name, run: task})
 	return app
 }
 
@@ -152,6 +173,20 @@ func (app *Application) Run() error {
 
 	address := host + ":" + port
 
+	backgroundCtx, cancelBackground := context.WithCancel(context.Background())
+	defer cancelBackground()
+	for _, registration := range app.background {
+		registration := registration
+		go func() {
+			if err := registration.run(backgroundCtx); err != nil && backgroundCtx.Err() == nil {
+				logging.Default.Error("background task stopped", map[string]any{
+					"name":  registration.name,
+					"error": err.Error(),
+				})
+			}
+		}()
+	}
+
 	fmt.Println()
 	fmt.Println("CopyTyGo v" + version.Framework)
 	fmt.Println("----------------------------")
@@ -193,6 +228,7 @@ func (app *Application) Run() error {
 	case <-stop:
 		fmt.Println()
 		fmt.Println("Shutting down gracefully...")
+		cancelBackground()
 
 		timeout := time.Duration(config.GetInt("SERVER_SHUTDOWN_TIMEOUT", 10)) * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
