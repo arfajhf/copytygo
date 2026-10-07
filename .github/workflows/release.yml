@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "version/version.go"
-      - ".github/workflows/release.yml"
 
 permissions:
   contents: write
@@ -33,25 +32,28 @@ jobs:
             exit 1
           fi
 
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid semantic version: $VERSION"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Refusing automatic final release for non-final version: $VERSION"
             exit 1
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Check existing tag and release
+      - name: Inspect tag and release
         id: existing
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+          if git rev-parse "$TAG^{commit}" >/dev/null 2>&1; then
+            TAG_SHA="$(git rev-parse "$TAG^{commit}")"
             echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+            echo "tag_sha=$TAG_SHA" >> "$GITHUB_OUTPUT"
           else
             echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+            echo "tag_sha=" >> "$GITHUB_OUTPUT"
           fi
 
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -60,16 +62,37 @@ jobs:
             echo "release_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create tag
-        if: steps.existing.outputs.tag_exists != 'true'
+          echo "head_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Protect published releases
+        if: >
+          steps.existing.outputs.release_exists == 'true' &&
+          steps.existing.outputs.tag_sha != '' &&
+          steps.existing.outputs.tag_sha != steps.existing.outputs.head_sha
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          echo "Release $TAG already exists but its tag does not point to this commit."
+          echo "Refusing to rewrite a published release tag."
+          exit 1
+
+      - name: Create or repair tag
+        if: >
+          steps.existing.outputs.release_exists != 'true' &&
+          (
+            steps.existing.outputs.tag_exists != 'true' ||
+            steps.existing.outputs.tag_sha != steps.existing.outputs.head_sha
+          )
         env:
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "CopyTyGo $TAG"
-          git push origin "$TAG"
+
+          git tag -f -a "$TAG" "$GITHUB_SHA" -m "CopyTyGo $TAG"
+          git push --force origin "refs/tags/$TAG"
 
       - name: Create GitHub release
         if: steps.existing.outputs.release_exists != 'true'
@@ -87,3 +110,4 @@ jobs:
           echo "CopyTyGo release workflow finished."
           echo "Version: ${{ steps.version.outputs.version }}"
           echo "Tag: ${{ steps.version.outputs.tag }}"
+          echo "Commit: $GITHUB_SHA"
