@@ -18,17 +18,8 @@ type Route struct {
 }
 
 type RouteBuilder struct {
-	route *Route
-}
-
-type groupRouteBuilder struct {
-	*RouteBuilder
-	group *RouteGroup
-}
-
-func (builder *groupRouteBuilder) Name(name string) *groupRouteBuilder {
-	builder.route.name = builder.group.namePrefix + name
-	return builder
+	route      *Route
+	namePrefix string
 }
 
 type RouteGroup struct {
@@ -66,7 +57,7 @@ func (route *Route) NameValue() string { return route.name }
 // ----------------------------------------------------
 
 func (builder *RouteBuilder) Name(name string) *RouteBuilder {
-	builder.route.name = name
+	builder.route.name = builder.namePrefix + name
 	return builder
 }
 
@@ -221,7 +212,7 @@ func (group *RouteGroup) add(
 	method string,
 	path string,
 	handler Handler,
-) *groupRouteBuilder {
+) *RouteBuilder {
 
 	fullPath := joinPaths(
 		group.prefix,
@@ -242,20 +233,14 @@ func (group *RouteGroup) add(
 		group.middlewares...,
 	)
 
-	if group.namePrefix != "" {
-		builder.route.name = group.namePrefix
-	}
-
-	return &groupRouteBuilder{
-		RouteBuilder: builder,
-		group:        group,
-	}
+	builder.namePrefix = group.namePrefix
+	return builder
 }
 
 func (group *RouteGroup) Get(
 	path string,
 	handler Handler,
-) *groupRouteBuilder {
+) *RouteBuilder {
 
 	return group.add(
 		http.MethodGet,
@@ -267,7 +252,7 @@ func (group *RouteGroup) Get(
 func (group *RouteGroup) Post(
 	path string,
 	handler Handler,
-) *groupRouteBuilder {
+) *RouteBuilder {
 
 	return group.add(
 		http.MethodPost,
@@ -279,7 +264,7 @@ func (group *RouteGroup) Post(
 func (group *RouteGroup) Put(
 	path string,
 	handler Handler,
-) *groupRouteBuilder {
+) *RouteBuilder {
 
 	return group.add(
 		http.MethodPut,
@@ -291,7 +276,7 @@ func (group *RouteGroup) Put(
 func (group *RouteGroup) Patch(
 	path string,
 	handler Handler,
-) *groupRouteBuilder {
+) *RouteBuilder {
 
 	return group.add(
 		http.MethodPatch,
@@ -303,7 +288,7 @@ func (group *RouteGroup) Patch(
 func (group *RouteGroup) Delete(
 	path string,
 	handler Handler,
-) *groupRouteBuilder {
+) *RouteBuilder {
 
 	return group.add(
 		http.MethodDelete,
