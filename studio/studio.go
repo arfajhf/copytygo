@@ -39,13 +39,16 @@ type routeView struct {
 }
 
 type viewData struct {
-	AppName     string
-	Version     string
-	Environment string
-	RouteCount  int
-	DocsURL     string
-	BasePath    string
-	Routes      []routeView
+	AppName       string
+	Version       string
+	Environment   string
+	RouteCount    int
+	ModelCount    int
+	ResourceCount int
+	QueueDriver   string
+	DocsURL       string
+	BasePath      string
+	Routes        []routeView
 }
 
 func urlQueryEscape(value string) string {
@@ -86,14 +89,20 @@ func Register(app *core.Application, options ...Options) bool {
 				Name:   route.NameValue(),
 			})
 		}
+		models, _ := cli.DiscoverModels("app/models")
+		resources, _ := cli.DiscoverGeneratedResources(".")
+
 		return viewData{
-			AppName:     config.Get("APP_NAME", "CopyTyGo"),
-			Version:     version.Framework,
-			Environment: config.Get("APP_ENV", "local"),
-			RouteCount:  len(items),
-			DocsURL:     config.Get("COPYTYGO_DOCS_URL", version.DocsURL),
-			BasePath:    path,
-			Routes:      items,
+			AppName:       config.Get("APP_NAME", "CopyTyGo"),
+			Version:       version.Framework,
+			Environment:   config.Get("APP_ENV", "local"),
+			RouteCount:    len(items),
+			ModelCount:    len(models),
+			ResourceCount: len(resources),
+			QueueDriver:   queue.Current().Driver,
+			DocsURL:       config.Get("COPYTYGO_DOCS_URL", version.DocsURL),
+			BasePath:      path,
+			Routes:        items,
 		}
 	}
 
@@ -837,8 +846,20 @@ var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!d
 <title>CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a class="active" href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>{{.AppName}}</h1><div style="color:#6f84a2;margin-top:6px">Local development workspace</div></div><span class="pill">{{.Environment}}</span></div>
-<section class="cards"><div class="card"><div class="label">Framework</div><div class="value">{{.Version}}</div></div><div class="card"><div class="label">Routes</div><div class="value">{{.RouteCount}}</div></div><div class="card"><div class="label">Runtime</div><div class="value">Ready</div></div></section>
-<div class="notice"><strong>Studio is connected to the running application.</strong><br>Route Explorer is live now. Other v4 ecosystem modules plug into this same workspace as they are completed. <a href="{{.DocsURL}}" target="_blank" rel="noreferrer">Open documentation</a>.</div>
+<section class="cards">
+<div class="card"><div class="label">Framework</div><div class="value">{{.Version}}</div></div>
+<div class="card"><div class="label">Environment</div><div class="value">{{.Environment}}</div></div>
+<div class="card"><div class="label">Queue</div><div class="value">{{.QueueDriver}}</div></div>
+<div class="card"><div class="label">Routes</div><div class="value">{{.RouteCount}}</div></div>
+<div class="card"><div class="label">Models</div><div class="value">{{.ModelCount}}</div></div>
+<div class="card"><div class="label">Resources</div><div class="value">{{.ResourceCount}}</div></div>
+</section>
+<div class="notice"><strong>Your CopyTyGo development workspace is ready.</strong><br>Inspect application structure, manage migrations, generate code, monitor requests/jobs, and diagnose runtime health without leaving Studio. <a href="{{.DocsURL}}" target="_blank" rel="noreferrer">Open documentation</a>.</div>
+<section class="cards" style="margin-top:14px">
+<a class="card" href="{{.BasePath}}/generator" style="text-decoration:none"><div class="label">Create</div><div class="value" style="font-size:18px">Visual Generator →</div></a>
+<a class="card" href="{{.BasePath}}/health" style="text-decoration:none"><div class="label">Monitor</div><div class="value" style="font-size:18px">Runtime Health →</div></a>
+<a class="card" href="{{.BasePath}}/doctor" style="text-decoration:none"><div class="label">Diagnose</div><div class="value" style="font-size:18px">Doctor →</div></a>
+</section>
 </main></div></body></html>`))
 
 var routesTemplate = template.Must(template.New("copytygo-studio-routes").Parse(`<!doctype html>
