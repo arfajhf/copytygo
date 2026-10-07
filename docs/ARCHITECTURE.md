@@ -111,6 +111,8 @@ Register/Login
   -> optional role middleware / policy gate
 ```
 
+Browser authentication adds rendered login/register/account pages and stores the signed token inside an encrypted HttpOnly web-session cookie. Form submissions verify the session's CSRF value; sign-in rotates both the session and CSRF value. Bearer-token API middleware remains independent. Generated templates are embedded in the application binary and editable in app/auth/views.
+
 Studio's Auth inspector only queries safe user fields and never selects password hashes.
 
 ## Sessions

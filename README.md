@@ -4,14 +4,14 @@ CopyTyGo is a full-stack Go framework focused on productive application developm
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> Stable release: `v4.0.2`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
+> Stable release: `v4.0.3`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
 
 ## Quick start
 
 Install the final v4 CLI, then create a project:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.2
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.3
 ctg new
 ```
 
@@ -205,13 +205,35 @@ ctg install:auth single
 ctg install:auth multi
 ```
 
-Generated routes:
+The installer creates editable login, registration and account pages. After setting your database connection in `.env`, run:
+
+```powershell
+ctg migrate
+ctg dev
+```
+
+The welcome page shows **Log in** and **Register** when those routes are installed. Registration signs the user in and redirects to `/account`.
+
+Browser routes:
+
+```text
+GET/POST /login
+GET/POST /register
+GET      /account
+POST     /logout
+```
+
+Browser forms use encrypted HttpOnly cookie sessions, CSRF protection, password confirmation, and inline validation messages. Production cookies require HTTPS. These pages run in Native Runtime and do not require a frontend build.
+
+JSON API routes remain available:
 
 ```text
 POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/me
 ```
+
+Edit `routes/auth.go` for routes, `app/auth/web.go` for the default registration role, and `app/auth/views/*.html` for the UI. Restart `ctg dev` after changing embedded views. Read [the authentication guide](docs/AUTHENTICATION.md) for setup, customization and upgrades.
 
 Studio includes a safe user inspector. Password hashes are never selected by the Studio inspector.
 

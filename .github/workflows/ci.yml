@@ -121,7 +121,7 @@ jobs:
 
 
   mysql-integration:
-    name: MySQL durable queue
+    name: MySQL queue and browser auth
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -156,11 +156,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: MySQL queue integration
-        run: go test ./integration -run TestDurableQueueIntegration -v
+      - name: MySQL integration
+        run: go test ./integration -v
 
   postgres-integration:
-    name: PostgreSQL durable queue
+    name: PostgreSQL queue and browser auth
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -195,8 +195,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: PostgreSQL queue integration
-        run: go test ./integration -run TestDurableQueueIntegration -v
+      - name: PostgreSQL integration
+        run: go test ./integration -v
 
 
   windows-smoke:
@@ -369,6 +369,11 @@ jobs:
             try {
               Wait-Http "http://127.0.0.1:18085/" 200 | Out-Null
               Wait-Http "http://127.0.0.1:18085/__copytygo" 200 | Out-Null
+              $authWelcome = Wait-Http "http://127.0.0.1:18085/" 200
+              if ($authWelcome.Content -notmatch 'href="/login"' -or $authWelcome.Content -notmatch 'href="/register"') { throw "Welcome auth buttons were missing" }
+              $loginPage = Wait-Http "http://127.0.0.1:18085/login" 200
+              $registerPage = Wait-Http "http://127.0.0.1:18085/register" 200
+              if ($loginPage.Content -notmatch 'autocomplete="current-password"' -or $registerPage.Content -notmatch 'name="password_confirmation"') { throw "Native auth forms were missing" }
               Wait-Http "http://127.0.0.1:18085/api/auth/me" 401 | Out-Null
               foreach ($endpoint in @("login", "register")) {
                 $response = Invoke-WebRequest -Uri ("http://127.0.0.1:18085/api/auth/" + $endpoint) -Method Post -Body '{}' -ContentType 'application/json' -SkipHttpErrorCheck

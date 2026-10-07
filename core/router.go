@@ -193,10 +193,10 @@ func (group *RouteGroup) Name(prefix string) *RouteGroup {
 
 func (group *RouteGroup) Group(prefix string) *RouteGroup {
 	return &RouteGroup{
-		router:       group.router,
-		prefix:       joinPaths(group.prefix, prefix),
-		namePrefix:   group.namePrefix,
-		middlewares:  append([]Middleware{}, group.middlewares...),
+		router:      group.router,
+		prefix:      joinPaths(group.prefix, prefix),
+		namePrefix:  group.namePrefix,
+		middlewares: append([]Middleware{}, group.middlewares...),
 	}
 }
 
@@ -349,6 +349,7 @@ func (router *Router) ServeHTTP(
 		}
 
 		ctx := newContext(w, r)
+		ctx.router = router
 
 		ctx.params = params
 

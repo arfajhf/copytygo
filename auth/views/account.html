@@ -1,0 +1,8 @@
+{{define "content"}}
+<div class="success">You're signed in</div>
+<h2 id="page-title">Hello, {{.Name}}</h2>
+<p class="subtitle">Your account is ready. You can continue to the home page or log out below.</p>
+<dl class="details"><div><dt>Name</dt><dd>{{.Name}}</dd></div><div><dt>Email address</dt><dd>{{.Email}}</dd></div>{{if .Role}}<div><dt>Role</dt><dd>{{.Role}}</dd></div>{{end}}</dl>
+<form method="post" action="/logout"><input type="hidden" name="_token" value="{{.CSRF}}"><button class="submit" type="submit" data-loading-label="Logging out…">Log out</button></form>
+<p class="switch"><a href="/">Continue to home</a></p>
+{{end}}

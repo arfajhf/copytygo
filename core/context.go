@@ -14,6 +14,7 @@ type Context struct {
 	params     map[string]string
 	statusCode int
 	values     map[string]any
+	router     *Router
 }
 
 type Map map[string]any
@@ -140,7 +141,6 @@ func (ctx *Context) Cookie(name string) (string, bool) {
 }
 func (ctx *Context) SetCookie(cookie *http.Cookie) { http.SetCookie(ctx.Response, cookie) }
 func (ctx *Context) NoContent(status int) error    { ctx.Response.WriteHeader(status); return nil }
-
 
 func (ctx *Context) Set(key string, value any) {
 	if ctx.values == nil {
