@@ -1,12 +1,18 @@
 package foundation
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/arfajhf/copytygo/v4/cache"
 	"github.com/arfajhf/copytygo/v4/config"
 	"github.com/arfajhf/copytygo/v4/container"
+	"github.com/arfajhf/copytygo/v4/database"
+	"github.com/arfajhf/copytygo/v4/database/drivers"
 	"github.com/arfajhf/copytygo/v4/events"
+	"github.com/arfajhf/copytygo/v4/health"
 	"github.com/arfajhf/copytygo/v4/mail"
 	"github.com/arfajhf/copytygo/v4/queue"
 	"github.com/arfajhf/copytygo/v4/scheduler"
@@ -20,6 +26,7 @@ const (
 	StorageService   = "storage"
 	QueueService     = "queue"
 	SchedulerService = "scheduler"
+	HealthService    = "health"
 )
 
 func RegisterDefaults(services *container.Container) error {
@@ -52,6 +59,67 @@ func RegisterDefaults(services *container.Container) error {
 
 	services.Instance(QueueService, queue.Default)
 	services.Instance(SchedulerService, scheduler.Default)
+
+	services.Singleton(HealthService, func(services *container.Container) (any, error) {
+		registry := health.New()
+
+		if err := registry.Add("database", func(ctx context.Context) error {
+			drivers.Register()
+			db, err := database.Connect()
+			if err != nil {
+				return err
+			}
+			checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			return db.PingContext(checkCtx)
+		}); err != nil {
+			return nil, err
+		}
+
+		if err := registry.Add("cache", func(context.Context) error {
+			service, err := services.Resolve(CacheService)
+			if err != nil {
+				return err
+			}
+			store, ok := service.(cache.Store)
+			if !ok {
+				return fmt.Errorf("cache service does not implement cache.Store")
+			}
+			const key = "__copytygo_health"
+			store.Set(key, "ok", time.Second)
+			value, ok := store.Get(key)
+			store.Delete(key)
+			if !ok || value != "ok" {
+				return fmt.Errorf("cache read/write check failed")
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+
+		if err := registry.Add("storage", func(context.Context) error {
+			service, err := services.Resolve(StorageService)
+			if err != nil {
+				return err
+			}
+			local, ok := service.(*storage.Local)
+			if !ok {
+				return nil
+			}
+			info, err := os.Stat(local.Root())
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				return fmt.Errorf("storage root is not a directory")
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+
+		return registry, nil
+	})
 
 	return nil
 }
