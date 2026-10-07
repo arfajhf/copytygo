@@ -251,3 +251,19 @@ func TestAuthAPIOnlyDoesNotAddFrontend(t *testing.T) {
 		t.Fatal("API-only gained frontend routes")
 	}
 }
+
+func TestAuthReinstallRejectsModeSwitchBeforeWriting(t *testing.T) {
+	root := authProject(t)
+	if err := InstallAuth("multi", root); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "app/auth/web.go")
+	before, _ := os.ReadFile(path)
+	if err := InstallAuth("single", root); err == nil {
+		t.Fatal("mode switch silently changed schema expectation")
+	}
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Fatal("failed mode switch wrote controller")
+	}
+}

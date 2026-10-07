@@ -13,6 +13,7 @@ import (
 
 	"github.com/arfajhf/copytygo/v4/config"
 	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v4/version"
 )
 
 // BrowserAuth exposes JSON endpoints for the TypeScript frontend. Authentication
@@ -111,7 +112,7 @@ func (browser *BrowserAuth) Session(ctx *core.Context) error {
 		}
 	}
 	ctx.Header("Cache-Control", "no-store")
-	return ctx.JSON(core.Map{"appName": config.Get("APP_NAME", "CopyTyGo"), "multi": browser.web.options.DefaultRole != "", "csrf": csrf, "user": user})
+	return ctx.JSON(core.Map{"appName": config.Get("APP_NAME", "CopyTyGo"), "version": version.Framework, "environment": config.Get("APP_ENV", "local"), "showStudio": !strings.EqualFold(config.Get("APP_ENV", "local"), "production") && config.GetBool("COPYTYGO_STUDIO", true), "multi": browser.web.options.DefaultRole != "", "csrf": csrf, "user": user})
 }
 
 func (browser *BrowserAuth) Login(ctx *core.Context) error {

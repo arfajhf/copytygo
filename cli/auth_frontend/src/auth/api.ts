@@ -1,5 +1,5 @@
 export interface User { id: string; name: string; email: string; role: string }
-export interface Session { appName: string; multi: boolean; csrf: string; user: User | null }
+export interface Session { appName: string; version: string; environment: string; showStudio: boolean; multi: boolean; csrf: string; user: User | null }
 export interface Dashboard { user: User; stats?: { total: number; admins: number; members: number } }
 export interface UserList { users: User[]; total: number; page: number; pageSize: number }
 export class ApiError extends Error {

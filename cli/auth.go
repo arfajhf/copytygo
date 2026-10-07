@@ -44,6 +44,9 @@ func InstallAuth(mode, root string) error {
 		roleField = "\tRole string `json:\"role\"`\n"
 		defaultRole = "user"
 	}
+	if installed, ok := liteAuthDefaultRole(filepath.Join(root, "app/auth/web.go")); ok && installed != defaultRole {
+		return fmt.Errorf("copytygo: auth mode differs from the existing starter; reinstall with the original single/multi mode to preserve your users schema")
+	}
 	model := fmt.Sprintf("package auth\n\n// User describes the application user. Password hashes are never serialized.\ntype User struct {\n\tID int64 `json:\"id\"`\n\tName string `json:\"name\"`\n\tEmail string `json:\"email\"`\n\tPassword string `json:\"-\"`\n%s}\n", roleField)
 	files := map[string]string{
 		"app/auth/user.go":       model,

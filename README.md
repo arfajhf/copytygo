@@ -325,6 +325,8 @@ Production always uses the native application binary:
 ctg build
 ```
 
+For auth projects, `ctg build` packages the compiled TypeScript frontend alongside Go. Deploy the complete `build/` directory and start the binary from that directory. Production does not require Node.js. See [authentication setup and deployment](docs/AUTHENTICATION.md).
+
 ## Visual and CLI generators
 
 CLI:

@@ -113,6 +113,12 @@ func buildAuthFrontend() error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("copytygo: TypeScript frontend build failed: %w", err)
 	}
+	if !fileExists("frontend/dist/auth.html") {
+		return fmt.Errorf("copytygo: frontend build did not produce auth.html; check frontend/vite.auth.config.ts")
+	}
+	if err := os.RemoveAll("build/frontend/dist"); err != nil {
+		return err
+	}
 	// Production starts from build/, alongside the compiled frontend directory.
 	return filepath.WalkDir("frontend/dist", func(path string, entry os.DirEntry, err error) error {
 		if err != nil {

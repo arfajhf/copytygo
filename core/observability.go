@@ -17,6 +17,10 @@ type statusResponseWriter struct {
 	status int
 }
 
+// Unwrap preserves ResponseController capabilities through request logging and
+// inspection, including the WebSocket upgrade used by frontend hot reload.
+func (w *statusResponseWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
 func (w *statusResponseWriter) WriteHeader(code int) {
 	if w.status == 0 {
 		w.status = code
