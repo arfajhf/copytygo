@@ -212,8 +212,8 @@ func frontendFiles(kind string) map[string]string {
 
 	case "react":
 		return map[string]string{
-			"frontend/package.json": `{"name":"copytygo-react","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"dependencies":{"react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/react":"^19.0.0","@types/react-dom":"^19.0.0","@vitejs/plugin-react":"^5.0.0","typescript":"^5.6.0","vite":"^6.0.0"}}`,
-			"frontend/tsconfig.json": `{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","strict":true,"jsx":"react-jsx","types":["vite/client"],"noEmit":true},"include":["src/**/*.ts","src/**/*.tsx","vite.config.ts"]}`,
+			"frontend/package.json": `{"name":"copytygo-react","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"dependencies":{"react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/node":"^24.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","@vitejs/plugin-react":"^5.0.0","typescript":"^5.9.0","vite":"^6.0.0"}}`,
+			"frontend/tsconfig.json": `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"jsx":"react-jsx","types":["vite/client","node"],"noEmit":true},"include":["src/**/*.ts","src/**/*.tsx","vite.config.ts"]}`,
 			"frontend/vite.config.ts": `import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 export default defineConfig({ plugins:[react()], server:{ proxy:{ "/api":"http://127.0.0.1:8080" } } });`,
@@ -226,8 +226,8 @@ createRoot(document.getElementById("root")!).render(<React.StrictMode><main><h1>
 
 	case "vue":
 		return map[string]string{
-			"frontend/package.json": `{"name":"copytygo-vue","private":true,"scripts":{"dev":"vite","build":"vue-tsc --noEmit && vite build"},"dependencies":{"vue":"^3.5.0"},"devDependencies":{"@vitejs/plugin-vue":"^6.0.0","typescript":"^5.6.0","vite":"^6.0.0","vue-tsc":"^3.0.0"}}`,
-			"frontend/tsconfig.json": `{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","strict":true,"types":["vite/client"],"noEmit":true},"include":["src/**/*.ts","src/**/*.vue","vite.config.ts"]}`,
+			"frontend/package.json": `{"name":"copytygo-vue","private":true,"scripts":{"dev":"vite","build":"vue-tsc --noEmit && vite build"},"dependencies":{"vue":"^3.5.0"},"devDependencies":{"@types/node":"^24.0.0","@vitejs/plugin-vue":"^6.0.0","typescript":"^5.9.0","vite":"^6.0.0","vue-tsc":"^3.0.0"}}`,
+			"frontend/tsconfig.json": `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"types":["vite/client","node"],"noEmit":true},"include":["src/**/*.ts","src/**/*.vue","vite.config.ts"]}`,
 			"frontend/vite.config.ts": `import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 export default defineConfig({ plugins:[vue()], server:{ proxy:{ "/api":"http://127.0.0.1:8080" } } });`,
@@ -318,8 +318,8 @@ func Register(app *core.Application) {
     }).Name("health")
 }
 `
-const frontendPackage = `{"name":"copytygo-frontend","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"devDependencies":{"typescript":"^5.6.0","vite":"^6.0.0"}}`
-const frontendTSConfig = `{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","strict":true,"outDir":"dist"},"include":["src","vite.config.ts"]}`
+const frontendPackage = `{"name":"copytygo-frontend","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"devDependencies":{"@types/node":"^24.0.0","typescript":"^5.9.0","vite":"^6.0.0"}}`
+const frontendTSConfig = `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"types":["vite/client","node"],"outDir":"dist"},"include":["src","vite.config.ts"]}`
 const frontendViteConfig = `import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -426,8 +426,15 @@ export function fieldErrors(errors: Record<string, string[]>): string[] {
   );
 }
 `
-const frontendMain = `import { api } from "./api";\n\ntype Health = { framework: string; status: string };
+const frontendMain = `import { api } from "./api";
+
+type Health = { framework: string; status: string };
 const app = document.querySelector<HTMLDivElement>("#app")!;
-async function boot() { const data = await api.get<Health>("/api/health"); app.innerHTML = "<h1>" + data.framework + "</h1><p>" + data.status + "</p>"; }
+
+async function boot() {
+  const data = await api.get<Health>("/api/health");
+  app.innerHTML = "<h1>" + data.framework + "</h1><p>" + data.status + "</p>";
+}
+
 void boot();
 `
