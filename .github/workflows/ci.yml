@@ -328,3 +328,68 @@ jobs:
               Stop-Process -Id $production.Id -Force
             }
           }
+
+          # Simulate a Windows policy refusal and verify plain `ctg dev` remembers it.
+          $fakeBin = Join-Path $tmp "policy-go"
+          New-Item -ItemType Directory -Force $fakeBin | Out-Null
+          $fakeSource = Join-Path $fakeBin "main.go"
+          @'
+          package main
+          import (
+            "fmt"
+            "os"
+          )
+          func main() {
+            f, err := os.OpenFile(os.Getenv("COPYTYGO_TEST_GO_COUNT_FILE"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+            if err != nil { panic(err) }
+            fmt.Fprintln(f, "native attempted")
+            f.Close()
+            fmt.Fprintln(os.Stderr, "fork/exec C:\\blocked\\app.exe: An Application Control policy has blocked this file.")
+            os.Exit(1)
+          }
+          '@ | Set-Content $fakeSource
+          go build -o (Join-Path $fakeBin "go.exe") $fakeSource
+          if ($LASTEXITCODE -ne 0) { throw "Unable to build policy simulator" }
+
+          $originalPath = $env:PATH
+          $originalCache = $env:LOCALAPPDATA
+          $env:COPYTYGO_TEST_GO_COUNT_FILE = Join-Path $tmp "native-attempts.txt"
+          $env:LOCALAPPDATA = Join-Path $tmp "runtime-cache"
+          $env:PATH = $fakeBin + [IO.Path]::PathSeparator + $env:PATH
+          try {
+            Set-EnvValue "APP_ENV" "local"
+            Set-EnvValue "APP_DEBUG" "true"
+            Set-EnvValue "APP_PORT" "18084"
+            $policyOut = Join-Path $tmp "policy-first.out"
+            $policyErr = Join-Path $tmp "policy-first.err"
+            $policy = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $policyOut -RedirectStandardError $policyErr
+            try {
+              Wait-Http "http://127.0.0.1:18084/" 200 | Out-Null
+              Wait-Http "http://127.0.0.1:18084/__copytygo" 200 | Out-Null
+            } finally {
+              if ($policy -and -not $policy.HasExited) { Stop-Process -Id $policy.Id -Force }
+            }
+            if ((Get-Content $policyErr -Raw) -match "fork/exec") { throw "Policy fallback printed a raw failure" }
+
+            & $ctg install:auth multi
+            if ($LASTEXITCODE -ne 0) { throw "Auth installation failed" }
+            Set-EnvValue "APP_PORT" "18085"
+            $rememberedOut = Join-Path $tmp "policy-remembered.out"
+            $remembered = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $rememberedOut -RedirectStandardError (Join-Path $tmp "policy-remembered.err")
+            try {
+              Wait-Http "http://127.0.0.1:18085/" 200 | Out-Null
+              Wait-Http "http://127.0.0.1:18085/api/auth/me" 401 | Out-Null
+              foreach ($endpoint in @("login", "register")) {
+                $response = Invoke-WebRequest -Uri ("http://127.0.0.1:18085/api/auth/" + $endpoint) -Method Post -Body '{}' -ContentType 'application/json' -SkipHttpErrorCheck
+                if ([int]$response.StatusCode -ne 422) { throw "Auth route $endpoint was not available after runtime fallback" }
+              }
+            } finally {
+              if ($remembered -and -not $remembered.HasExited) { Stop-Process -Id $remembered.Id -Force }
+            }
+            if (@(Get-Content $env:COPYTYGO_TEST_GO_COUNT_FILE).Count -ne 1) { throw "Plain ctg dev retried the blocked executable after installing auth" }
+            if ((Get-Content $rememberedOut -Raw) -notmatch "Using Lite Runtime automatically") { throw "Remembered runtime was not used" }
+          } finally {
+            $env:PATH = $originalPath
+            $env:LOCALAPPDATA = $originalCache
+            Remove-Item Env:COPYTYGO_TEST_GO_COUNT_FILE
+          }

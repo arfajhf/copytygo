@@ -9,17 +9,17 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"net"
 	"net/http"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
-	"sync"
 	"strings"
+	"sync"
 
 	copyauth "github.com/arfajhf/copytygo/v4/auth"
 	"github.com/arfajhf/copytygo/v4/config"
@@ -61,37 +61,7 @@ var liteMemoryStore = struct {
 }
 
 func Dev(args []string) error {
-	forceLite := false
-	for _, arg := range args {
-		if arg == "--lite" {
-			forceLite = true
-		}
-	}
-
-	if forceLite {
-		return runLiteDev()
-	}
-
-	fmt.Println("CopyTyGo Dev")
-	fmt.Println("-------------")
-	fmt.Println("Runtime : native")
-	fmt.Println()
-
-	err := runNativeDev()
-	if err == nil {
-		return nil
-	}
-
-	if !looksLikeExecutionPolicyBlock(err) {
-		return err
-	}
-
-	fmt.Println()
-	fmt.Println("Native execution is blocked by the operating system.")
-	fmt.Println("Switching automatically to CopyTyGo Lite Runtime...")
-	fmt.Println()
-
-	return runLiteDev()
+	return devWithRuntimes(args, runtime.GOOS, devRuntimeCachePath(), runNativeDev, runLiteDev, os.Stdout)
 }
 
 func runNativeDev() error {
@@ -107,22 +77,21 @@ func runNativeDev() error {
 	}
 
 	message := strings.TrimSpace(stderr.String())
-	if message != "" {
-		fmt.Fprintln(os.Stderr, message)
-	}
-
 	return fmt.Errorf("copytygo native runtime: %w: %s", err, message)
 }
 
 func looksLikeExecutionPolicyBlock(err error) bool {
-	if err == nil || runtime.GOOS != "windows" {
+	return executionPolicyBlock(err, runtime.GOOS)
+}
+
+func executionPolicyBlock(err error, goos string) bool {
+	if err == nil || goos != "windows" {
 		return false
 	}
 	text := strings.ToLower(err.Error())
 	needles := []string{
 		"application control policy",
 		"blocked this file",
-		"access is denied",
 		"operation did not complete successfully because the file contains",
 	}
 	for _, needle := range needles {
@@ -130,7 +99,8 @@ func looksLikeExecutionPolicyBlock(err error) bool {
 			return true
 		}
 	}
-	return false
+	// A generic source-file permission error must not hide behind Lite fallback.
+	return strings.Contains(text, "fork/exec") && strings.Contains(text, ".exe") && strings.Contains(text, "access is denied")
 }
 
 func runLiteDev() error {
@@ -239,14 +209,14 @@ func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRou
 			case errors.Is(err, copyauth.ErrEmailRegistered):
 				writeLiteJSON(w, http.StatusConflict, map[string]any{
 					"error": map[string]any{
-						"status": http.StatusConflict,
+						"status":  http.StatusConflict,
 						"message": "Email already registered",
 					},
 				})
 			case errors.Is(err, copyauth.ErrInvalidRegistration):
 				writeLiteJSON(w, http.StatusBadRequest, map[string]any{
 					"error": map[string]any{
-						"status": http.StatusBadRequest,
+						"status":  http.StatusBadRequest,
 						"message": "Invalid registration data",
 					},
 				})
@@ -263,7 +233,7 @@ func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRou
 			if errors.Is(err, copyauth.ErrInvalidCredentials) {
 				writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
 					"error": map[string]any{
-						"status": http.StatusUnauthorized,
+						"status":  http.StatusUnauthorized,
 						"message": "Invalid credentials",
 					},
 				})
@@ -280,7 +250,7 @@ func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRou
 		if !strings.HasPrefix(header, prefix) {
 			writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
 				"error": map[string]any{
-					"status": http.StatusUnauthorized,
+					"status":  http.StatusUnauthorized,
 					"message": "Authentication required",
 				},
 			})
@@ -294,7 +264,7 @@ func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRou
 		if err != nil {
 			writeLiteJSON(w, http.StatusUnauthorized, map[string]any{
 				"error": map[string]any{
-					"status": http.StatusUnauthorized,
+					"status":  http.StatusUnauthorized,
 					"message": "Invalid authentication token",
 				},
 			})
@@ -302,11 +272,11 @@ func handleLiteAuthRoute(w http.ResponseWriter, req *http.Request, route liteRou
 		}
 
 		writeLiteJSON(w, http.StatusOK, map[string]any{
-			"id": claims.Subject,
-			"role": claims.Role,
-			"name": claims.Data["name"],
+			"id":    claims.Subject,
+			"role":  claims.Role,
+			"name":  claims.Data["name"],
 			"email": claims.Data["email"],
-			"exp": claims.ExpiresAt,
+			"exp":   claims.ExpiresAt,
 		})
 	}
 }
@@ -318,7 +288,7 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 	if err != nil {
 		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": map[string]any{
-				"status": http.StatusInternalServerError,
+				"status":  http.StatusInternalServerError,
 				"message": err.Error(),
 			},
 		})
@@ -329,7 +299,7 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 	if err != nil {
 		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": map[string]any{
-				"status": http.StatusInternalServerError,
+				"status":  http.StatusInternalServerError,
 				"message": err.Error(),
 			},
 		})
@@ -384,7 +354,7 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 		if !ok {
 			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": map[string]any{
-					"status": http.StatusBadRequest,
+					"status":  http.StatusBadRequest,
 					"message": "Invalid resource data",
 				},
 			})
@@ -402,7 +372,7 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 		if !ok {
 			writeLiteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": map[string]any{
-					"status": http.StatusBadRequest,
+					"status":  http.StatusBadRequest,
 					"message": "Invalid resource data",
 				},
 			})
@@ -434,7 +404,7 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 	default:
 		writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": map[string]any{
-				"status": http.StatusInternalServerError,
+				"status":  http.StatusInternalServerError,
 				"message": "Unsupported Lite database action",
 			},
 		})
@@ -448,7 +418,7 @@ func writeLiteDatabaseError(w http.ResponseWriter, err error) {
 	}
 	writeLiteJSON(w, http.StatusInternalServerError, map[string]any{
 		"error": map[string]any{
-			"status": http.StatusInternalServerError,
+			"status":  http.StatusInternalServerError,
 			"message": message,
 		},
 	})
@@ -713,35 +683,35 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 				if roleOK {
 					routes = append(routes,
 						liteRoute{
-							Method: "POST",
-							Path: "/api/auth/register",
-							Status: http.StatusCreated,
+							Method:      "POST",
+							Path:        "/api/auth/register",
+							Status:      http.StatusCreated,
 							ContentType: "application/json; charset=utf-8",
 							Validation: map[string]string{
-								"name": "required|min:3",
-								"email": "required|email",
+								"name":     "required|min:3",
+								"email":    "required|email",
 								"password": "required|min:8",
 							},
 							AuthAction: "register",
-							AuthRole: defaultRole,
+							AuthRole:   defaultRole,
 						},
 						liteRoute{
-							Method: "POST",
-							Path: "/api/auth/login",
-							Status: http.StatusOK,
+							Method:      "POST",
+							Path:        "/api/auth/login",
+							Status:      http.StatusOK,
 							ContentType: "application/json; charset=utf-8",
 							Validation: map[string]string{
-								"email": "required|email",
+								"email":    "required|email",
 								"password": "required|min:8",
 							},
 							AuthAction: "login",
 						},
 						liteRoute{
-							Method: "GET",
-							Path: "/api/auth/me",
-							Status: http.StatusOK,
+							Method:      "GET",
+							Path:        "/api/auth/me",
+							Status:      http.StatusOK,
 							ContentType: "application/json; charset=utf-8",
-							AuthAction: "me",
+							AuthAction:  "me",
 						},
 					)
 					return true
@@ -775,8 +745,8 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 			member += "/:id"
 
 			definitions := []struct {
-				Method string
-				Path   string
+				Method  string
+				Path    string
 				Handler string
 			}{
 				{"GET", base, "Index"},
