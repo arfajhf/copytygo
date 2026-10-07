@@ -584,6 +584,38 @@ func Register(app *core.Application, options ...Options) bool {
 		return ctx.Redirect(path + "/generator?created=" + urlQueryEscape(name))
 	}).Name("copytygo.studio.generator.resource")
 
+	app.Post(path+"/generator/scaffold", func(ctx *core.Context) error {
+		kind := strings.ToLower(strings.TrimSpace(ctx.Input("type")))
+		name := strings.TrimSpace(ctx.Input("name"))
+
+		var err error
+		switch kind {
+		case "model":
+			err = cli.MakeModel(name, "app/models")
+		case "middleware":
+			err = cli.MakeMiddleware(name, "app/middleware")
+		case "service":
+			err = cli.MakeService(name, "app/services")
+		case "job":
+			err = cli.MakeJob(name, "app/jobs")
+		case "listener":
+			err = cli.MakeListener(name, "app/listeners")
+		case "seeder":
+			err = cli.MakeSeeder(name, "database/seeders")
+		case "factory":
+			err = cli.MakeFactory(name, "database/factories")
+		case "mail":
+			err = cli.MakeMail(name, "app/mails")
+		default:
+			err = fmt.Errorf("copytygo studio: unsupported generator type %q", kind)
+		}
+
+		if err != nil {
+			return ctx.Redirect(path + "/generator?error=" + urlQueryEscape(err.Error()))
+		}
+		return ctx.Redirect(path + "/generator?created=" + urlQueryEscape(kind+" "+name))
+	}).Name("copytygo.studio.generator.scaffold")
+
 	return true
 }
 
@@ -637,6 +669,13 @@ textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padd
 <div class="field"><label>Fields</label><textarea name="fields" placeholder="name:string&#10;price:decimal&#10;stock:integer&#10;active:boolean&#10;description:text?"></textarea>
 <div class="hint">One field per line or separated by spaces. Supported types follow the same rules as <code>ctg make:resource</code>.</div></div>
 <button type="submit">Create Resource</button>
+</form>
+<form class="form" method="post" action="{{.BasePath}}/generator/scaffold">
+<div class="field"><label>Scaffold type</label><select name="type" required style="width:100%;background:#08111f;border:1px solid #263852;color:#e7edf7;border-radius:9px;padding:12px;font:inherit">
+<option value="model">Model</option><option value="middleware">Middleware</option><option value="service">Service</option><option value="job">Queue Job</option><option value="listener">Event Listener</option><option value="seeder">Seeder</option><option value="factory">Factory</option><option value="mail">Mail</option>
+</select></div>
+<div class="field"><label>Name</label><input name="name" placeholder="SendWelcomeEmail" required></div>
+<button type="submit">Create Scaffold</button>
 </form></main></div></body></html>`))
 
 
