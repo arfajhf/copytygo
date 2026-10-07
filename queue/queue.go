@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/arfajhf/copytygo/v4/core"
 )
 
 var ErrClosed = errors.New("copytygo queue: worker is closed")
@@ -20,9 +23,20 @@ type Item struct {
 }
 
 type Failure struct {
-	Name     string
-	Attempts int
-	Err      error
+	Name     string    `json:"name"`
+	Attempts int       `json:"attempts"`
+	Error    string    `json:"error"`
+	At       time.Time `json:"at"`
+	Err      error     `json:"-"`
+}
+
+type Stats struct {
+	Pending     int   `json:"pending"`
+	Running     int64 `json:"running"`
+	Completed   int64 `json:"completed"`
+	Failed      int64 `json:"failed"`
+	Started     bool  `json:"started"`
+	Concurrency int   `json:"concurrency"`
 }
 
 type Worker struct {
@@ -31,14 +45,37 @@ type Worker struct {
 	wg        sync.WaitGroup
 	mu        sync.RWMutex
 	closed    bool
+	started   bool
+	concurrency int
 	onFailure func(Failure)
+	failures  []Failure
+	running   atomic.Int64
+	completed atomic.Int64
+	failed    atomic.Int64
 }
 
 func New(buffer int) *Worker {
 	if buffer < 1 {
 		buffer = 64
 	}
-	return &Worker{jobs: make(chan Item, buffer)}
+	return &Worker{jobs: make(chan Item, buffer), failures: make([]Failure, 0)}
+}
+
+var Default = New(256)
+
+func Attach(app *core.Application, worker *Worker, concurrency int) {
+	if app == nil {
+		return
+	}
+	if worker == nil {
+		worker = Default
+	}
+	app.Background("queue", func(ctx context.Context) error {
+		worker.Start(ctx, concurrency)
+		<-ctx.Done()
+		worker.Stop()
+		return nil
+	})
 }
 
 func (w *Worker) OnFailure(fn func(Failure)) {
@@ -51,9 +88,16 @@ func (w *Worker) Start(parent context.Context, concurrency int) {
 	if concurrency < 1 {
 		concurrency = 1
 	}
-	ctx, cancel := context.WithCancel(parent)
+
 	w.mu.Lock()
+	if w.started || w.closed {
+		w.mu.Unlock()
+		return
+	}
+	ctx, cancel := context.WithCancel(parent)
 	w.cancel = cancel
+	w.started = true
+	w.concurrency = concurrency
 	w.mu.Unlock()
 
 	for i := 0; i < concurrency; i++ {
@@ -88,10 +132,37 @@ func (w *Worker) Stop() {
 	w.closed = true
 	cancel := w.cancel
 	w.mu.Unlock()
+
 	if cancel != nil {
 		cancel()
 	}
 	w.wg.Wait()
+}
+
+func (w *Worker) Stats() Stats {
+	w.mu.RLock()
+	started := w.started && !w.closed
+	concurrency := w.concurrency
+	w.mu.RUnlock()
+
+	return Stats{
+		Pending:     len(w.jobs),
+		Running:     w.running.Load(),
+		Completed:   w.completed.Load(),
+		Failed:      w.failed.Load(),
+		Started:     started,
+		Concurrency: concurrency,
+	}
+}
+
+func (w *Worker) Failures() []Failure {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	out := make([]Failure, len(w.failures))
+	for i := range w.failures {
+		out[len(w.failures)-1-i] = w.failures[i]
+	}
+	return out
 }
 
 func (w *Worker) loop(ctx context.Context) {
@@ -101,32 +172,53 @@ func (w *Worker) loop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case item := <-w.jobs:
-			w.run(ctx, item)
+			w.running.Add(1)
+			success := w.run(ctx, item)
+			w.running.Add(-1)
+			if success {
+				w.completed.Add(1)
+			}
 		}
 	}
 }
 
-func (w *Worker) run(ctx context.Context, item Item) {
+func (w *Worker) run(ctx context.Context, item Item) bool {
 	var err error
 	for attempt := 1; attempt <= item.MaxAttempts; attempt++ {
 		err = item.Run(ctx)
 		if err == nil {
-			return
+			return true
 		}
 		if attempt < item.MaxAttempts && item.Backoff > 0 {
 			timer := time.NewTimer(item.Backoff)
 			select {
 			case <-ctx.Done():
 				timer.Stop()
-				return
+				return false
 			case <-timer.C:
 			}
 		}
 	}
-	w.mu.RLock()
-	fn := w.onFailure
-	w.mu.RUnlock()
-	if fn != nil {
-		fn(Failure{Name: item.Name, Attempts: item.MaxAttempts, Err: fmt.Errorf("%w", err)})
+
+	failure := Failure{
+		Name:     item.Name,
+		Attempts: item.MaxAttempts,
+		Error:    err.Error(),
+		Err:      fmt.Errorf("%w", err),
+		At:       time.Now().UTC(),
 	}
+	w.failed.Add(1)
+
+	w.mu.Lock()
+	w.failures = append(w.failures, failure)
+	if len(w.failures) > 100 {
+		w.failures = append([]Failure(nil), w.failures[len(w.failures)-100:]...)
+	}
+	fn := w.onFailure
+	w.mu.Unlock()
+
+	if fn != nil {
+		fn(failure)
+	}
+	return false
 }
