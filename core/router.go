@@ -462,7 +462,8 @@ func matchPath(
 	routeParts := splitPath(routePath)
 	requestParts := splitPath(requestPath)
 
-	if len(routeParts) != len(requestParts) {
+	wildcard := len(routeParts) > 0 && strings.HasPrefix(routeParts[len(routeParts)-1], "*")
+	if !wildcard && len(routeParts) != len(requestParts) || wildcard && len(requestParts) < len(routeParts)-1 {
 		return nil, false
 	}
 
@@ -471,6 +472,14 @@ func matchPath(
 	for index := range routeParts {
 
 		routePart := routeParts[index]
+		if wildcard && index == len(routeParts)-1 {
+			name := strings.TrimPrefix(routePart, "*")
+			if name == "" {
+				return nil, false
+			}
+			params[name] = strings.Join(requestParts[index:], "/")
+			return params, true
+		}
 		requestPart := requestParts[index]
 
 		if strings.HasPrefix(

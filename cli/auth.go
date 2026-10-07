@@ -13,7 +13,7 @@ import (
 	copyauth "github.com/arfajhf/copytygo/v4/auth"
 )
 
-//go:embed auth_legacy_v403/*
+//go:embed auth_legacy_v403/* auth_legacy_v404/* auth_frontend/* auth_frontend/src/auth/*
 var legacyAuthStarter embed.FS
 
 func InstallAuth(mode, root string) error {
@@ -30,10 +30,15 @@ func InstallAuth(mode, root string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	updateRoutes := os.IsNotExist(err) || legacyAuthRoutes(current) || unchangedBrowserRoutes(current, module)
-	if !updateRoutes && !strings.Contains(string(current), "appauth.Pages()") {
-		return fmt.Errorf("copytygo: routes/auth.go has custom auth routes; add the browser routes from docs/AUTHENTICATION.md manually")
+	updateRoutes := os.IsNotExist(err) || unchangedCurrentAuthRoutes(current, module) || legacyAuthRoutes(current) || unchangedBrowserRoutes(current, module) || matchesAuthSnapshot(current, "routes.txt", module)
+	if !updateRoutes && !strings.Contains(string(current), "appauth.Sessions()") {
+		return fmt.Errorf("copytygo: routes/auth.go has custom auth routes; integrate the TypeScript starter routes from docs/AUTHENTICATION.md manually")
 	}
+	webPath := filepath.Join(root, "app/auth/web.go")
+	if raw, err := os.ReadFile(webPath); err == nil && strings.Contains(string(raw), "func Pages()") && !unchangedAuthWeb(raw) {
+		return fmt.Errorf("copytygo: app/auth/web.go has custom HTML controllers; migrate it to Sessions() using docs/AUTHENTICATION.md before reinstalling")
+	}
+	frontendEnabled := fileExists(filepath.Join(root, "frontend/package.json"))
 	roleField, defaultRole := "", ""
 	if mode == "multi" {
 		roleField = "\tRole string `json:\"role\"`\n"
@@ -46,12 +51,14 @@ func InstallAuth(mode, root string) error {
 		"app/auth/web.go":        fmt.Sprintf(authWebScaffold, defaultRole),
 		"app/auth/README.md":     authScaffoldReadme,
 	}
-	views, err := copyauth.StarterViews()
-	if err != nil {
-		return err
-	}
-	for name, content := range views {
-		files["app/auth/views/"+name] = content
+	if frontendEnabled {
+		for _, path := range []string{"auth.html", "vite.auth.config.ts", "src/auth/api.ts", "src/auth/views.ts", "src/auth/main.ts", "src/auth/style.css"} {
+			raw, err := legacyAuthStarter.ReadFile("auth_frontend/" + path)
+			if err != nil {
+				return err
+			}
+			files["frontend/"+path] = string(raw)
+		}
 	}
 	for path, content := range files {
 		if err := writeAuthStarterFile(root, path, content); err != nil {
@@ -62,7 +69,11 @@ func InstallAuth(mode, root string) error {
 		return err
 	}
 	if updateRoutes {
-		source, err := format.Source([]byte(fmt.Sprintf(authRoutesScaffold, module)))
+		routes := fmt.Sprintf(authRoutesScaffold, module)
+		if !frontendEnabled {
+			routes = fmt.Sprintf(authAPIRoutesScaffold, module)
+		}
+		source, err := format.Source([]byte(routes))
 		if err != nil {
 			return err
 		}
@@ -73,7 +84,7 @@ func InstallAuth(mode, root string) error {
 			return err
 		}
 	}
-	webPath := filepath.Join(root, "routes", "web.go")
+	webPath = filepath.Join(root, "routes", "web.go")
 	raw, err := os.ReadFile(webPath)
 	if err != nil {
 		return err
@@ -86,26 +97,36 @@ func InstallAuth(mode, root string) error {
 			return fmt.Errorf("copytygo: routes.Register function not found")
 		}
 		at := index + len(needle)
-		source, err := format.Source([]byte(web[:at] + "\n RegisterAuth(app)" + web[at:]))
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(webPath, source, 0644); err != nil {
-			return err
-		}
+		web = web[:at] + "\n RegisterAuth(app)" + web[at:]
+	}
+	if frontendEnabled && strings.Contains(web, `app.Get("/", core.Welcome()).Name("welcome")`) {
+		web = strings.Replace(web, `app.Get("/", core.Welcome()).Name("welcome")`, `app.Get("/", frontend.Page()).Name("welcome")`, 1)
+		web = strings.Replace(web, `"github.com/arfajhf/copytygo/v4/core"`, `"github.com/arfajhf/copytygo/v4/core"`+"\n"+`"github.com/arfajhf/copytygo/v4/frontend"`, 1)
+	}
+	source, err := format.Source([]byte(web))
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(webPath, source, 0644); err != nil {
+		return err
+	}
+	if err := removeUnchangedHTMLViews(root); err != nil {
+		return err
 	}
 	fmt.Printf("Auth starter installed (%s role).\n", mode)
 	fmt.Println("1. Set your database connection in .env, then run: ctg migrate")
 	fmt.Println("2. Start the application: ctg dev")
-	fmt.Println("3. Open /login or /register, or use the buttons on the welcome page.")
-	fmt.Println("Customize: routes/auth.go, app/auth/web.go, app/auth/views/*.html")
+	if frontendEnabled {
+		fmt.Println("3. Open the application URL. Login/register, dashboard and Users are TypeScript UI.")
+		fmt.Println("Customize: frontend/src/auth/*.ts, frontend/src/auth/style.css, routes/auth.go")
+		fmt.Println("ctg dev starts Go + Vite; ctg build compiles TypeScript + Go. Node.js is required to develop/build the frontend.")
+	} else {
+		fmt.Println("API-only project: use /api/auth/register, /api/auth/login and /api/auth/me.")
+	}
 	if mode == "multi" {
 		fmt.Println("First admin: register your account, then run ctg auth:admin <email> locally.")
 	}
-	if !updateRoutes && !strings.Contains(string(current), "pages.Dashboard") {
-		fmt.Println("Custom routes preserved: add dashboard/user routes from docs/AUTHENTICATION.md.")
-	}
-	fmt.Println("Guide: app/auth/README.md. Customized files are preserved; unchanged v4.0.3 starter files are upgraded.")
+	fmt.Println("Guide: app/auth/README.md. Customized source files are preserved.")
 	return nil
 }
 
@@ -114,7 +135,15 @@ func writeAuthStarterFile(root, path, content string) error {
 	if current, err := os.ReadFile(target); err == nil {
 		legacyName := map[string]string{"app/auth/views/layout.html": "layout.html", "app/auth/views/account.html": "account.html", "app/auth/README.md": "README.txt"}[path]
 		legacy, readErr := legacyAuthStarter.ReadFile("auth_legacy_v403/" + legacyName)
-		if legacyName == "" || readErr != nil || !bytes.Equal(current, legacy) {
+		upgrade := legacyName != "" && readErr == nil && bytes.Equal(current, legacy)
+		if path == "app/auth/web.go" {
+			upgrade = unchangedAuthWeb(current)
+		}
+		if path == "app/auth/README.md" {
+			old, _ := legacyAuthStarter.ReadFile("auth_legacy_v404/README.txt")
+			upgrade = upgrade || bytes.Equal(current, old)
+		}
+		if !upgrade {
 			return nil
 		}
 	} else if !os.IsNotExist(err) {
@@ -227,7 +256,7 @@ import (
  "github.com/arfajhf/copytygo/v4/core"
 )
 
-// Middleware protects bearer-token API routes. Browser pages use Pages().Middleware().
+// Middleware protects bearer-token API routes. Browser JSON APIs use Sessions().Middleware().
 func Middleware() core.Middleware { return copyauth.Middleware() }
 
 // RequireRole must run after authentication middleware.
@@ -236,26 +265,14 @@ func RequireRole(roles ...string) core.Middleware { return copyauth.RequireRole(
 
 const authWebScaffold = `package auth
 
-import (
- "embed"
- copyauth "github.com/arfajhf/copytygo/v4/auth"
-)
+import copyauth "github.com/arfajhf/copytygo/v4/auth"
 
-// DefaultRole is assigned by the server during public registration.
-// Use an empty role for single-role auth; multi-role auth starts with "user".
+// DefaultRole is assigned by Go during public registration, never by the client.
+// Multi-role accounts start as "user"; create the first admin with ctg auth:admin.
 const DefaultRole = %q
 
-//go:embed views/*.html
-var pageViews embed.FS
-
-// Pages connects your editable HTML views to the browser auth controller.
-// Views compile into the application binary. Restart ctg dev after editing them.
-func Pages() *copyauth.WebAuth {
- return copyauth.NewWebAuth(copyauth.WebOptions{
-  DefaultRole: DefaultRole,
-  Views: pageViews,
- })
-}
+// Sessions supplies JSON controllers. All UI lives in frontend/src/auth/.
+func Sessions() *copyauth.BrowserAuth { return copyauth.NewBrowserAuth(DefaultRole) }
 `
 
 const authRoutesScaffold = `package routes
@@ -264,33 +281,47 @@ import (
  appauth "%s/app/auth"
  copyauth "github.com/arfajhf/copytygo/v4/auth"
  "github.com/arfajhf/copytygo/v4/core"
+ "github.com/arfajhf/copytygo/v4/frontend"
 )
 
-// RegisterAuth defines browser pages and JSON endpoints in one place.
-// Edit these routes to customize your application.
+// Go defines API routes; TypeScript renders the pages in frontend/src/auth/.
 func RegisterAuth(app *core.Application) {
- pages := appauth.Pages()
-
- // Browser: HTML forms, encrypted cookie sessions, and CSRF protection.
- app.Get("/login", pages.LoginPage).Name("auth.login")
- app.Post("/login", pages.Login)
- app.Get("/register", pages.RegisterPage).Name("auth.register")
- app.Post("/register", pages.Register)
- app.Get("/dashboard", pages.Dashboard).Middleware(pages.Middleware()).Name("auth.dashboard")
- app.Get("/account", pages.Account).Middleware(pages.Middleware()).Name("auth.account")
- app.Post("/logout", pages.Logout).Middleware(pages.Middleware())
-
- // Multi-role administration. Both middleware checks are required.
- if appauth.DefaultRole != "" {
-  app.Get("/users", pages.Users).Middleware(pages.Middleware(), pages.RequireAdmin()).Name("auth.users")
-  app.Get("/users/create", pages.UserCreatePage).Middleware(pages.Middleware(), pages.RequireAdmin())
-  app.Post("/users", pages.UserCreate).Middleware(pages.Middleware(), pages.RequireAdmin())
-  app.Get("/users/:id/edit", pages.UserEditPage).Middleware(pages.Middleware(), pages.RequireAdmin())
-  app.Post("/users/:id", pages.UserUpdate).Middleware(pages.Middleware(), pages.RequireAdmin())
-  app.Post("/users/:id/delete", pages.UserDelete).Middleware(pages.Middleware(), pages.RequireAdmin())
+ sessions := appauth.Sessions()
+ frontend.Assets(app)
+ for _, path := range []string{"/login", "/register", "/dashboard", "/account", "/users", "/users/create", "/users/:id/edit"} {
+  app.Get(path, frontend.Page())
  }
 
- // API: JSON responses and Authorization: Bearer <token>.
+ // Browser JSON APIs use HttpOnly cookie sessions and X-CSRF-Token.
+ app.Get("/api/session", sessions.Session)
+ app.Post("/api/session/login", sessions.Login).Middleware(sessions.CSRF())
+ app.Post("/api/session/register", sessions.Register).Middleware(sessions.CSRF())
+ app.Post("/api/session/logout", sessions.Logout).Middleware(sessions.Middleware(), sessions.CSRF())
+ app.Get("/api/dashboard", sessions.Dashboard).Middleware(sessions.Middleware())
+
+ // Always enforce fresh database roles on the backend, including every write.
+ if appauth.DefaultRole != "" {
+  app.Get("/api/users", sessions.Users).Middleware(sessions.Middleware(), sessions.RequireAdmin())
+  app.Get("/api/users/:id", sessions.User).Middleware(sessions.Middleware(), sessions.RequireAdmin())
+  app.Post("/api/users", sessions.CreateUser).Middleware(sessions.Middleware(), sessions.RequireAdmin(), sessions.CSRF())
+  app.Put("/api/users/:id", sessions.UpdateUser).Middleware(sessions.Middleware(), sessions.RequireAdmin(), sessions.CSRF())
+  app.Delete("/api/users/:id", sessions.DeleteUser).Middleware(sessions.Middleware(), sessions.RequireAdmin(), sessions.CSRF())
+ }
+
+ // Bearer APIs remain available for external/mobile clients.
+ app.Post("/api/auth/register", copyauth.RegisterHandler(appauth.DefaultRole))
+ app.Post("/api/auth/login", copyauth.LoginHandler())
+ app.Get("/api/auth/me", copyauth.MeHandler()).Middleware(copyauth.Middleware())
+}
+`
+
+const authAPIRoutesScaffold = `package routes
+import (
+ appauth "%s/app/auth"
+ copyauth "github.com/arfajhf/copytygo/v4/auth"
+ "github.com/arfajhf/copytygo/v4/core"
+)
+func RegisterAuth(app *core.Application) {
  app.Post("/api/auth/register", copyauth.RegisterHandler(appauth.DefaultRole))
  app.Post("/api/auth/login", copyauth.LoginHandler())
  app.Get("/api/auth/me", copyauth.MeHandler()).Middleware(copyauth.Middleware())
@@ -311,46 +342,103 @@ func RegisterAuth(app *core.Application) {
 }
 `
 
-const authScaffoldReadme = `# Your authentication starter
+const authScaffoldReadme = `# Your TypeScript + Go authentication starter
 
-Start here:
+1. Configure MySQL/PostgreSQL in .env and run ctg migrate.
+2. Install Node.js 22+ and Go. Run ctg dev from the project root.
+3. Open the application URL. Vite runs automatically alongside the native Go app.
+4. Register or log in. You arrive at /dashboard.
 
-1. Configure your MySQL or PostgreSQL connection in .env.
-2. Run ctg migrate to create the users table.
-3. Run ctg dev, then open the welcome page, /login, or /register.
-4. Registration signs you in automatically and redirects to /dashboard.
+Edit the frontend:
+- frontend/src/auth/views.ts: welcome/navbar, login/register, dashboard, account, Users and user form.
+- frontend/src/auth/main.ts: page routing, form submission and interactions.
+- frontend/src/auth/api.ts: typed JSON client and API response types.
+- frontend/src/auth/style.css: responsive styling.
+- frontend/vite.auth.config.ts: auth entry plus your existing frontend preset.
 
-Files you can edit:
+Edit the backend:
+- routes/auth.go: JSON endpoints and frontend page routes.
+- app/auth/web.go: default role and JSON controller configuration.
+- app/auth/user.go: application user shape.
+- app/auth/middleware.go: bearer API helpers.
 
-- routes/auth.go: browser and API route definitions.
-- app/auth/web.go: default registration role and HTML view binding.
-- app/auth/views/layout.html: shared layout, responsive CSS, and form helpers.
-- app/auth/views/login.html: login form.
-- app/auth/views/register.html: registration form and password confirmation.
-- app/auth/views/app-layout.html: dashboard navbar, role menu, CSS and logout form.
-- app/auth/views/dashboard.html: member/admin dashboard.
-- app/auth/views/users.html: searchable, paginated admin user list.
-- app/auth/views/user-form.html: admin create/edit form.
-- app/auth/views/account.html: your account details.
-- app/auth/user.go: user structure.
-- app/auth/middleware.go: API authentication and role helpers.
+TypeScript changes reload through Vite. Restart ctg dev after Go changes.
+ctg build type-checks/builds the frontend and compiles the Go application.
+Deploy build/app (app.exe on Windows) with build/frontend/. Start from the build
+folder so frontend/dist is available. Node.js is not needed on production servers.
+A custom location can be set with COPYTYGO_FRONTEND_DIST.
 
-Restart ctg dev after editing Go code or embedded HTML views. Production builds
-include the views and do not require Node.js for these pages.
+Browser JSON endpoints live at /api/session, /api/dashboard and /api/users.
+Cookie sessions are encrypted and HttpOnly; do not store auth tokens in localStorage.
+Every write includes X-CSRF-Token obtained from GET /api/session. Go checks it.
+Bearer /api/auth endpoints remain available for external/mobile clients.
 
-Browser pages use encrypted HttpOnly cookies. Every POST form includes a CSRF
-field. Keep that field when changing templates. API endpoints still use bearer
-tokens and do not accept the browser cookie as API authentication.
+Public multi-role registration starts as user. Register the first admin normally,
+then run ctg auth:admin your-email@example.com locally inside the project.
+Only admins can manage Users. Go reads roles from the database for each request
+and checks write permissions within a transaction. Passwords never appear in UI.
+You cannot delete or demote your own administrator account from Users.
 
-Public multi-role registration assigns DefaultRole on the server. It never reads
-a role field submitted by the user. Create the first administrator by registering normally, then running
-ctg auth:admin your-email@example.com on your own terminal inside this project.
-The account's role is read from the database on each browser request. Only admins
-can manage /users. Passwords are hashed and never displayed. Your own admin role
-and account cannot be removed from this menu.
-
-Running install:auth again preserves customized files and routes. Unchanged
-v4.0.3 layouts and routes are upgraded automatically and missing files are added.
-Use the same auth mode as the original installation. Custom routes may need the
-dashboard and user routes from docs/AUTHENTICATION.md added manually.
+Reinstall using the same mode. Unchanged v4.0.3/v4.0.4 Go HTML starter files are
+migrated to TypeScript. Customized old routes/controllers require manual migration;
+customized HTML files are preserved on disk but are no longer starter UI.
+API-only projects keep bearer endpoints and do not add a frontend or Node dependency.
 `
+
+func fileExists(path string) bool { info, err := os.Stat(path); return err == nil && !info.IsDir() }
+
+func matchesAuthSnapshot(raw []byte, name, argument string) bool {
+	expected, err := legacyAuthStarter.ReadFile("auth_legacy_v404/" + name)
+	if err != nil {
+		return false
+	}
+	old, err := format.Source([]byte(fmt.Sprintf(string(expected), argument)))
+	if err != nil {
+		return false
+	}
+	actual, err := format.Source(raw)
+	return err == nil && bytes.Equal(bytes.TrimSpace(old), bytes.TrimSpace(actual))
+}
+func unchangedAuthWeb(raw []byte) bool {
+	return matchesAuthSnapshot(raw, "web.txt", "") || matchesAuthSnapshot(raw, "web.txt", "user")
+}
+func removeUnchangedHTMLViews(root string) error {
+	views, err := copyauth.StarterViews()
+	if err != nil {
+		return err
+	}
+	for name, expected := range views {
+		path := filepath.Join(root, "app/auth/views", name)
+		current, err := os.ReadFile(path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		legacy, _ := legacyAuthStarter.ReadFile("auth_legacy_v403/" + name)
+		if bytes.Equal(current, []byte(expected)) || len(legacy) > 0 && bytes.Equal(current, legacy) {
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+		} else {
+			fmt.Println("Preserved customized legacy view:", path, "(move its UI to frontend/src/auth/)")
+		}
+	}
+	_ = os.Remove(filepath.Join(root, "app/auth/views")) // only removes an empty directory
+	return nil
+}
+
+func unchangedCurrentAuthRoutes(raw []byte, module string) bool {
+	actual, err := format.Source(raw)
+	if err != nil {
+		return false
+	}
+	for _, scaffold := range []string{authRoutesScaffold, authAPIRoutesScaffold} {
+		expected, err := format.Source([]byte(fmt.Sprintf(scaffold, module)))
+		if err == nil && bytes.Equal(bytes.TrimSpace(actual), bytes.TrimSpace(expected)) {
+			return true
+		}
+	}
+	return false
+}

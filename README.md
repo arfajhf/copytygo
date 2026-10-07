@@ -6,7 +6,7 @@ CopyTyGo is a full-stack Go framework focused on productive application developm
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> Stable release: `v4.0.5`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
+> Stable release: `v4.0.5`. Go 1.27.1 or newer is required. Node.js 22+ is needed for frontend development and builds.
 
 ## Quick start
 
@@ -226,7 +226,7 @@ GET      /account
 POST     /logout
 ```
 
-Browser forms use encrypted HttpOnly cookie sessions, CSRF protection, password confirmation, and inline validation messages. Production cookies require HTTPS. These pages run in Native Runtime and do not require a frontend build.
+The TypeScript frontend provides login/register, role-aware dashboards and Users CRUD. Go handles JSON endpoints, encrypted HttpOnly sessions, CSRF, validation and permissions. `ctg dev` starts native Go + Vite automatically; `ctg build` compiles both. Production cookies require HTTPS.
 
 JSON API routes remain available:
 
@@ -236,7 +236,7 @@ POST /api/auth/login
 GET  /api/auth/me
 ```
 
-Edit `routes/auth.go` for routes, `app/auth/web.go` for the default registration role, and `app/auth/views/*.html` for the UI. Restart `ctg dev` after changing embedded views. Read [the authentication guide](docs/AUTHENTICATION.md) for setup, customization and upgrades.
+Edit `frontend/src/auth/*.ts` and `style.css` for the UI, `routes/auth.go` for JSON routes, and `app/auth/web.go` for the default registration role. TypeScript changes reload through Vite; restart `ctg dev` after Go changes. Read [the authentication guide](docs/AUTHENTICATION.md) for setup, customization and upgrades.
 
 For multi-role auth, register your first account, then promote it from your own terminal inside the project:
 

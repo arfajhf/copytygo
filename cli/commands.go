@@ -122,6 +122,9 @@ func RegisterDeveloperCommands(app *CLI) {
 	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })
 	app.Command("build", func(_ []string) error {
+		if err := buildAuthFrontend(); err != nil {
+			return err
+		}
 		if err := os.MkdirAll("build", 0755); err != nil {
 			return err
 		}

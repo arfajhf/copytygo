@@ -1,0 +1,22 @@
+package auth
+
+import (
+ "embed"
+ copyauth "github.com/arfajhf/copytygo/v4/auth"
+)
+
+// DefaultRole is assigned by the server during public registration.
+// Use an empty role for single-role auth; multi-role auth starts with "user".
+const DefaultRole = %q
+
+//go:embed views/*.html
+var pageViews embed.FS
+
+// Pages connects your editable HTML views to the browser auth controller.
+// Views compile into the application binary. Restart ctg dev after editing them.
+func Pages() *copyauth.WebAuth {
+ return copyauth.NewWebAuth(copyauth.WebOptions{
+  DefaultRole: DefaultRole,
+  Views: pageViews,
+ })
+}
