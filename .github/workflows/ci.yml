@@ -192,3 +192,134 @@ jobs:
 
       - name: PostgreSQL queue integration
         run: go test ./integration -run TestDurableQueueIntegration -v
+
+
+  windows-smoke:
+    name: Windows Native and Lite smoke
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build CLI
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          go build -o build\ctg.exe .\cmd\ctg
+
+      - name: Fresh project smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $root = $env:GITHUB_WORKSPACE
+          $tmp = Join-Path $env:RUNNER_TEMP "copytygo-windows-smoke"
+          if (Test-Path $tmp) {
+            Remove-Item -Recurse -Force $tmp
+          }
+          New-Item -ItemType Directory -Force $tmp | Out-Null
+
+          $ctg = Join-Path $tmp "ctg.exe"
+          Copy-Item (Join-Path $root "build\ctg.exe") $ctg
+
+          Set-Location $tmp
+          & $ctg new windows-smoke
+
+          Set-Location (Join-Path $tmp "windows-smoke")
+          go mod edit "-replace=github.com/arfajhf/copytygo/v4=$root"
+          go mod tidy
+          go test ./...
+
+          New-Item -ItemType Directory -Force build | Out-Null
+          go build -o build\app.exe .\cmd\app
+
+          & $ctg doctor
+
+          function Set-EnvValue([string]$Key, [string]$Value) {
+            $lines = Get-Content .env
+            $pattern = "^" + [regex]::Escape($Key) + "=.*$"
+            if ($lines -match $pattern) {
+              $lines = $lines -replace $pattern, ($Key + "=" + $Value)
+            } else {
+              $lines += ($Key + "=" + $Value)
+            }
+            Set-Content .env $lines
+          }
+
+          function Wait-Http([string]$Url, [int]$Expected = 200) {
+            for ($i = 0; $i -lt 40; $i++) {
+              try {
+                $response = Invoke-WebRequest -Uri $Url -SkipHttpErrorCheck -TimeoutSec 2
+                if ([int]$response.StatusCode -eq $Expected) {
+                  return $response
+                }
+              } catch {
+              }
+              Start-Sleep -Milliseconds 500
+            }
+            throw "Timed out waiting for $Url with status $Expected"
+          }
+
+          # Native Runtime smoke
+          Set-EnvValue "APP_ENV" "local"
+          Set-EnvValue "APP_PORT" "18080"
+          $native = Start-Process -FilePath (Join-Path (Get-Location) "build\app.exe") -PassThru -WorkingDirectory (Get-Location)
+          try {
+            $welcome = Wait-Http "http://127.0.0.1:18080/" 200
+            if ($welcome.Content -notmatch "CopyTyGo") {
+              throw "Native welcome page did not render CopyTyGo"
+            }
+
+            $studio = Wait-Http "http://127.0.0.1:18080/__copytygo" 200
+            if ($studio.Content -notmatch "CopyTyGo") {
+              throw "Native Studio did not render"
+            }
+          } finally {
+            if ($native -and -not $native.HasExited) {
+              Stop-Process -Id $native.Id -Force
+            }
+          }
+
+          # Lite Runtime smoke
+          Set-EnvValue "APP_ENV" "local"
+          Set-EnvValue "APP_PORT" "18081"
+          $lite = Start-Process -FilePath $ctg -ArgumentList @("dev","--lite") -PassThru -WorkingDirectory (Get-Location)
+          try {
+            $welcomeLite = Wait-Http "http://127.0.0.1:18081/" 200
+            if ($welcomeLite.Content -notmatch "CopyTyGo") {
+              throw "Lite welcome page did not render CopyTyGo"
+            }
+
+            $studioLite = Wait-Http "http://127.0.0.1:18081/__copytygo" 200
+            if ($studioLite.Content -notmatch "CopyTyGo") {
+              throw "Lite Studio did not render"
+            }
+          } finally {
+            if ($lite -and -not $lite.HasExited) {
+              Stop-Process -Id $lite.Id -Force
+            }
+          }
+
+          # Production safety: Studio must be unavailable.
+          Set-EnvValue "APP_ENV" "production"
+          Set-EnvValue "APP_DEBUG" "false"
+          Set-EnvValue "APP_PORT" "18082"
+          $production = Start-Process -FilePath (Join-Path (Get-Location) "build\app.exe") -PassThru -WorkingDirectory (Get-Location)
+          try {
+            Wait-Http "http://127.0.0.1:18082/" 200 | Out-Null
+            $studioProduction = Wait-Http "http://127.0.0.1:18082/__copytygo" 404
+            if ([int]$studioProduction.StatusCode -ne 404) {
+              throw "Studio must return 404 in production"
+            }
+          } finally {
+            if ($production -and -not $production.HasExited) {
+              Stop-Process -Id $production.Id -Force
+            }
+          }
