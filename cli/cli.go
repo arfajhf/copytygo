@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arfajhf/copytygo/v3/version"
+	"github.com/arfajhf/copytygo/v4/version"
 )
 
 type CommandHandler func(args []string) error
@@ -69,8 +69,10 @@ func (cli *CLI) printHelp() {
 	fmt.Printf("\nCopyTyGo v%s\n\n", version.Framework)
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
-	fmt.Println("  new <name>                 Create a CopyTyGo project")
+	fmt.Println("  new [name] [-i|--interactive] Create a project or open the setup wizard")
 	fmt.Println("  dev [--lite]               Run development server with automatic Lite fallback")
+	fmt.Println("  open                       Open application in browser")
+	fmt.Println("  studio                     Open CopyTyGo Studio in browser")
 	fmt.Println("  doctor [--db] [--production] Check project, runtime, security, DB and production config")
 	fmt.Println("  build                      Build application")
 	fmt.Println("  route:list                 List project routes")
@@ -83,6 +85,11 @@ func (cli *CLI) printHelp() {
 	fmt.Println("  make:migration <name>")
 	fmt.Println("  make:middleware <name>")
 	fmt.Println("  make:service <name>")
+	fmt.Println("  make:job <name>")
+	fmt.Println("  make:listener <name>")
+	fmt.Println("  make:seeder <name>")
+	fmt.Println("  make:factory <name>")
+	fmt.Println("  make:mail <name>")
 	fmt.Println("\nDatabase:")
 	fmt.Println("  migrate")
 	fmt.Println("  migrate:status")

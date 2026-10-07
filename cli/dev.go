@@ -21,12 +21,12 @@ import (
 	"sync"
 	"strings"
 
-	copyauth "github.com/arfajhf/copytygo/v3/auth"
-	"github.com/arfajhf/copytygo/v3/config"
-	"github.com/arfajhf/copytygo/v3/database"
-	"github.com/arfajhf/copytygo/v3/database/drivers"
-	"github.com/arfajhf/copytygo/v3/security"
-	"github.com/arfajhf/copytygo/v3/validation"
+	copyauth "github.com/arfajhf/copytygo/v4/auth"
+	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v4/database"
+	"github.com/arfajhf/copytygo/v4/database/drivers"
+	"github.com/arfajhf/copytygo/v4/security"
+	"github.com/arfajhf/copytygo/v4/validation"
 )
 
 type liteRoute struct {
@@ -142,12 +142,12 @@ func runLiteDev() error {
 	if err != nil {
 		return err
 	}
-	if len(routes) == 0 {
-		return errors.New("copytygo lite runtime: no supported routes found; use native runtime for this project")
-	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		if handleLiteStudio(w, req) {
+			return
+		}
 		currentRoutes, reloadErr := discoverLiteRoutes("routes")
 		if reloadErr != nil {
 			http.Error(w, "CopyTyGo Lite reload error: "+reloadErr.Error(), http.StatusInternalServerError)
@@ -190,7 +190,7 @@ func runLiteDev() error {
 		}
 		if req.Method == http.MethodGet && req.URL.Path == "/" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_, _ = fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8"><title>CopyTyGo</title></head><body style="font-family:system-ui;max-width:760px;margin:60px auto;padding:0 20px"><h1>CopyTyGo Lite Runtime</h1><p>Your development server is running without a generated application executable.</p><p>Routes reload automatically on each request during development.</p></body></html>`)
+			_, _ = fmt.Fprint(w, liteWelcomePage())
 			return
 		}
 		http.NotFound(w, req)
@@ -208,11 +208,15 @@ func runLiteDev() error {
 
 	fmt.Println("CopyTyGo Dev")
 	fmt.Println("-------------")
-	fmt.Println("Runtime : lite")
-	fmt.Println("Backend : http://" + address)
-	fmt.Printf("Routes  : %d\n", len(routes))
+	fmt.Println("Runtime     : lite")
+	fmt.Println("Application : http://" + address)
+	if !strings.EqualFold(config.Get("APP_ENV", "local"), "production") && config.GetBool("COPYTYGO_STUDIO", true) {
+		fmt.Println("Studio      : http://" + address + "/__copytygo")
+	}
+	fmt.Printf("Routes      : %d\n", len(routes))
 	fmt.Println()
-	fmt.Println("Lite Runtime supports inline Text/JSON routes with automatic route hot reload.")
+	fmt.Println("Lite Runtime keeps Welcome and Studio available even when no project routes can be interpreted.")
+	fmt.Println("Supported inline Text/JSON routes still reload automatically.")
 	fmt.Println("Complex controllers, middleware, database calls and arbitrary Go packages still use native mode.")
 	fmt.Println()
 

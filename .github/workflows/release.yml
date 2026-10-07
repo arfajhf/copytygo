@@ -9,6 +9,11 @@ on:
 
 permissions:
   contents: write
+  actions: read
+
+concurrency:
+  group: copytygo-final-release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -39,6 +44,32 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for CI on this main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for attempt in $(seq 1 90); do
+            RESULT="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push" --jq '.workflow_runs | sort_by(.created_at) | last | if . == null then "waiting" else "\(.status) \(.conclusion)" end')"
+            if [ "$RESULT" = "completed success" ]; then
+              exit 0
+            fi
+            if [[ "$RESULT" == completed* ]]; then
+              echo "Refusing release because CI did not pass: $RESULT"
+              exit 1
+            fi
+            echo "Waiting for CI: $RESULT"
+            sleep 10
+          done
+          echo "CI did not finish within the release timeout."
+          exit 1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
 
       - name: Inspect tag and release
         id: existing
@@ -93,6 +124,56 @@ jobs:
 
           git tag -f -a "$TAG" "$GITHUB_SHA" -m "CopyTyGo $TAG"
           git push --force origin "refs/tags/$TAG"
+
+      - name: Verify installation from release tag
+        if: steps.existing.outputs.release_exists != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          TMP="$(mktemp -d)"
+          export GOBIN="$TMP/bin"
+          # Fetch the just-created tag directly, without waiting for proxy indexing.
+          export GOPROXY=direct
+          go install "github.com/arfajhf/copytygo/v4/cmd/ctg@$TAG"
+          CTG="$GOBIN/ctg"
+          test "$("$CTG" version)" = "CopyTyGo v$VERSION"
+          cd "$TMP"
+          "$CTG" new release-smoke
+          cd release-smoke
+          grep -q "require github.com/arfajhf/copytygo/v4 $TAG" go.mod
+          if grep -q '^replace ' go.mod; then
+            echo "Release smoke must not use a local module replacement."
+            exit 1
+          fi
+          go mod tidy
+          "$CTG" make:job SendWelcomeEmail
+          "$CTG" make:listener NotifyAdmin
+          "$CTG" make:seeder UserSeeder
+          "$CTG" make:factory User
+          "$CTG" make:mail Welcome
+          go test ./...
+          "$CTG" build
+          "$CTG" doctor
+          sed -i 's/^APP_PORT=.*/APP_PORT=18083/' .env
+          ./build/app > "$TMP/application.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          READY=false
+          for attempt in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:18083/ > "$TMP/welcome.html"; then
+              READY=true
+              break
+            fi
+            sleep 0.5
+          done
+          if [ "$READY" != true ]; then
+            cat "$TMP/application.log"
+            exit 1
+          fi
+          grep -q 'CopyTyGo' "$TMP/welcome.html"
+          curl -fsS http://127.0.0.1:18083/__copytygo | grep -q 'CopyTyGo'
 
       - name: Create GitHub release
         if: steps.existing.outputs.release_exists != 'true'

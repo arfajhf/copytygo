@@ -18,13 +18,15 @@ type Route struct {
 }
 
 type RouteBuilder struct {
-	route *Route
+	route      *Route
+	namePrefix string
 }
 
 type RouteGroup struct {
 	router *Router
 
 	prefix      string
+	namePrefix  string
 	middlewares []Middleware
 }
 
@@ -55,7 +57,7 @@ func (route *Route) NameValue() string { return route.name }
 // ----------------------------------------------------
 
 func (builder *RouteBuilder) Name(name string) *RouteBuilder {
-	builder.route.name = name
+	builder.route.name = builder.namePrefix + name
 	return builder
 }
 
@@ -184,6 +186,20 @@ func (group *RouteGroup) Middleware(
 	return group
 }
 
+func (group *RouteGroup) Name(prefix string) *RouteGroup {
+	group.namePrefix += prefix
+	return group
+}
+
+func (group *RouteGroup) Group(prefix string) *RouteGroup {
+	return &RouteGroup{
+		router:       group.router,
+		prefix:       joinPaths(group.prefix, prefix),
+		namePrefix:   group.namePrefix,
+		middlewares:  append([]Middleware{}, group.middlewares...),
+	}
+}
+
 func (group *RouteGroup) Routes(
 	callback func(route *RouteGroup),
 ) *RouteGroup {
@@ -217,6 +233,7 @@ func (group *RouteGroup) add(
 		group.middlewares...,
 	)
 
+	builder.namePrefix = group.namePrefix
 	return builder
 }
 
@@ -278,6 +295,25 @@ func (group *RouteGroup) Delete(
 		path,
 		handler,
 	)
+}
+
+func (group *RouteGroup) Resource(path string, controller ResourceController) *RouteGroup {
+	base := strings.TrimRight(path, "/")
+	if base == "" {
+		base = "/"
+	}
+	member := base
+	if member == "/" {
+		member = ""
+	}
+	member += "/:id"
+
+	group.Get(base, controller.Index)
+	group.Get(member, controller.Show)
+	group.Post(base, controller.Store)
+	group.Put(member, controller.Update)
+	group.Delete(member, controller.Destroy)
+	return group
 }
 
 // ----------------------------------------------------

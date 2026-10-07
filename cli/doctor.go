@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v3/config"
-	"github.com/arfajhf/copytygo/v3/security"
-	"github.com/arfajhf/copytygo/v3/version"
+	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v4/security"
+	"github.com/arfajhf/copytygo/v4/version"
 )
 
 type doctorCheck struct {
@@ -19,12 +19,15 @@ type doctorCheck struct {
 	Err  error
 }
 
-func Doctor(args []string) error {
-	fmt.Printf("CopyTyGo Doctor v%s\n", version.Framework)
-	fmt.Println("------------------------------")
+type DoctorResult struct {
+	Name  string `json:"name"`
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
 
+func RunDoctorChecks(args []string) []DoctorResult {
 	checks := []doctorCheck{
-		{Name: "go.mod", Err: doctorFileContains("go.mod", "github.com/arfajhf/copytygo/v3")},
+		{Name: "go.mod", Err: doctorFileContains("go.mod", "github.com/arfajhf/copytygo/v4")},
 		{Name: ".env", Err: doctorFileExists(".env")},
 		{Name: "routes", Err: doctorRoutes()},
 		{Name: "Lite params/query", Err: doctorLiteParams()},
@@ -48,14 +51,30 @@ func Doctor(args []string) error {
 		}
 	}
 
-	failed := 0
+	results := make([]DoctorResult, 0, len(checks))
 	for _, check := range checks {
+		result := DoctorResult{Name: check.Name, OK: check.Err == nil}
 		if check.Err != nil {
+			result.Error = check.Err.Error()
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+func Doctor(args []string) error {
+	fmt.Printf("CopyTyGo Doctor v%s\n", version.Framework)
+	fmt.Println("------------------------------")
+
+	results := RunDoctorChecks(args)
+	failed := 0
+	for _, result := range results {
+		if !result.OK {
 			failed++
-			fmt.Printf("x %-20s %v\n", check.Name, check.Err)
+			fmt.Printf("x %-20s %s\n", result.Name, result.Error)
 			continue
 		}
-		fmt.Printf("✓ %s\n", check.Name)
+		fmt.Printf("✓ %s\n", result.Name)
 	}
 
 	fmt.Println()
@@ -86,14 +105,11 @@ func doctorFileContains(path, needle string) error {
 }
 
 func doctorRoutes() error {
-	routes, err := discoverLiteRoutes("routes")
-	if err != nil {
+	if _, err := os.Stat("routes"); err != nil {
 		return err
 	}
-	if len(routes) == 0 {
-		return fmt.Errorf("no Lite-compatible routes found")
-	}
-	return nil
+	_, err := discoverLiteRoutes("routes")
+	return err
 }
 
 func doctorLiteParams() error {

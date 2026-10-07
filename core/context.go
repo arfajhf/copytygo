@@ -66,6 +66,13 @@ func (ctx *Context) Text(value string) error {
 	return err
 }
 
+func (ctx *Context) HTML(value string) error {
+	ctx.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	ctx.Response.WriteHeader(ctx.statusCode)
+	_, err := ctx.Response.Write([]byte(value))
+	return err
+}
+
 func (ctx *Context) JSON(data any) error {
 	ctx.Response.Header().Set(
 		"Content-Type",

@@ -10,17 +10,30 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arfajhf/copytygo/v3/config"
-	"github.com/arfajhf/copytygo/v3/version"
+	"github.com/arfajhf/copytygo/v4/config"
+	copycontainer "github.com/arfajhf/copytygo/v4/container"
+	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v4/logging"
 )
 
+type BackgroundTask func(context.Context) error
+
+type backgroundRegistration struct {
+	name string
+	run  BackgroundTask
+}
+
 type Application struct {
-	router *Router
+	router     *Router
+	background []backgroundRegistration
+	Services   *copycontainer.Container
 }
 
 func New() *Application {
 	return &Application{
-		router: NewRouter(),
+		router:     NewRouter(),
+		background: make([]backgroundRegistration, 0),
+		Services:   copycontainer.New(),
 	}
 }
 
@@ -29,7 +42,25 @@ func (app *Application) Use(middlewares ...Middleware) *Application {
 	return app
 }
 
+func (app *Application) Background(name string, task BackgroundTask) *Application {
+	if task == nil {
+		return app
+	}
+	if strings.TrimSpace(name) == "" {
+		name = "background"
+	}
+	app.background = append(app.background, backgroundRegistration{name: name, run: task})
+	return app
+}
+
 func (app *Application) Routes() []*Route { return app.router.Routes() }
+
+func (app *Application) Resolve(name string) (any, error) {
+	if app.Services == nil {
+		return nil, fmt.Errorf("copytygo: application service container is unavailable")
+	}
+	return app.Services.Resolve(name)
+}
 
 func (app *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	app.router.ServeHTTP(w, r)
@@ -124,6 +155,14 @@ func (app *Application) Group(
 	return app.router.Group(prefix)
 }
 
+func (app *Application) APIVersion(version string) *RouteGroup {
+	version = strings.Trim(strings.TrimSpace(version), "/")
+	if version == "" {
+		version = "v1"
+	}
+	return app.Group("/api/" + version).Name("api." + version + ".")
+}
+
 func (app *Application) Run() error {
 	host := config.Get(
 		"APP_HOST",
@@ -152,6 +191,20 @@ func (app *Application) Run() error {
 
 	address := host + ":" + port
 
+	backgroundCtx, cancelBackground := context.WithCancel(context.Background())
+	defer cancelBackground()
+	for _, registration := range app.background {
+		registration := registration
+		go func() {
+			if err := registration.run(backgroundCtx); err != nil && backgroundCtx.Err() == nil {
+				logging.Default.Error("background task stopped", map[string]any{
+					"name":  registration.name,
+					"error": err.Error(),
+				})
+			}
+		}()
+	}
+
 	fmt.Println()
 	fmt.Println("CopyTyGo v" + version.Framework)
 	fmt.Println("----------------------------")
@@ -159,9 +212,11 @@ func (app *Application) Run() error {
 	fmt.Println("Environment :", environment)
 	fmt.Println("Debug       :", debug)
 	fmt.Println()
-	fmt.Println(
-		"Server running at http://" + address,
-	)
+	fmt.Println("Application  : http://" + address)
+	if !strings.EqualFold(environment, "production") && config.GetBool("COPYTYGO_STUDIO", true) {
+		fmt.Println("Studio       : http://" + address + "/__copytygo")
+	}
+	fmt.Println("Documentation:", config.Get("COPYTYGO_DOCS_URL", version.DocsURL))
 	fmt.Println()
 
 	server := &http.Server{
@@ -191,6 +246,7 @@ func (app *Application) Run() error {
 	case <-stop:
 		fmt.Println()
 		fmt.Println("Shutting down gracefully...")
+		cancelBackground()
 
 		timeout := time.Duration(config.GetInt("SERVER_SHUTDOWN_TIMEOUT", 10)) * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)

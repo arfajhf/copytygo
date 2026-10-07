@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arfajhf/copytygo/v3/database/schema"
-	"github.com/arfajhf/copytygo/v3/database/schema/dialect"
+	"github.com/arfajhf/copytygo/v4/database/schema"
+	"github.com/arfajhf/copytygo/v4/database/schema/dialect"
 )
 
 type Migrator struct {
@@ -315,73 +315,63 @@ func (migrator *Migrator) Rollback() error {
 	return nil
 }
 
-func (migrator *Migrator) Status() error {
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		10*time.Second,
-	)
+type StatusRecord struct {
+	Migration string `json:"migration"`
+	Ran       bool   `json:"ran"`
+	Batch     int    `json:"batch"`
+}
 
+func (migrator *Migrator) StatusRecords() ([]StatusRecord, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := migrator.repository.Ensure(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
-	records, err :=
-		migrator.repository.AllRecords(ctx)
-
+	records, err := migrator.repository.AllRecords(ctx)
 	if err != nil {
-		return fmt.Errorf(
-			"copytygo: unable to read migration status: %w",
-			err,
-		)
+		return nil, fmt.Errorf("copytygo: unable to read migration status: %w", err)
 	}
 
-	executed := make(
-		map[string]Record,
-	)
-
+	executed := make(map[string]Record, len(records))
 	for _, record := range records {
 		executed[record.Migration] = record
+	}
+
+	statuses := make([]StatusRecord, 0, len(All()))
+	for _, item := range All() {
+		record, exists := executed[item.Name]
+		statuses = append(statuses, StatusRecord{
+			Migration: item.Name,
+			Ran:       exists,
+			Batch:     record.Batch,
+		})
+	}
+	return statuses, nil
+}
+
+func (migrator *Migrator) Status() error {
+	statuses, err := migrator.StatusRecords()
+	if err != nil {
+		return err
 	}
 
 	fmt.Println()
 	fmt.Println("Migration Status")
 	fmt.Println("---------------------------------------------------------------")
-	fmt.Printf(
-		"%-8s %-8s %s\n",
-		"STATUS",
-		"BATCH",
-		"MIGRATION",
-	)
+	fmt.Printf("%-8s %-8s %s\n", "STATUS", "BATCH", "MIGRATION")
 	fmt.Println("---------------------------------------------------------------")
 
-	for _, item := range All() {
-
-		record, exists :=
-			executed[item.Name]
-
-		if exists {
-			fmt.Printf(
-				"%-8s %-8d %s\n",
-				"Ran",
-				record.Batch,
-				item.Name,
-			)
-
+	for _, item := range statuses {
+		if item.Ran {
+			fmt.Printf("%-8s %-8d %s\n", "Ran", item.Batch, item.Migration)
 			continue
 		}
-
-		fmt.Printf(
-			"%-8s %-8s %s\n",
-			"Pending",
-			"-",
-			item.Name,
-		)
+		fmt.Printf("%-8s %-8s %s\n", "Pending", "-", item.Migration)
 	}
 
 	fmt.Println()
-
 	return nil
 }
 

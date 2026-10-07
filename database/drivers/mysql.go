@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/arfajhf/copytygo/v3/database"
+	"github.com/arfajhf/copytygo/v4/database"
 
 	_ "github.com/go-sql-driver/mysql"
 )

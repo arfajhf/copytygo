@@ -2,8 +2,9 @@ package version
 
 import "runtime/debug"
 
-const Framework = "3.0.0"
-const StableModule = "v3.0.0"
+const Framework = "4.0.0"
+const StableModule = "v4.0.0"
+const DocsURL = "https://github.com/arfajhf/copytygo/tree/v4.0.0/docs"
 
 func Module() string {
 	info, ok := debug.ReadBuildInfo()

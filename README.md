@@ -1,23 +1,183 @@
-# CopyTyGo v3
+# CopyTyGo v4
 
-CopyTyGo is an opinionated full-stack Go framework with a TypeScript-first frontend workflow. v3 is the first production-oriented major release line: stable REST resources, database-backed auth, production diagnostics, request tracing, graceful shutdown, and Native/Lite Runtime parity.
+CopyTyGo is a full-stack Go framework focused on productive application development without hiding the strengths of Go.
+
+v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
+
+> Stable release: `v4.0.0`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
 
 ## Quick start
 
+Install the final v4 CLI, then create a project:
+
 ```powershell
-go install github.com/arfajhf/copytygo/v3/cmd/ctg@latest
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.0
+ctg new
+```
+
+The interactive installer can configure:
+
+- MySQL or PostgreSQL
+- no auth, single-role auth, or multi-role auth
+- TypeScript, React, Vue, or API-only frontend
+- CopyTyGo Studio
+
+Ensure the Go binary directory, normally `%USERPROFILE%\go\bin` on Windows, is on your PATH.
+
+The classic non-interactive workflow remains available:
+
+```powershell
 ctg new toko-online
 cd toko-online
-
-ctg make:resource Product name:string price:decimal stock:integer description:text?
-ctg install:auth multi
-ctg migrate
 ctg dev
 ```
 
-Generated resources include the model, database-backed controller, migration, validation, REST route registration, pagination/search/filter/sort configuration, timestamps, and soft deletes.
+When the application starts locally:
 
-## Generated resource API
+```text
+Application  : http://127.0.0.1:8080
+Studio       : http://127.0.0.1:8080/__copytygo
+Documentation: ...
+```
+
+The default application route renders the CopyTyGo welcome page with links to Documentation, Studio, and GitHub.
+
+## CopyTyGo Studio
+
+Studio is a local development workspace bundled with the framework.
+
+```text
+/__copytygo
+├── Dashboard
+├── Routes
+├── Models
+├── Resources
+├── Database
+├── Migrations
+├── Auth
+├── Services
+├── Queue
+├── Scheduler
+├── Requests
+├── Errors
+├── Logs
+├── Generator
+├── Health
+└── Doctor
+```
+
+Studio is disabled when `APP_ENV=production`.
+
+You can open the application or Studio directly:
+
+```powershell
+ctg open
+ctg studio
+```
+
+## Backend ecosystem
+
+CopyTyGo v4 includes:
+
+- MySQL and PostgreSQL
+- migrations and schema DSL
+- query builder and database resources
+- transactions
+- model relationships
+- seeders and factories
+- API resources and serialization
+- database-backed authentication
+- authorization policies
+- encrypted sessions and flash data
+- cache abstraction
+- events and listeners
+- local storage and uploads
+- SMTP mail and mail templates
+- scheduler with interval and cron support
+- memory, synchronous, and durable database queues
+- retries and backoff
+- runtime health checks
+- structured logs and request/error inspection
+- HTTP client with safe retry support
+- testing client and framework fakes
+
+## Queue drivers
+
+Generated projects use:
+
+```env
+QUEUE_DRIVER=memory
+QUEUE_WORKERS=1
+QUEUE_POLL_SECONDS=1
+QUEUE_BACKOFF_SECONDS=1
+```
+
+Available drivers:
+
+```text
+sync
+memory
+database
+```
+
+The database driver persists jobs in MySQL/PostgreSQL and uses dedicated CopyTyGo queue and failed-job tables.
+
+Generate a named job:
+
+```powershell
+ctg make:job SendWelcomeEmail
+```
+
+Dispatch it through the configured driver:
+
+```go
+queue.DispatchNamed(ctx, "SendWelcomeEmail", queue.Payload{
+    "user_id": 42,
+})
+```
+
+Delayed jobs are supported through `queue.DispatchOptions`.
+
+## Scheduler
+
+Interval scheduling:
+
+```go
+scheduler.Default.Hourly("reports", func(ctx context.Context) error {
+    return nil
+})
+```
+
+Cron scheduling:
+
+```go
+scheduler.Default.Cron(
+    "weekday-report",
+    "0 8 * * 1-5",
+    func(ctx context.Context) error {
+        return nil
+    },
+)
+```
+
+## Generated resources
+
+```powershell
+ctg make:resource Product name:string price:decimal stock:integer active:boolean description:text?
+```
+
+This generates:
+
+- model
+- database-backed controller
+- migration
+- validation
+- REST routes
+- search/filter/sort allowlists
+- timestamps
+- soft deletes
+
+Resource API:
 
 ```text
 GET     /products
@@ -27,7 +187,7 @@ PUT     /products/:id
 DELETE  /products/:id
 ```
 
-List resources support:
+List options:
 
 ```text
 /products?page=2&per_page=20
@@ -36,64 +196,16 @@ List resources support:
 /products?filter[stock]=10
 ```
 
-Generated DELETE operations use soft deletes through `deleted_at`.
-
-## v3 production highlights
-
-- Native Go runtime with automatic Lite Runtime fallback on supported Windows Application Control failures.
-- MySQL and PostgreSQL.
-- Pagination, search, filtering and sorting with generated field allowlists.
-- Generated soft deletes and automatic `updated_at`.
-- JSON responses for 404, 405, validation and framework errors.
-- Request IDs through `X-Request-ID`.
-- Structured request logging with method, path, status and latency.
-- HTTP server read/write/idle timeouts and graceful shutdown.
-- Hardened signed tokens with minimum key length, issued-at and expiration validation.
-- Production safeguards for destructive migrations.
-- `ctg doctor --production` for deployment configuration checks.
-- TypeScript/Vite frontend starter with reusable API client.
-- Automated Git tags and GitHub Releases when a final version is merged to `main`.
-
-## Resource field types
-
-```text
-string
-text
-integer
-bigint
-boolean
-decimal
-json
-uuid
-datetime
-timestamp
-```
-
-Append `?` for nullable columns:
-
-```powershell
-ctg make:resource Product name:string price:decimal description:text?
-```
-
-Generated validation includes integer, numeric, boolean and UUID rules where appropriate.
-
 ## Authentication
 
-Single role:
+Install from the CLI:
 
 ```powershell
 ctg install:auth single
-ctg migrate
-```
-
-Multi role:
-
-```powershell
 ctg install:auth multi
-ctg migrate
 ```
 
-Generated endpoints:
+Generated routes:
 
 ```text
 POST /api/auth/register
@@ -101,112 +213,137 @@ POST /api/auth/login
 GET  /api/auth/me
 ```
 
-Protect routes:
+Studio includes a safe user inspector. Password hashes are never selected by the Studio inspector.
+
+## Sessions
+
+Sessions are encrypted with AES-GCM using `APP_KEY`.
 
 ```go
-app.Get("/admin", handler).
-    Middleware(auth.Middleware(), auth.RequireRole("admin"))
+sessions := session.New()
+
+_ = sessions.Put(ctx, "user_id", "42")
+userID := sessions.Get(ctx, "user_id")
+
+_ = sessions.Flash(ctx, "status", "Saved")
+message, ok, _ := sessions.PullFlash(ctx, "status")
 ```
+
+## Route groups and API versions
+
+```go
+api := app.APIVersion("v1")
+
+api.Group("/admin").
+    Name("admin.").
+    Routes(func(routes *core.RouteGroup) {
+        routes.Get("/users/:id", handler).Name("users.show")
+    })
+```
+
+Named URL:
+
+```go
+url, ok := app.URL(
+    "api.v1.admin.users.show",
+    map[string]string{"id": "42"},
+)
+```
+
+## Runtime health
+
+Generated applications expose:
+
+```text
+GET /api/health
+```
+
+The default health registry checks:
+
+- database
+- cache
+- storage
+
+Unhealthy applications return HTTP `503`.
+
+Studio also exposes a visual Runtime Health dashboard.
 
 ## Development runtime
 
-`ctg dev` tries native Go first.
-
 ```powershell
 ctg dev
+```
+
+CopyTyGo attempts Native Runtime first. On supported Windows Application Control failures, it automatically falls back to Lite Runtime.
+
+Force Lite:
+
+```powershell
 ctg dev --lite
 ```
 
-Lite Runtime v3 supports generated database resources, pagination/search/filter/sort, validation, soft-delete options and generated authentication routes. It remains a development fallback. Production uses a normal Go binary built through:
+Lite Runtime includes the welcome page, Studio inspection tools, and the same resource/scaffold generators as Native Studio. Request, error and log runtime inspection remain available in Native Studio. Execution of arbitrary project Go background jobs remains Native-only by design.
+
+Production always uses the native application binary:
 
 ```powershell
 ctg build
 ```
 
-## Production verification
+## Visual and CLI generators
+
+CLI:
+
+```text
+ctg make:controller <name>
+ctg make:resource <name> [field:type ...]
+ctg make:model <name>
+ctg make:migration <name>
+ctg make:middleware <name>
+ctg make:service <name>
+ctg make:job <name>
+ctg make:listener <name>
+ctg make:seeder <name>
+ctg make:factory <name>
+ctg make:mail <name>
+```
+
+The same ecosystem can be generated from Studio's Visual Generator.
+
+## Production checks
 
 Before deployment:
 
 ```powershell
 ctg doctor --db --production
+ctg migrate:status
+ctg build
 ```
 
-Production expectations include:
+Recommended production values:
 
-```text
+```env
 APP_ENV=production
 APP_DEBUG=false
+COPYTYGO_STUDIO=false
 APP_KEY=<strong generated key>
+QUEUE_DRIVER=database
 ```
 
-Generated applications also support:
-
-```text
-SERVER_READ_HEADER_TIMEOUT=5
-SERVER_READ_TIMEOUT=15
-SERVER_WRITE_TIMEOUT=30
-SERVER_IDLE_TIMEOUT=60
-SERVER_SHUTDOWN_TIMEOUT=10
-```
-
-## Migration safety
-
-Normal migration:
-
-```powershell
-ctg migrate
-```
-
-Destructive migration commands require `--force` when `APP_ENV=production`:
-
-```powershell
-ctg migrate:rollback --force
-ctg migrate:reset --force
-ctg migrate:fresh --force
-```
-
-## Core CLI
-
-```text
-ctg new <name>
-ctg dev [--lite]
-ctg doctor [--db] [--production]
-ctg build
-ctg update [version]
-ctg route:list
-
-ctg make:resource <name> [field:type ...]
-ctg make:controller <name> [--resource|--memory-resource]
-ctg make:model <name>
-ctg make:migration <name>
-ctg make:middleware <name>
-ctg make:service <name>
-
-ctg migrate
-ctg migrate:status
-ctg migrate:rollback [--force]
-ctg migrate:reset [--force]
-ctg migrate:fresh [--force]
-ctg db:check
-
-ctg key:generate
-ctg install:auth [single|multi]
-```
-
-## Public IDs
-
-```go
-crypt, _ := security.NewCrypt(config.Get("APP_KEY"))
-publicID, _ := crypt.UUIDCos(42)
-id, _ := crypt.ResolveUUIDCos(publicID)
-```
+Studio does not register in production even if the local development setting was left enabled.
 
 ## Go module path
 
-CopyTyGo v3 follows Go semantic import versioning:
+CopyTyGo v4 follows Go semantic import versioning:
+
+```text
+github.com/arfajhf/copytygo/v4
+```
+
+Existing v3 applications may remain on:
 
 ```text
 github.com/arfajhf/copytygo/v3
 ```
 
-v2 applications can remain on `github.com/arfajhf/copytygo/v2` until intentionally upgraded.
+until intentionally upgraded.
