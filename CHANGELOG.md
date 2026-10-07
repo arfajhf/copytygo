@@ -1,5 +1,37 @@
 # Changelog
 
+## v4.0.0-dev
+
+- Migrated the framework module to `github.com/arfajhf/copytygo/v4`.
+- Added the CopyTyGo welcome page with Documentation, Studio and GitHub links.
+- Added CopyTyGo Studio as a production-disabled local development workspace.
+- Added Studio dashboards for routes, models, resources, database, migrations, authentication, services, queue, scheduler, requests, errors, logs, runtime health and Doctor diagnostics.
+- Added a visual generator that uses the same generator engine as the CLI.
+- Added Studio and welcome-page parity to Lite Runtime for supported Windows Application Control fallback scenarios.
+- Added interactive project creation with MySQL/PostgreSQL, auth mode, Studio, and TypeScript/React/Vue/API-only starter choices.
+- Added `ctg open` and `ctg studio`.
+- Added cache abstraction with TTL memory storage and `Remember`.
+- Added events/listeners and event registration inspection.
+- Added SMTP mail, mail fakes and HTML/text mail templates.
+- Added storage abstraction, local disk protection and uploaded-file helpers.
+- Added service container bindings, singletons, instances and default application services.
+- Added in-memory, synchronous and durable MySQL/PostgreSQL queue drivers.
+- Added named job registry, delayed jobs, retries/backoff, failed jobs and configurable queue workers.
+- Added scheduler runtime status, interval helpers and five-field cron expressions.
+- Added application background-service lifecycle with graceful shutdown.
+- Added database transaction helpers and model HasOne/HasMany/BelongsTo relationships.
+- Added seeders, generic factories and API resource serialization.
+- Added encrypted AES-GCM sessions with flash data and request-scoped mutation consistency.
+- Added policy-based authorization gates.
+- Finalized configurable rate limiting with remaining/reset/retry headers and bucket cleanup.
+- Added nested route groups, route-name prefixes, grouped resources and API version helpers.
+- Added a reusable retry/backoff package and safe HTTP-client retries for idempotent requests.
+- Added runtime health registry with default database/cache/storage checks and generated `/api/health` responses.
+- Added structured framework logging, request inspection and error inspection.
+- Added HTTP testing helpers and framework fakes.
+- Added CLI and Studio generators for jobs, listeners, seeders, factories and mail classes.
+- Added production documentation and v4 release-gate tracking.
+
 ## v1.0.0
 
 - Added HTTP core, routing, middleware and request binding.
