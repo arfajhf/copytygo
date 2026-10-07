@@ -121,7 +121,13 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"\nDB_DATABASE=" + name +
 		"\nDB_USERNAME=" + dbUser +
 		"\nDB_PASSWORD=" +
+		"\nQUEUE_DRIVER=memory" +
+		"\nQUEUE_DRIVER=memory" +
 		"\nQUEUE_WORKERS=1" +
+		"\nQUEUE_POLL_SECONDS=1" +
+		"\nQUEUE_BACKOFF_SECONDS=1" +
+		"\nQUEUE_POLL_SECONDS=1" +
+		"\nQUEUE_BACKOFF_SECONDS=1" +
 		"\nSTORAGE_PATH=storage/app" +
 		"\nMAIL_HOST=127.0.0.1" +
 		"\nMAIL_PORT=1025" +
@@ -176,6 +182,10 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		if err := os.WriteFile(filepath.Join(name, path), []byte(content), 0644); err != nil {
 			return err
 		}
+	}
+
+	if err := GenerateJobRegistry(filepath.Join(name, "app", "jobs")); err != nil {
+		return err
 	}
 
 	if options.Auth != "none" {
@@ -258,6 +268,7 @@ import (
     "github.com/arfajhf/copytygo/v4/studio"
     "github.com/arfajhf/copytygo/v4/queue"
     "github.com/arfajhf/copytygo/v4/scheduler"
+    "{{MODULE}}/app/jobs"
     "{{MODULE}}/routes"
 )
 
@@ -265,8 +276,9 @@ func main() {
     if err := config.LoadEnv(".env"); err != nil { log.Fatal(err) }
     app := core.New()
     if err := foundation.RegisterDefaults(app.Services); err != nil { log.Fatal(err) }
+    if err := jobs.Register(queue.DefaultRegistry); err != nil { log.Fatal(err) }
     app.Use(core.RequestID(), core.RequestLogger(), core.SecurityHeaders(), core.BodyLimit(2<<20))
-    queue.Attach(app, queue.Default, config.GetInt("QUEUE_WORKERS", 1))
+    if err := queue.AttachConfigured(app); err != nil { log.Fatal(err) }
     scheduler.Attach(app, scheduler.Default)
     routes.Register(app)
     studio.Register(app)
