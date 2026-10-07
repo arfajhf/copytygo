@@ -142,9 +142,6 @@ func runLiteDev() error {
 	if err != nil {
 		return err
 	}
-	if len(routes) == 0 {
-		return errors.New("copytygo lite runtime: no supported routes found; use native runtime for this project")
-	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -218,7 +215,7 @@ func runLiteDev() error {
 	}
 	fmt.Printf("Routes      : %d\n", len(routes))
 	fmt.Println()
-	fmt.Println("Lite Runtime supports inline Text/JSON routes with automatic route hot reload.")
+	fmt.Println("Lite Runtime keeps Welcome and Studio available even when no project routes can be interpreted.")\n\tfmt.Println("Supported inline Text/JSON routes still reload automatically.")
 	fmt.Println("Complex controllers, middleware, database calls and arbitrary Go packages still use native mode.")
 	fmt.Println()
 
