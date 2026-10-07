@@ -3,11 +3,11 @@ package core
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/arfajhf/copytygo/v4/logging"
 )
 
 const RequestIDContextKey = "copytygo.request_id"
@@ -78,18 +78,14 @@ func RequestLogger() Middleware {
 				status = http.StatusOK
 			}
 
-			entry := map[string]any{
+			logging.Default.Info("http.request", map[string]any{
 				"request_id":  RequestIDValue(ctx),
 				"method":      ctx.Request.Method,
 				"path":        ctx.Request.URL.Path,
 				"status":      status,
 				"duration_ms": time.Since(start).Milliseconds(),
 				"remote_addr": ctx.Request.RemoteAddr,
-			}
-
-			if raw, marshalErr := json.Marshal(entry); marshalErr == nil {
-				log.Printf("%s", raw)
-			}
+			})
 
 			return err
 		}
