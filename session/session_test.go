@@ -1,12 +1,14 @@
 package session
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v4/security"
 )
 
 func TestSignedPayload(t *testing.T) {
@@ -20,7 +22,6 @@ func TestSignedPayload(t *testing.T) {
 		t.Fatal("tampered session must fail")
 	}
 }
-
 
 func TestEncryptedSessionAndFlash(t *testing.T) {
 	t.Setenv("APP_KEY", "12345678901234567890123456789012")
@@ -45,8 +46,8 @@ func TestEncryptedSessionAndFlash(t *testing.T) {
 			return err
 		}
 		return ctx.JSON(core.Map{
-			"user_id": manager.Get(ctx, "user_id"),
-			"flash": flash,
+			"user_id":  manager.Get(ctx, "user_id"),
+			"flash":    flash,
 			"flash_ok": ok,
 		})
 	})
@@ -60,8 +61,30 @@ func TestEncryptedSessionAndFlash(t *testing.T) {
 	if len(cookies) == 0 {
 		t.Fatal("expected encrypted session cookie")
 	}
-	if strings.Contains(cookies[0].Value, "user_id") || strings.Contains(cookies[0].Value, "42") {
-		t.Fatal("session cookie must not expose plaintext values")
+	// Random ciphertext can contain short strings such as "42" by chance.
+	// Verify authenticated encryption rather than searching its encoded text.
+	crypt, err := security.NewCrypt("12345678901234567890123456789012")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encrypted := cookies[len(cookies)-1].Value
+	decrypted, err := crypt.DecryptString(encrypted)
+	if err != nil {
+		t.Fatalf("expected authenticated encrypted session: %v", err)
+	}
+	var state payload
+	if err := json.Unmarshal([]byte(decrypted), &state); err != nil {
+		t.Fatal(err)
+	}
+	if state.Values["user_id"] != "42" || state.Flash["status"] != "saved" {
+		t.Fatal("encrypted cookie lost session or flash values")
+	}
+	wrongKey, err := security.NewCrypt("00000000000000000000000000000000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := wrongKey.DecryptString(encrypted); err == nil {
+		t.Fatal("session cookie authenticated with the wrong key")
 	}
 
 	readReq := httptest.NewRequest(http.MethodGet, "/read", nil)

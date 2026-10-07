@@ -7,6 +7,7 @@
 - Kept Lite available only through explicit `ctg dev --lite`; `--native` remains a compatible alias.
 - Preserved Native failures so a blocked application is not presented as a successful limited-runtime startup.
 - Added Windows process regression coverage for stale Lite state, Native startup before and after auth installation, and repeated policy failures.
+- Corrected a session test that could mistake random ciphertext containing "42" for exposed plaintext; it now verifies authenticated decryption and rejects the wrong key.
 
 ## v4.0.1
 
@@ -134,4 +135,3 @@
 - Protected destructive migration commands in production behind `--force`.
 - Added generated production server timeout settings and richer health responses.
 - Added production-focused tests for JSON errors, request IDs and signed tokens.
-
