@@ -24,7 +24,7 @@ CopyTyGo v4 is the feature-complete framework milestone. It combines a mature ba
 - [x] Documentation integration
 - [x] Production-safe Studio controls
 - [x] Lite Runtime Studio parity for Windows execution-policy fallback
-- [ ] Dedicated model/auth inspector
+- [x] Dedicated model/auth inspector
 - [ ] Final Studio navigation/UI polish
 
 ## Backend Ecosystem
