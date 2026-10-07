@@ -21,10 +21,21 @@ type RouteBuilder struct {
 	route *Route
 }
 
+type groupRouteBuilder struct {
+	*RouteBuilder
+	group *RouteGroup
+}
+
+func (builder *groupRouteBuilder) Name(name string) *groupRouteBuilder {
+	builder.route.name = builder.group.namePrefix + name
+	return builder
+}
+
 type RouteGroup struct {
 	router *Router
 
 	prefix      string
+	namePrefix  string
 	middlewares []Middleware
 }
 
@@ -184,6 +195,20 @@ func (group *RouteGroup) Middleware(
 	return group
 }
 
+func (group *RouteGroup) Name(prefix string) *RouteGroup {
+	group.namePrefix += prefix
+	return group
+}
+
+func (group *RouteGroup) Group(prefix string) *RouteGroup {
+	return &RouteGroup{
+		router:       group.router,
+		prefix:       joinPaths(group.prefix, prefix),
+		namePrefix:   group.namePrefix,
+		middlewares:  append([]Middleware{}, group.middlewares...),
+	}
+}
+
 func (group *RouteGroup) Routes(
 	callback func(route *RouteGroup),
 ) *RouteGroup {
@@ -196,7 +221,7 @@ func (group *RouteGroup) add(
 	method string,
 	path string,
 	handler Handler,
-) *RouteBuilder {
+) *groupRouteBuilder {
 
 	fullPath := joinPaths(
 		group.prefix,
@@ -217,13 +242,20 @@ func (group *RouteGroup) add(
 		group.middlewares...,
 	)
 
-	return builder
+	if group.namePrefix != "" {
+		builder.route.name = group.namePrefix
+	}
+
+	return &groupRouteBuilder{
+		RouteBuilder: builder,
+		group:        group,
+	}
 }
 
 func (group *RouteGroup) Get(
 	path string,
 	handler Handler,
-) *RouteBuilder {
+) *groupRouteBuilder {
 
 	return group.add(
 		http.MethodGet,
@@ -235,7 +267,7 @@ func (group *RouteGroup) Get(
 func (group *RouteGroup) Post(
 	path string,
 	handler Handler,
-) *RouteBuilder {
+) *groupRouteBuilder {
 
 	return group.add(
 		http.MethodPost,
@@ -247,7 +279,7 @@ func (group *RouteGroup) Post(
 func (group *RouteGroup) Put(
 	path string,
 	handler Handler,
-) *RouteBuilder {
+) *groupRouteBuilder {
 
 	return group.add(
 		http.MethodPut,
@@ -259,7 +291,7 @@ func (group *RouteGroup) Put(
 func (group *RouteGroup) Patch(
 	path string,
 	handler Handler,
-) *RouteBuilder {
+) *groupRouteBuilder {
 
 	return group.add(
 		http.MethodPatch,
@@ -271,13 +303,32 @@ func (group *RouteGroup) Patch(
 func (group *RouteGroup) Delete(
 	path string,
 	handler Handler,
-) *RouteBuilder {
+) *groupRouteBuilder {
 
 	return group.add(
 		http.MethodDelete,
 		path,
 		handler,
 	)
+}
+
+func (group *RouteGroup) Resource(path string, controller ResourceController) *RouteGroup {
+	base := strings.TrimRight(path, "/")
+	if base == "" {
+		base = "/"
+	}
+	member := base
+	if member == "/" {
+		member = ""
+	}
+	member += "/:id"
+
+	group.Get(base, controller.Index)
+	group.Get(member, controller.Show)
+	group.Post(base, controller.Store)
+	group.Put(member, controller.Update)
+	group.Delete(member, controller.Destroy)
+	return group
 }
 
 // ----------------------------------------------------
