@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v3/database/schema"
+	"github.com/arfajhf/copytygo/v4/database/schema"
 )
 
 type PostgreSQL struct{}

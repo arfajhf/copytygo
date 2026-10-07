@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arfajhf/copytygo/v3/core"
+	"github.com/arfajhf/copytygo/v4/core"
 )
 
 func TestRegisterStudioLocally(t *testing.T) {
