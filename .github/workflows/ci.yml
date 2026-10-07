@@ -63,6 +63,7 @@ jobs:
           go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
           go mod tidy
           go test ./...
+          mkdir -p build
           go build -o build/smoke-app ./cmd/app
 
           test -f build/smoke-app
