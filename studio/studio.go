@@ -46,6 +46,9 @@ func Register(app *core.Application, options ...Options) bool {
 		return false
 	}
 
+	inspector := core.NewRequestInspector(200)
+	app.Use(inspector.Middleware())
+
 	path := DefaultPath
 	if len(options) > 0 && strings.TrimSpace(options[0].Path) != "" {
 		path = strings.TrimRight(strings.TrimSpace(options[0].Path), "/")
@@ -101,6 +104,32 @@ func Register(app *core.Application, options ...Options) bool {
 		})
 	}).Name("copytygo.studio.api.routes")
 
+	app.Get(path+"/requests", func(ctx *core.Context) error {
+		payload := struct {
+			viewData
+			Requests []core.RequestRecord
+		}{
+			viewData:  data(),
+			Requests: inspector.Records(),
+		}
+		var out strings.Builder
+		if err := requestsTemplate.Execute(&out, payload); err != nil {
+			return fmt.Errorf("copytygo studio requests: %w", err)
+		}
+		return ctx.HTML(out.String())
+	}).Name("copytygo.studio.requests")
+
+	app.Get(path+"/api/requests", func(ctx *core.Context) error {
+		return ctx.JSON(core.Map{
+			"data": inspector.Records(),
+		})
+	}).Name("copytygo.studio.api.requests")
+
+	app.Post(path+"/requests/clear", func(ctx *core.Context) error {
+		inspector.Clear()
+		return ctx.Redirect(path + "/requests")
+	}).Name("copytygo.studio.requests.clear")
+
 	app.Get(path+"/generator", func(ctx *core.Context) error {
 		page := data()
 		payload := struct {
@@ -149,7 +178,7 @@ table{width:100%;border-collapse:collapse;margin-top:24px;border:1px solid #1e2d
 var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a class="active" href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
+<nav><a class="active" href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>{{.AppName}}</h1><div style="color:#6f84a2;margin-top:6px">Local development workspace</div></div><span class="pill">{{.Environment}}</span></div>
 <section class="cards"><div class="card"><div class="label">Framework</div><div class="value">{{.Version}}</div></div><div class="card"><div class="label">Routes</div><div class="value">{{.RouteCount}}</div></div><div class="card"><div class="label">Runtime</div><div class="value">Ready</div></div></section>
 <div class="notice"><strong>Studio is connected to the running application.</strong><br>Route Explorer is live now. Other v4 ecosystem modules plug into this same workspace as they are completed. <a href="{{.DocsURL}}" target="_blank" rel="noreferrer">Open documentation</a>.</div>
@@ -158,7 +187,7 @@ var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!d
 var routesTemplate = template.Must(template.New("copytygo-studio-routes").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Routes · CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a class="active" href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a class="active" href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Route Explorer</h1><div style="color:#6f84a2;margin-top:6px">{{.RouteCount}} registered routes</div></div><span class="pill">{{.Environment}}</span></div>
 <table><thead><tr><th>Method</th><th>Path</th><th>Name</th></tr></thead><tbody>
 {{range .Routes}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{if .Name}}{{.Name}}{{else}}—{{end}}</td></tr>{{end}}
@@ -175,7 +204,7 @@ textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padd
 .flash{margin-top:18px;padding:13px 15px;border-radius:10px;background:#10233a;border:1px solid #29405e}.error{background:#2a1518;border-color:#6b2a31;color:#ffc5cb}
 .hint{color:#6f84a2;font-size:13px;line-height:1.6;margin-top:7px}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="#">Logs</a><a class="active" href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a class="active" href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Visual Generator</h1><div style="color:#6f84a2;margin-top:6px">Generate framework code without leaving Studio</div></div><span class="pill">{{.Environment}}</span></div>
 {{if .Created}}<div class="flash">Resource <strong>{{.Created}}</strong> created successfully. Model, controller, migration and routes were generated.</div>{{end}}
 {{if .Error}}<div class="flash error">{{.Error}}</div>{{end}}
@@ -185,3 +214,18 @@ textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padd
 <div class="hint">One field per line or separated by spaces. Supported types follow the same rules as <code>ctg make:resource</code>.</div></div>
 <button type="submit">Create Resource</button>
 </form></main></div></body></html>`))
+
+
+var requestsTemplate = template.Must(template.New("copytygo-studio-requests").Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Requests · CopyTyGo Studio</title><style>` + studioStyle + `
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:24px;gap:12px}.muted{color:#6f84a2;font-size:13px}
+button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:9px 12px;cursor:pointer}
+.status-ok{color:#74d99f}.status-warn{color:#ffcf70}.status-error{color:#ff8e98}
+</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="#">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a class="active" href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="#">Doctor</a></nav></aside>
+<main class="main"><div class="top"><div><h1>Request Inspector</h1><div style="color:#6f84a2;margin-top:6px">Recent requests captured from the running local application</div></div><span class="pill">{{.Environment}}</span></div>
+<div class="toolbar"><div class="muted">{{len .Requests}} requests retained</div><form method="post" action="{{.BasePath}}/requests/clear"><button type="submit">Clear</button></form></div>
+<table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Latency</th><th>Request ID</th></tr></thead><tbody>
+{{range .Requests}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{.Status}}</td><td>{{.DurationMS}} ms</td><td><code>{{.RequestID}}</code></td></tr>{{else}}<tr><td colspan="5" class="muted">No requests captured yet.</td></tr>{{end}}
+</tbody></table></main></div></body></html>`))
