@@ -276,8 +276,11 @@ func main() {
 const projectRoutes = `package routes
 
 import (
+    "net/http"
+
     "github.com/arfajhf/copytygo/v4/config"
     "github.com/arfajhf/copytygo/v4/core"
+    "github.com/arfajhf/copytygo/v4/foundation"
     "github.com/arfajhf/copytygo/v4/version"
 )
 
@@ -285,11 +288,19 @@ func Register(app *core.Application) {
     app.Get("/", core.Welcome()).Name("welcome")
 
     app.Get("/api/health", func(ctx *core.Context) error {
+        status, checks, err := foundation.RunHealth(ctx.Request.Context(), app.Services)
+        if err != nil {
+            return err
+        }
+        if string(status) != "healthy" {
+            ctx.Status(http.StatusServiceUnavailable)
+        }
         return ctx.JSON(core.Map{
             "framework": "CopyTyGo",
             "version": version.Framework,
             "environment": config.Get("APP_ENV", "local"),
-            "status": "ok",
+            "status": status,
+            "checks": checks,
             "request_id": core.RequestIDValue(ctx),
         })
     }).Name("health")
