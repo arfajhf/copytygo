@@ -68,7 +68,12 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"app/models",
 		"app/middleware",
 		"app/services",
+		"app/jobs",
+		"app/listeners",
+		"app/mails",
 		"database/migrations",
+		"database/seeders",
+		"database/factories",
 		"routes",
 	}
 	if options.Frontend != "api" {
