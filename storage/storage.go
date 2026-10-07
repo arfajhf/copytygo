@@ -85,3 +85,11 @@ func (l *Local) Exists(name string) bool {
 	info, err := os.Stat(full)
 	return err == nil && !info.IsDir()
 }
+
+
+func (l *Local) Root() string {
+	if l == nil {
+		return ""
+	}
+	return l.root
+}
