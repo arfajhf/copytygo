@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.0.2
+
+- Made plain `ctg dev` always execute the full Native application.
+- Removed automatic Lite fallback and stopped reading remembered runtime decisions from v4.0.1.
+- Kept Lite available only through explicit `ctg dev --lite`; `--native` remains a compatible alias.
+- Preserved Native failures so a blocked application is not presented as a successful limited-runtime startup.
+- Added Windows process regression coverage for stale Lite state, Native startup before and after auth installation, and repeated policy failures.
+
 ## v4.0.1
 
 - Made plain `ctg dev` remember Windows policy fallback per project in the local user cache.

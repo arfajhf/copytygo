@@ -1,28 +1,28 @@
 # CopyTyGo v4 Development Runtime
 
-CopyTyGo uses Native Runtime as the primary development runtime and Lite Runtime as a Windows-friendly fallback.
+CopyTyGo runs Native Runtime by default. Lite Runtime requires explicit opt-in.
 
-## Native-first execution
+## Native execution
 
 ```text
 ctg dev
   -> go run ./cmd/app
        -> success: Native Runtime
-       -> supported Windows Application Control block:
-            -> remember the decision in the local user cache
-            -> automatic Lite Runtime fallback
-  -> remembered policy block on later runs: Lite Runtime directly
+       -> failure: return the Native error
+
+ctg dev --lite
+  -> Lite Runtime
 ```
 
-The user-facing command remains `ctg dev`. Installing auth or editing source does not reset a remembered Windows policy block. Runtime decisions are stored per project in the user cache, outside the project source.
+Every `ctg dev` startup runs the complete generated application, including after installing auth or editing source. Cached Lite decisions written by v4.0.1 are ignored. No cache cleanup is required when updating the CLI.
 
-Retry Native Runtime after a policy change:
+The explicit Native flag remains a compatible alias:
 
 ```powershell
 ctg dev --native
 ```
 
-Force Lite for one run:
+Choose Lite for one run:
 
 ```powershell
 ctg dev --lite
@@ -99,11 +99,9 @@ Studio explicitly marks Queue and Scheduler execution as Native-only in this mod
 
 ## Windows Application Control
 
-CopyTyGo does not require users to disable Windows security controls.
+If Windows blocks the temporary executable produced by `go run`, `ctg dev` returns the execution error. The CLI does not override operating-system policy or switch to Lite automatically. Resolving an actual policy refusal requires identifying the applicable Windows policy and its trust requirements.
 
-If the operating system blocks the temporary executable produced by `go run`, `ctg dev` detects supported policy errors and falls back to Lite Runtime.
-
-Production does not rely on this fallback.
+An earlier policy refusal does not prevent later Native startup when Windows permits execution.
 
 ## Browser helpers
 
