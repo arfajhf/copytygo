@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v4/retry"
 )
 
 var ErrClosed = errors.New("copytygo queue: worker is closed")
@@ -183,28 +184,27 @@ func (w *Worker) loop(ctx context.Context) {
 }
 
 func (w *Worker) run(ctx context.Context, item Item) bool {
-	var err error
-	for attempt := 1; attempt <= item.MaxAttempts; attempt++ {
-		err = item.Run(ctx)
-		if err == nil {
-			return true
-		}
-		if attempt < item.MaxAttempts && item.Backoff > 0 {
-			timer := time.NewTimer(item.Backoff)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return false
-			case <-timer.C:
-			}
-		}
+	var last error
+	err := retry.Do(ctx, retry.Policy{
+		Attempts:   item.MaxAttempts,
+		Initial:    item.Backoff,
+		Multiplier: 1,
+	}, func(int) error {
+		last = item.Run(ctx)
+		return last
+	})
+	if err == nil {
+		return true
+	}
+	if last == nil {
+		last = err
 	}
 
 	failure := Failure{
 		Name:     item.Name,
 		Attempts: item.MaxAttempts,
-		Error:    err.Error(),
-		Err:      fmt.Errorf("%w", err),
+		Error:    last.Error(),
+		Err:      fmt.Errorf("%w", last),
 		At:       time.Now().UTC(),
 	}
 	w.failed.Add(1)
