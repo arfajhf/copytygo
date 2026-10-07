@@ -155,6 +155,14 @@ func (app *Application) Group(
 	return app.router.Group(prefix)
 }
 
+func (app *Application) APIVersion(version string) *RouteGroup {
+	version = strings.Trim(strings.TrimSpace(version), "/")
+	if version == "" {
+		version = "v1"
+	}
+	return app.Group("/api/" + version).Name("api." + version + ".")
+}
+
 func (app *Application) Run() error {
 	host := config.Get(
 		"APP_HOST",
