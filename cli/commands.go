@@ -10,10 +10,18 @@ import (
 
 func RegisterDeveloperCommands(app *CLI) {
 	app.Command("new", func(args []string) error {
-		if len(args) < 1 {
-			return fmt.Errorf("usage: ctg new <project>")
+		if len(args) == 0 {
+			return InteractiveNewProject("")
 		}
-		return NewProject(args[0])
+
+		name := args[0]
+		for _, arg := range args[1:] {
+			if arg == "--interactive" || arg == "-i" {
+				return InteractiveNewProject(name)
+			}
+		}
+
+		return NewProject(name)
 	})
 	app.Command("make:migration", func(args []string) error {
 		if len(args) < 1 {
