@@ -215,7 +215,8 @@ func runLiteDev() error {
 	}
 	fmt.Printf("Routes      : %d\n", len(routes))
 	fmt.Println()
-	fmt.Println("Lite Runtime keeps Welcome and Studio available even when no project routes can be interpreted.")\n\tfmt.Println("Supported inline Text/JSON routes still reload automatically.")
+	fmt.Println("Lite Runtime keeps Welcome and Studio available even when no project routes can be interpreted.")
+	fmt.Println("Supported inline Text/JSON routes still reload automatically.")
 	fmt.Println("Complex controllers, middleware, database calls and arbitrary Go packages still use native mode.")
 	fmt.Println()
 
