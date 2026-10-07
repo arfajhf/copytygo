@@ -329,67 +329,97 @@ jobs:
             }
           }
 
-          # Simulate a Windows policy refusal and verify plain `ctg dev` remembers it.
-          $fakeBin = Join-Path $tmp "policy-go"
-          New-Item -ItemType Directory -Force $fakeBin | Out-Null
-          $fakeSource = Join-Path $fakeBin "main.go"
-          @'
-          package main
-          import (
-            "fmt"
-            "os"
-          )
-          func main() {
-            f, err := os.OpenFile(os.Getenv("COPYTYGO_TEST_GO_COUNT_FILE"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-            if err != nil { panic(err) }
-            fmt.Fprintln(f, "native attempted")
-            f.Close()
-            fmt.Fprintln(os.Stderr, "fork/exec C:\\blocked\\app.exe: An Application Control policy has blocked this file.")
-            os.Exit(1)
-          }
-          '@ | Set-Content $fakeSource
-          go build -o (Join-Path $fakeBin "go.exe") $fakeSource
-          if ($LASTEXITCODE -ne 0) { throw "Unable to build policy simulator" }
-
-          $originalPath = $env:PATH
+          # A stale v4.0.1 decision must never prevent real Native startup.
           $originalCache = $env:LOCALAPPDATA
-          $env:COPYTYGO_TEST_GO_COUNT_FILE = Join-Path $tmp "native-attempts.txt"
+          $originalPath = $env:PATH
           $env:LOCALAPPDATA = Join-Path $tmp "runtime-cache"
-          $env:PATH = $fakeBin + [IO.Path]::PathSeparator + $env:PATH
+          $cacheRoot = Join-Path $env:LOCALAPPDATA "copytygo\runtime"
+          New-Item -ItemType Directory -Force $cacheRoot | Out-Null
+          $projectKey = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes((Get-Location).Path))).ToLowerInvariant()
+          Set-Content -Path (Join-Path $cacheRoot ($projectKey + ".json")) -Value '{"os":"windows","runtime":"lite"}' -NoNewline
+
+          function Stop-DevProcess($Process) {
+            if ($Process -and -not $Process.HasExited) {
+              taskkill.exe /PID $Process.Id /T /F | Out-Null
+            }
+          }
+
           try {
             Set-EnvValue "APP_ENV" "local"
             Set-EnvValue "APP_DEBUG" "true"
             Set-EnvValue "APP_PORT" "18084"
-            $policyOut = Join-Path $tmp "policy-first.out"
-            $policyErr = Join-Path $tmp "policy-first.err"
-            $policy = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $policyOut -RedirectStandardError $policyErr
+            $nativeOut = Join-Path $tmp "dev-native.out"
+            $nativeDev = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $nativeOut -RedirectStandardError (Join-Path $tmp "dev-native.err")
             try {
               Wait-Http "http://127.0.0.1:18084/" 200 | Out-Null
               Wait-Http "http://127.0.0.1:18084/__copytygo" 200 | Out-Null
+              $output = Get-Content $nativeOut -Raw
+              if ($output -notmatch "Runtime : native" -or $output -match "Runtime : lite") { throw "Stale Lite cache prevented Native dev startup" }
             } finally {
-              if ($policy -and -not $policy.HasExited) { Stop-Process -Id $policy.Id -Force }
+              Stop-DevProcess $nativeDev
             }
-            if ((Get-Content $policyErr -Raw) -match "fork/exec") { throw "Policy fallback printed a raw failure" }
 
             & $ctg install:auth multi
             if ($LASTEXITCODE -ne 0) { throw "Auth installation failed" }
+            go mod tidy
+            if ($LASTEXITCODE -ne 0) { throw "Auth dependencies failed" }
             Set-EnvValue "APP_PORT" "18085"
-            $rememberedOut = Join-Path $tmp "policy-remembered.out"
-            $remembered = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $rememberedOut -RedirectStandardError (Join-Path $tmp "policy-remembered.err")
+            $authOut = Join-Path $tmp "dev-native-auth.out"
+            $authDev = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $authOut -RedirectStandardError (Join-Path $tmp "dev-native-auth.err")
             try {
               Wait-Http "http://127.0.0.1:18085/" 200 | Out-Null
+              Wait-Http "http://127.0.0.1:18085/__copytygo" 200 | Out-Null
               Wait-Http "http://127.0.0.1:18085/api/auth/me" 401 | Out-Null
               foreach ($endpoint in @("login", "register")) {
                 $response = Invoke-WebRequest -Uri ("http://127.0.0.1:18085/api/auth/" + $endpoint) -Method Post -Body '{}' -ContentType 'application/json' -SkipHttpErrorCheck
-                if ([int]$response.StatusCode -ne 422) { throw "Auth route $endpoint was not available after runtime fallback" }
+                if ([int]$response.StatusCode -ne 422) { throw "Native auth route $endpoint was unavailable" }
               }
+              $output = Get-Content $authOut -Raw
+              if ($output -notmatch "Runtime : native" -or $output -match "Runtime : lite") { throw "Installing auth changed dev runtime" }
             } finally {
-              if ($remembered -and -not $remembered.HasExited) { Stop-Process -Id $remembered.Id -Force }
+              Stop-DevProcess $authDev
             }
-            if (@(Get-Content $env:COPYTYGO_TEST_GO_COUNT_FILE).Count -ne 1) { throw "Plain ctg dev retried the blocked executable after installing auth" }
-            if ((Get-Content $rememberedOut -Raw) -notmatch "Using Lite Runtime automatically") { throw "Remembered runtime was not used" }
+
+            # A genuine policy error stays visible and is retried next time.
+            $fakeBin = Join-Path $tmp "policy-go"
+            New-Item -ItemType Directory -Force $fakeBin | Out-Null
+            $fakeSource = Join-Path $fakeBin "main.go"
+            @'
+            package main
+            import (
+              "fmt"
+              "os"
+            )
+            func main() {
+              f, err := os.OpenFile(os.Getenv("COPYTYGO_TEST_GO_COUNT_FILE"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+              if err != nil { panic(err) }
+              fmt.Fprintln(f, "native attempted")
+              f.Close()
+              fmt.Fprintln(os.Stderr, "fork/exec C:\\blocked\\app.exe: An Application Control policy has blocked this file.")
+              os.Exit(1)
+            }
+          '@ | Set-Content $fakeSource
+            go build -o (Join-Path $fakeBin "go.exe") $fakeSource
+            if ($LASTEXITCODE -ne 0) { throw "Unable to build policy simulator" }
+            $env:COPYTYGO_TEST_GO_COUNT_FILE = Join-Path $tmp "native-attempts.txt"
+            $env:PATH = $fakeBin + [IO.Path]::PathSeparator + $originalPath
+            foreach ($attempt in @(1,2)) {
+              $policyOut = Join-Path $tmp ("policy-" + $attempt + ".out")
+              $policyErr = Join-Path $tmp ("policy-" + $attempt + ".err")
+              $policy = Start-Process -FilePath $ctg -ArgumentList @("dev") -PassThru -WorkingDirectory (Get-Location) -RedirectStandardOutput $policyOut -RedirectStandardError $policyErr
+              try {
+                if (-not $policy.WaitForExit(30000)) { throw "Policy error switched to a running fallback" }
+                $policy.Refresh()
+                if ($policy.ExitCode -eq 0) { throw "Blocked Native was presented as successful startup" }
+              } finally {
+                Stop-DevProcess $policy
+              }
+              if ((Get-Content $policyErr -Raw) -notmatch "Application Control policy") { throw "Native policy error was hidden" }
+              if ((Get-Content $policyOut -Raw) -match "Runtime : lite") { throw "Unexpected automatic Lite startup" }
+            }
+            if (@(Get-Content $env:COPYTYGO_TEST_GO_COUNT_FILE).Count -ne 2) { throw "Plain dev did not retry Native" }
           } finally {
             $env:PATH = $originalPath
             $env:LOCALAPPDATA = $originalCache
-            Remove-Item Env:COPYTYGO_TEST_GO_COUNT_FILE
+            Remove-Item Env:COPYTYGO_TEST_GO_COUNT_FILE -ErrorAction SilentlyContinue
           }

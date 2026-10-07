@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,7 +60,7 @@ var liteMemoryStore = struct {
 }
 
 func Dev(args []string) error {
-	return devWithRuntimes(args, runtime.GOOS, devRuntimeCachePath(), runNativeDev, runLiteDev, os.Stdout)
+	return devWithRuntimes(args, runNativeDev, runLiteDev, os.Stdout)
 }
 
 func runNativeDev() error {
@@ -78,29 +77,6 @@ func runNativeDev() error {
 
 	message := strings.TrimSpace(stderr.String())
 	return fmt.Errorf("copytygo native runtime: %w: %s", err, message)
-}
-
-func looksLikeExecutionPolicyBlock(err error) bool {
-	return executionPolicyBlock(err, runtime.GOOS)
-}
-
-func executionPolicyBlock(err error, goos string) bool {
-	if err == nil || goos != "windows" {
-		return false
-	}
-	text := strings.ToLower(err.Error())
-	needles := []string{
-		"application control policy",
-		"blocked this file",
-		"operation did not complete successfully because the file contains",
-	}
-	for _, needle := range needles {
-		if strings.Contains(text, needle) {
-			return true
-		}
-	}
-	// A generic source-file permission error must not hide behind Lite fallback.
-	return strings.Contains(text, "fork/exec") && strings.Contains(text, ".exe") && strings.Contains(text, "access is denied")
 }
 
 func runLiteDev() error {

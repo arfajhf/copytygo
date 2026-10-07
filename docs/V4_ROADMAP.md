@@ -23,7 +23,7 @@ CopyTyGo v4 is the feature-complete framework milestone. It combines a mature ba
 - [x] TypeScript, React, Vue and API-only starters
 - [x] Documentation integration
 - [x] Production-safe Studio controls
-- [x] Lite Runtime Studio parity for Windows execution-policy fallback
+- [x] Lite Runtime Studio parity for explicit Lite development
 - [x] Dedicated model/auth inspector
 - [x] Final Studio navigation/UI polish
 
