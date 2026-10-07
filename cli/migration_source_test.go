@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arfajhf/copytygo/v3/database/migration"
+	"github.com/arfajhf/copytygo/v4/database/migration"
 )
 
 func TestRegisterProjectMigrationsFromSource(t *testing.T) {
@@ -14,8 +14,8 @@ func TestRegisterProjectMigrationsFromSource(t *testing.T) {
 	source := `package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v3/database/migration"
-	"github.com/arfajhf/copytygo/v3/database/schema"
+	"github.com/arfajhf/copytygo/v4/database/migration"
+	"github.com/arfajhf/copytygo/v4/database/schema"
 )
 
 func Register20261006120000() error {

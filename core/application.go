@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arfajhf/copytygo/v3/config"
-	"github.com/arfajhf/copytygo/v3/version"
+	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v4/version"
 )
 
 type Application struct {

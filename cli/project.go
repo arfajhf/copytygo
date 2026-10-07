@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v3/version"
+	"github.com/arfajhf/copytygo/v4/version"
 )
 
 func NewProject(name string) error {
@@ -24,7 +24,7 @@ func NewProject(name string) error {
 	}
 	key, _ := GenerateKey()
 	files := map[string]string{
-		"go.mod":                 "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v3 " + version.StableModule + "\n",
+		"go.mod":                 "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v4 " + version.StableModule + "\n",
 		".env":                   "APP_NAME=" + name + "\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=" + key + "\nCOPYTYGO_STUDIO=true\nCOPYTYGO_DOCS_URL=" + version.DocsURL + "\nSERVER_READ_HEADER_TIMEOUT=5\nSERVER_READ_TIMEOUT=15\nSERVER_WRITE_TIMEOUT=30\nSERVER_IDLE_TIMEOUT=60\nSERVER_SHUTDOWN_TIMEOUT=10\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=" + name + "\nDB_USERNAME=root\nDB_PASSWORD=\n",
 		".env.example":           "APP_NAME=CopyTyGo\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=\nCOPYTYGO_STUDIO=true\nCOPYTYGO_DOCS_URL=" + version.DocsURL + "\nSERVER_READ_HEADER_TIMEOUT=5\nSERVER_READ_TIMEOUT=15\nSERVER_WRITE_TIMEOUT=30\nSERVER_IDLE_TIMEOUT=60\nSERVER_SHUTDOWN_TIMEOUT=10\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=copytygo\nDB_USERNAME=root\nDB_PASSWORD=\n",
 		"cmd/app/main.go":        strings.ReplaceAll(projectMain, "{{MODULE}}", name),
@@ -51,8 +51,8 @@ const projectMain = `package main
 
 import (
     "log"
-    "github.com/arfajhf/copytygo/v3/config"
-    "github.com/arfajhf/copytygo/v3/core"
+    "github.com/arfajhf/copytygo/v4/config"
+    "github.com/arfajhf/copytygo/v4/core"
     "{{MODULE}}/routes"
 )
 
@@ -67,9 +67,9 @@ func main() {
 const projectRoutes = `package routes
 
 import (
-    "github.com/arfajhf/copytygo/v3/config"
-    "github.com/arfajhf/copytygo/v3/core"
-    "github.com/arfajhf/copytygo/v3/version"
+    "github.com/arfajhf/copytygo/v4/config"
+    "github.com/arfajhf/copytygo/v4/core"
+    "github.com/arfajhf/copytygo/v4/version"
 )
 
 func Register(app *core.Application) {
