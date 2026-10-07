@@ -22,12 +22,20 @@ func browserTestApp(t *testing.T) (*core.Application, *WebAuth) {
 	t.Setenv("APP_ENV", "local")
 	t.Setenv("APP_NAME", "Example App")
 	pages := NewWebAuth(WebOptions{DefaultRole: "user"})
+	pages.users = &memoryUsers{users: map[string]User{"7": {ID: "7", Name: "Alex User", Email: "alex@example.com", Role: "user"}}}
 	app := core.New()
 	app.Get("/", core.Welcome())
 	app.Get("/login", pages.LoginPage)
 	app.Post("/login", pages.Login)
 	app.Get("/register", pages.RegisterPage)
 	app.Post("/register", pages.Register)
+	app.Get("/dashboard", pages.Dashboard).Middleware(pages.Middleware())
+	app.Get("/users", pages.Users).Middleware(pages.Middleware(), pages.RequireAdmin())
+	app.Get("/users/create", pages.UserCreatePage).Middleware(pages.Middleware(), pages.RequireAdmin())
+	app.Post("/users", pages.UserCreate).Middleware(pages.Middleware(), pages.RequireAdmin())
+	app.Get("/users/:id/edit", pages.UserEditPage).Middleware(pages.Middleware(), pages.RequireAdmin())
+	app.Post("/users/:id", pages.UserUpdate).Middleware(pages.Middleware(), pages.RequireAdmin())
+	app.Post("/users/:id/delete", pages.UserDelete).Middleware(pages.Middleware(), pages.RequireAdmin())
 	app.Get("/account", pages.Account).Middleware(pages.Middleware())
 	app.Post("/logout", pages.Logout).Middleware(pages.Middleware())
 	Routes(app, "user")
@@ -79,7 +87,7 @@ func TestBrowserRegistrationAccountAndLogout(t *testing.T) {
 		return Session{User: User{ID: "7", Name: name, Email: email, Role: role}, Token: bearer}, err
 	}
 	rec := webRequest(app, "POST", "/register", url.Values{"_token": {token}, "name": {"Alex User"}, "email": {"alex@example.com"}, "password": {password}, "password_confirmation": {password}, "role": {"admin"}}, cookie, "http://example.com")
-	if rec.Code != 303 || rec.Header().Get("Location") != "/account" {
+	if rec.Code != 303 || rec.Header().Get("Location") != "/dashboard" {
 		t.Fatalf("registration failed: %d %s", rec.Code, rec.Body.String())
 	}
 	cookies := rec.Result().Cookies()
@@ -99,7 +107,7 @@ func TestBrowserRegistrationAccountAndLogout(t *testing.T) {
 	if api.Code != 401 {
 		t.Fatal("browser cookie unexpectedly authenticated bearer API")
 	}
-	if got := webRequest(app, "GET", "/login", nil, authenticated, ""); got.Code != 303 || got.Header().Get("Location") != "/account" {
+	if got := webRequest(app, "GET", "/login", nil, authenticated, ""); got.Code != 303 || got.Header().Get("Location") != "/dashboard" {
 		t.Fatal("signed-in visitor saw login form")
 	}
 	stale := webRequest(app, "POST", "/logout", url.Values{"_token": {token}}, authenticated, "http://example.com")

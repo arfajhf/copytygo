@@ -77,6 +77,28 @@ jobs:
           grep -q 'queue.AttachConfigured(app)' cmd/app/main.go
           grep -q 'studio.Register(app)' cmd/app/main.go
 
+      - name: Compile single and multi-role auth starters
+        shell: bash
+        run: |
+          ROOT="$GITHUB_WORKSPACE"
+          TMP="$(mktemp -d)"
+          CTG="$ROOT/build/ctg"
+          cd "$TMP"
+          for MODE in single multi; do
+            "$CTG" new "auth-$MODE"
+            cd "auth-$MODE"
+            go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
+            "$CTG" install:auth "$MODE"
+            go mod tidy
+            go test ./...
+            mkdir -p build
+            go build -o build/auth-app ./cmd/app
+            test -f app/auth/views/dashboard.html
+            test -f app/auth/views/users.html
+            grep -q 'pages.Dashboard' routes/auth.go
+            cd ..
+          done
+
   frontend-smoke:
     name: Frontend starter (${{ matrix.frontend }})
     runs-on: ubuntu-latest
@@ -118,10 +140,11 @@ jobs:
           cd frontend-smoke/frontend
           npm install --no-audit --no-fund
           npm run build
+          test -f public/logo.png
 
 
   mysql-integration:
-    name: MySQL queue and browser auth
+    name: MySQL queue, browser auth and admin CRUD
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -160,7 +183,7 @@ jobs:
         run: go test ./integration -v
 
   postgres-integration:
-    name: PostgreSQL queue and browser auth
+    name: PostgreSQL queue, browser auth and admin CRUD
     runs-on: ubuntu-latest
     services:
       postgres:

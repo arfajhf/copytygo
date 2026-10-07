@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"embed"
@@ -13,7 +14,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/arfajhf/copytygo/v4/branding"
 	"github.com/arfajhf/copytygo/v4/config"
 	"github.com/arfajhf/copytygo/v4/core"
 	"github.com/arfajhf/copytygo/v4/security"
@@ -26,26 +29,40 @@ var webViews embed.FS
 // WebOptions configures the browser starter independently of bearer-token APIs.
 type WebOptions struct {
 	DefaultRole string
-	Views       fs.FS // contains views/layout.html, login.html, register.html and account.html
+	Views       fs.FS // contains the editable views/*.html starter templates
 }
 
 // WebAuth serves browser forms with encrypted, HttpOnly cookie sessions.
 type WebAuth struct {
 	options  WebOptions
 	sessions *session.Manager
+	users    userStore
 	login    func(string, string) (Session, error)
 	register func(string, string, string, string) (Session, error)
 }
 
 type webPage struct {
-	AppName string
-	Title   string
-	CSRF    string
-	Name    string
-	Email   string
-	Role    string
-	Message string
-	Errors  map[string][]string
+	LogoURL     template.URL
+	Admin       bool
+	Multi       bool
+	UserID      string
+	Stats       userStats
+	Users       []User
+	Editing     User
+	Search      string
+	PreviousURL string
+	NextURL     string
+	Total       int64
+	FormAction  string
+	Success     string
+	AppName     string
+	Title       string
+	CSRF        string
+	Name        string
+	Email       string
+	Role        string
+	Message     string
+	Errors      map[string][]string
 }
 
 func NewWebAuth(options WebOptions) *WebAuth {
@@ -57,13 +74,13 @@ func NewWebAuth(options WebOptions) *WebAuth {
 	if sessions.Secure {
 		sessions.Name = "__Host-copytygo_web_session"
 	}
-	return &WebAuth{options: options, sessions: sessions, login: Login, register: Register}
+	return &WebAuth{options: options, sessions: sessions, users: databaseUsers{multi: options.DefaultRole != ""}, login: Login, register: Register}
 }
 
 // StarterViews returns editable HTML files for install:auth.
 func StarterViews() (map[string]string, error) {
 	files := make(map[string]string)
-	for _, name := range []string{"layout.html", "login.html", "register.html", "account.html"} {
+	for _, name := range []string{"layout.html", "login.html", "register.html", "account.html", "app-layout.html", "dashboard.html", "users.html", "user-form.html", "error.html"} {
 		raw, err := webViews.ReadFile("views/" + name)
 		if err != nil {
 			return nil, err
@@ -75,14 +92,14 @@ func StarterViews() (map[string]string, error) {
 
 func (web *WebAuth) LoginPage(ctx *core.Context) error {
 	if _, ok := web.claims(ctx); ok {
-		return webRedirect(ctx, "/account")
+		return webRedirect(ctx, "/dashboard")
 	}
 	return web.render(ctx, "login", webPage{Title: "Log in"})
 }
 
 func (web *WebAuth) RegisterPage(ctx *core.Context) error {
 	if _, ok := web.claims(ctx); ok {
-		return webRedirect(ctx, "/account")
+		return webRedirect(ctx, "/dashboard")
 	}
 	return web.render(ctx, "register", webPage{Title: "Create account"})
 }
@@ -148,6 +165,19 @@ func (web *WebAuth) Middleware() core.Middleware {
 				web.manager(ctx).Forget(ctx)
 				return webRedirect(ctx, "/login")
 			}
+			requestContext, cancel := context.WithTimeout(ctx.Request.Context(), 10*time.Second)
+			defer cancel()
+			user, err := web.users.Find(requestContext, claims.Subject)
+			if errors.Is(err, errUserMissing) {
+				web.manager(ctx).Forget(ctx)
+				return webRedirect(ctx, "/login")
+			}
+			if err != nil {
+				return web.failure(ctx, err)
+			}
+			// Always refresh identity and role from the database, not the cookie.
+			claims.Role = user.Role
+			claims.Data = map[string]string{"name": user.Name, "email": user.Email}
 			ctx.Set(ClaimsContextKey, claims)
 			return next(ctx)
 		}
@@ -206,12 +236,25 @@ func (web *WebAuth) signIn(ctx *core.Context, result Session) error {
 	if err := web.manager(ctx).Write(ctx, map[string]string{"token": result.Token, "csrf": csrf}); err != nil {
 		return err
 	}
-	return webRedirect(ctx, "/account")
+	return webRedirect(ctx, "/dashboard")
 }
 
 func (web *WebAuth) render(ctx *core.Context, name string, page webPage) error {
 	ctx.Header("Cache-Control", "no-store")
+	page.Multi = web.options.DefaultRole != ""
+	page.LogoURL = branding.LogoURL()
 	page.AppName = config.Get("APP_NAME", "CopyTyGo")
+	if claims, ok := Claims(ctx); ok {
+		page.UserID = claims.Subject
+		page.Admin = web.options.DefaultRole != "" && claims.Role == "admin"
+		if page.Name == "" {
+			page.Name = claims.Data["name"]
+		}
+		if page.Email == "" {
+			page.Email = claims.Data["email"]
+		}
+		page.Role = claims.Role
+	}
 	page.CSRF = web.manager(ctx).Get(ctx, "csrf")
 	if page.CSRF == "" {
 		token, err := newWebCSRF()
@@ -223,7 +266,11 @@ func (web *WebAuth) render(ctx *core.Context, name string, page webPage) error {
 		}
 		page.CSRF = token
 	}
-	views, err := template.ParseFS(web.options.Views, "views/layout.html", "views/"+name+".html")
+	layout := "views/layout.html"
+	if name != "login" && name != "register" {
+		layout = "views/app-layout.html"
+	}
+	views, err := template.ParseFS(web.options.Views, layout, "views/"+name+".html")
 	if err != nil {
 		return fmt.Errorf("copytygo auth views: %w", err)
 	}

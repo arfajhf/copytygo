@@ -1,0 +1,26 @@
+package routes
+
+import (
+ appauth "%s/app/auth"
+ copyauth "github.com/arfajhf/copytygo/v4/auth"
+ "github.com/arfajhf/copytygo/v4/core"
+)
+
+// RegisterAuth defines browser pages and JSON endpoints in one place.
+// Edit these routes to customize your application.
+func RegisterAuth(app *core.Application) {
+ pages := appauth.Pages()
+
+ // Browser: HTML forms, encrypted cookie sessions, and CSRF protection.
+ app.Get("/login", pages.LoginPage).Name("auth.login")
+ app.Post("/login", pages.Login)
+ app.Get("/register", pages.RegisterPage).Name("auth.register")
+ app.Post("/register", pages.Register)
+ app.Get("/account", pages.Account).Middleware(pages.Middleware()).Name("auth.account")
+ app.Post("/logout", pages.Logout).Middleware(pages.Middleware())
+
+ // API: JSON responses and Authorization: Bearer <token>.
+ app.Post("/api/auth/register", copyauth.RegisterHandler(appauth.DefaultRole))
+ app.Post("/api/auth/login", copyauth.LoginHandler())
+ app.Get("/api/auth/me", copyauth.MeHandler()).Middleware(copyauth.Middleware())
+}

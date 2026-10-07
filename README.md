@@ -1,17 +1,19 @@
+<p><img src="branding/logo.png" alt="CopyTyGo logo" width="100"></p>
+
 # CopyTyGo v4
 
 CopyTyGo is a full-stack Go framework focused on productive application development without hiding the strengths of Go.
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> Stable release: `v4.0.3`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
+> Stable release: `v4.0.4`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
 
 ## Quick start
 
 Install the final v4 CLI, then create a project:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.3
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.4
 ctg new
 ```
 
@@ -205,20 +207,21 @@ ctg install:auth single
 ctg install:auth multi
 ```
 
-The installer creates editable login, registration and account pages. After setting your database connection in `.env`, run:
+The installer creates editable login, registration, dashboard and account pages. After setting your database connection in `.env`, run:
 
 ```powershell
 ctg migrate
 ctg dev
 ```
 
-The welcome page shows **Log in** and **Register** when those routes are installed. Registration signs the user in and redirects to `/account`.
+The welcome navbar shows **Log in** and **Register** when those routes are installed. Login and registration redirect to `/dashboard`. Multi-role administrators get user statistics and a Users menu with search, pagination, create, edit and delete forms.
 
 Browser routes:
 
 ```text
 GET/POST /login
 GET/POST /register
+GET      /dashboard
 GET      /account
 POST     /logout
 ```
@@ -234,6 +237,14 @@ GET  /api/auth/me
 ```
 
 Edit `routes/auth.go` for routes, `app/auth/web.go` for the default registration role, and `app/auth/views/*.html` for the UI. Restart `ctg dev` after changing embedded views. Read [the authentication guide](docs/AUTHENTICATION.md) for setup, customization and upgrades.
+
+For multi-role auth, register your first account, then promote it from your own terminal inside the project:
+
+```powershell
+ctg auth:admin your-email@example.com
+```
+
+The dashboard reads the current role from the database on every browser request. Public registration creates a regular user. Administrator CRUD requires server authorization and CSRF, never displays password hashes, and prevents removing your own admin account or role.
 
 Studio includes a safe user inspector. Password hashes are never selected by the Studio inspector.
 

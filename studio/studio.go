@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/arfajhf/copytygo/v4/branding"
 	"github.com/arfajhf/copytygo/v4/cache"
 	"github.com/arfajhf/copytygo/v4/cli"
 	"github.com/arfajhf/copytygo/v4/config"
@@ -821,9 +822,9 @@ table{width:100%;border-collapse:collapse;margin-top:24px;border:1px solid #1e2d
 @media(max-width:800px){.layout{grid-template-columns:1fr}.side{display:none}.main{padding:24px}.cards{grid-template-columns:1fr}}
 `
 
-var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+var dashboardTemplate = template.Must(template.New("copytygo-studio").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a class="active" href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>{{.AppName}}</h1><div style="color:#6f84a2;margin-top:6px">Local development workspace</div></div><span class="pill">{{.Environment}}</span></div>
 <section class="cards">
@@ -842,17 +843,17 @@ var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!d
 </section>
 </main></div></body></html>`))
 
-var routesTemplate = template.Must(template.New("copytygo-studio-routes").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Routes · CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+var routesTemplate = template.Must(template.New("copytygo-studio-routes").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Routes · CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a class="active" href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Route Explorer</h1><div style="color:#6f84a2;margin-top:6px">{{.RouteCount}} registered routes</div></div><span class="pill">{{.Environment}}</span></div>
 <table><thead><tr><th>Method</th><th>Path</th><th>Name</th></tr></thead><tbody>
 {{range .Routes}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{if .Name}}{{.Name}}{{else}}—{{end}}</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-var generatorTemplate = template.Must(template.New("copytygo-studio-generator").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var generatorTemplate = template.Must(template.New("copytygo-studio-generator").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Generator · CopyTyGo Studio</title><style>` + studioStyle + `
 .form{margin-top:24px;border:1px solid #1e2d43;background:#0b1525;border-radius:15px;padding:22px;max-width:760px}
 .field{margin-bottom:18px}.field label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#758aa8;margin-bottom:8px}
@@ -860,7 +861,7 @@ input,textarea{width:100%;background:#08111f;border:1px solid #263852;color:#e7e
 textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padding:12px 16px;background:#f4f7fb;color:#0c1525;font-weight:700;cursor:pointer}
 .flash{margin-top:18px;padding:13px 15px;border-radius:10px;background:#10233a;border:1px solid #29405e}.error{background:#2a1518;border-color:#6b2a31;color:#ffc5cb}
 .hint{color:#6f84a2;font-size:13px;line-height:1.6;margin-top:7px}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a class="active" href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Visual Generator</h1><div style="color:#6f84a2;margin-top:6px">Generate framework code without leaving Studio</div></div><span class="pill">{{.Environment}}</span></div>
 {{if .Created}}<div class="flash">Resource <strong>{{.Created}}</strong> created successfully. Model, controller, migration and routes were generated.</div>{{end}}
@@ -879,13 +880,13 @@ textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padd
 <button type="submit">Create Scaffold</button>
 </form></main></div></body></html>`))
 
-var requestsTemplate = template.Must(template.New("copytygo-studio-requests").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var requestsTemplate = template.Must(template.New("copytygo-studio-requests").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Requests · CopyTyGo Studio</title><style>` + studioStyle + `
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:24px;gap:12px}.muted{color:#6f84a2;font-size:13px}
 button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:9px 12px;cursor:pointer}
 .status-ok{color:#74d99f}.status-warn{color:#ffcf70}.status-error{color:#ff8e98}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a class="active" href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Request Inspector</h1><div style="color:#6f84a2;margin-top:6px">Recent requests captured from the running local application</div></div><span class="pill">{{.Environment}}</span></div>
 <div class="toolbar"><div class="muted">{{len .Requests}} requests retained</div><form method="post" action="{{.BasePath}}/requests/clear"><button type="submit">Clear</button></form></div>
@@ -893,34 +894,34 @@ button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8
 {{range .Requests}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{.Status}}</td><td>{{.DurationMS}} ms</td><td><code>{{.RequestID}}</code></td></tr>{{else}}<tr><td colspan="5" class="muted">No requests captured yet.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-var databaseTemplate = template.Must(template.New("copytygo-studio-database").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var databaseTemplate = template.Must(template.New("copytygo-studio-database").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Database · CopyTyGo Studio</title><style>` + studioStyle + `
 .dbgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}.dbitem{border:1px solid #1e2d43;background:#0b1525;border-radius:13px;padding:18px}.dbitem .value{font-size:18px}.ok{color:#74d99f}.bad{color:#ff8e98}.message{margin-top:18px;padding:14px 16px;border:1px solid #263a55;border-radius:11px;background:#0b1525;color:#9eb0c9;word-break:break-word}
 @media(max-width:700px){.dbgrid{grid-template-columns:1fr}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a class="active" href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Database</h1><div style="color:#6f84a2;margin-top:6px">Connection overview without exposing credentials</div></div>{{if .Connected}}<span class="pill ok">Connected</span>{{else}}<span class="pill bad">Disconnected</span>{{end}}</div>
 <section class="dbgrid"><div class="dbitem"><div class="label">Driver</div><div class="value">{{.Driver}}</div></div><div class="dbitem"><div class="label">Database</div><div class="value">{{.Database}}</div></div><div class="dbitem"><div class="label">Host</div><div class="value">{{.Host}}</div></div><div class="dbitem"><div class="label">Port</div><div class="value">{{.Port}}</div></div></section>
 <div class="message">{{.Message}}</div></main></div></body></html>`))
 
-var doctorTemplate = template.Must(template.New("copytygo-studio-doctor").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var doctorTemplate = template.Must(template.New("copytygo-studio-doctor").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Doctor · CopyTyGo Studio</title><style>` + studioStyle + `
 .summary{display:flex;gap:12px;margin-top:24px}.summary .card{min-width:140px}.check{display:grid;grid-template-columns:26px 180px 1fr;gap:10px;align-items:start;padding:13px 15px;border-bottom:1px solid #1e2d43}.checks{margin-top:20px;border:1px solid #1e2d43;border-radius:14px;background:#0b1525;overflow:hidden}.good{color:#74d99f}.bad{color:#ff8e98}.reason{color:#8094b1;font-size:13px;word-break:break-word}
 @media(max-width:700px){.check{grid-template-columns:26px 1fr}.reason{grid-column:2}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a class="active" href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Doctor</h1><div style="color:#6f84a2;margin-top:6px">Framework, project, security and database diagnostics</div></div><span class="pill">{{.Environment}}</span></div>
 <section class="summary"><div class="card"><div class="label">Passed</div><div class="value good">{{.Passed}}</div></div><div class="card"><div class="label">Failed</div><div class="value {{if .Failed}}bad{{else}}good{{end}}">{{.Failed}}</div></div></section>
 <div class="checks">{{range .Results}}<div class="check"><div class="{{if .OK}}good{{else}}bad{{end}}">{{if .OK}}✓{{else}}×{{end}}</div><strong>{{.Name}}</strong><div class="reason">{{if .Error}}{{.Error}}{{else}}Healthy{{end}}</div></div>{{end}}</div>
 </main></div></body></html>`))
 
-var migrationsTemplate = template.Must(template.New("copytygo-studio-migrations").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var migrationsTemplate = template.Must(template.New("copytygo-studio-migrations").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Migrations · CopyTyGo Studio</title><style>` + studioStyle + `
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.actions form{margin:0}.actions button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:10px 13px;cursor:pointer}.actions .primary{background:#f4f7fb;color:#0c1525;border-color:#f4f7fb}.flash{margin-top:18px;padding:13px 15px;border-radius:10px;background:#10233a;border:1px solid #29405e}.flash.error{background:#2a1518;border-color:#6b2a31;color:#ffc5cb}.ran{color:#74d99f}.pending{color:#ffcf70}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a class="active" href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Migrations</h1><div style="color:#6f84a2;margin-top:6px">Inspect and run project database migrations</div></div><span class="pill">{{.Environment}}</span></div>
 <div class="actions"><form method="post" action="{{.BasePath}}/migrations/run"><button class="primary" type="submit">Run Migrations</button></form><form method="post" action="{{.BasePath}}/migrations/rollback"><button type="submit">Rollback Last Batch</button></form></div>
@@ -929,12 +930,12 @@ var migrationsTemplate = template.Must(template.New("copytygo-studio-migrations"
 {{range .Statuses}}<tr><td class="{{if .Ran}}ran{{else}}pending{{end}}">{{if .Ran}}Ran{{else}}Pending{{end}}</td><td>{{if .Ran}}{{.Batch}}{{else}}—{{end}}</td><td><code>{{.Migration}}</code></td></tr>{{else}}<tr><td colspan="3" style="color:#6f84a2">No migrations registered.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-var logsTemplate = template.Must(template.New("copytygo-studio-logs").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var logsTemplate = template.Must(template.New("copytygo-studio-logs").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Logs · CopyTyGo Studio</title><style>` + studioStyle + `
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:24px}.toolbar button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:9px 12px;cursor:pointer}
 .level{font-weight:800;text-transform:uppercase;font-size:11px}.debug{color:#9fb0ca}.info{color:#74d99f}.warn{color:#ffcf70}.error{color:#ff8e98}.fields{color:#7f94b2;font-size:12px;word-break:break-word}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a class="active" href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Logs</h1><div style="color:#6f84a2;margin-top:6px">Structured framework and request logs</div></div><span class="pill">{{.Environment}}</span></div>
 <div class="toolbar"><div style="color:#6f84a2">{{len .Entries}} retained entries</div><form method="post" action="{{.BasePath}}/logs/clear"><button type="submit">Clear</button></form></div>
@@ -942,11 +943,11 @@ var logsTemplate = template.Must(template.New("copytygo-studio-logs").Parse(`<!d
 {{range .Entries}}<tr><td><span class="level {{.Level}}">{{.Level}}</span></td><td>{{.Message}}</td><td class="fields">{{printf "%v" .Fields}}</td><td class="fields">{{.At}}</td></tr>{{else}}<tr><td colspan="4" class="fields">No logs captured yet.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-var queueTemplate = template.Must(template.New("copytygo-studio-queue").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var queueTemplate = template.Must(template.New("copytygo-studio-queue").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Queue · CopyTyGo Studio</title><style>` + studioStyle + `
 .state{color:#74d99f}.stopped{color:#ffcf70}.error{color:#ff8e98}.small{color:#758aa8;font-size:12px}.stats4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:24px}@media(max-width:800px){.stats4{grid-template-columns:repeat(2,1fr)}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a class="active" href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Queue</h1><div style="color:#6f84a2;margin-top:6px">Background job worker runtime · driver: <strong>{{.Driver}}</strong></div></div>
 {{if eq .Driver "database"}}<span class="pill state">Durable Queue</span>{{else}}{{if .MemoryStats.Started}}<span class="pill state">Running · {{.MemoryStats.Concurrency}} worker(s)</span>{{else}}<span class="pill stopped">Stopped</span>{{end}}{{end}}</div>
@@ -959,43 +960,43 @@ var queueTemplate = template.Must(template.New("copytygo-studio-queue").Parse(`<
 <table><thead><tr><th>Failed Job</th><th>Attempts</th><th>Error</th><th>Time</th></tr></thead><tbody>{{range .Failures}}<tr><td>{{.Name}}</td><td>{{.Attempts}}</td><td class="error">{{.Error}}</td><td class="small">{{.At}}</td></tr>{{else}}<tr><td colspan="4" class="small">No failed jobs.</td></tr>{{end}}</tbody></table>
 </main></div></body></html>`))
 
-var schedulerTemplate = template.Must(template.New("copytygo-studio-scheduler").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var schedulerTemplate = template.Must(template.New("copytygo-studio-scheduler").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scheduler · CopyTyGo Studio</title><style>` + studioStyle + `
 .state{color:#74d99f}.stopped{color:#ffcf70}.error{color:#ff8e98}.small{color:#758aa8;font-size:12px}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a class="active" href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Scheduler</h1><div style="color:#6f84a2;margin-top:6px">Registered recurring background tasks</div></div>{{if .Started}}<span class="pill state">Running</span>{{else}}<span class="pill stopped">Stopped</span>{{end}}</div>
 <table><thead><tr><th>Task</th><th>Schedule</th><th>Runs</th><th>Last Run</th><th>Next Run</th><th>Last Error</th></tr></thead><tbody>{{range .Entries}}<tr><td><strong>{{.Name}}</strong></td><td>{{if .Cron}}<code>{{.Cron}}</code>{{else}}{{.Interval}}{{end}}</td><td>{{.Runs}}</td><td class="small">{{.LastRun}}</td><td class="small">{{.NextRun}}</td><td class="error">{{.LastError}}</td></tr>{{else}}<tr><td colspan="6" class="small">No scheduled tasks registered.</td></tr>{{end}}</tbody></table>
 </main></div></body></html>`))
 
-var resourcesTemplate = template.Must(template.New("copytygo-studio-resources").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var resourcesTemplate = template.Must(template.New("copytygo-studio-resources").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Resources · CopyTyGo Studio</title><style>` + studioStyle + `
 .resource-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px}.resource-card{border:1px solid #1e2d43;background:#0b1525;border-radius:14px;padding:18px}.resource-card h3{margin:0 0 8px}.small{color:#758aa8;font-size:12px}.resource-card a{display:inline-block;margin-top:14px;text-decoration:none}@media(max-width:900px){.resource-grid{grid-template-columns:1fr}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a class="active" href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Resources</h1><div style="color:#6f84a2;margin-top:6px">Generated application resources</div></div><span class="pill">{{len .Resources}} resource(s)</span></div>
 {{if .Error}}<div class="notice">{{.Error}}</div>{{end}}<section class="resource-grid">{{range .Resources}}<article class="resource-card"><h3>{{.Resource}}</h3><div class="small">Controller: {{.ControllerType}}</div><div class="small">File: {{.File}}</div><a href="{{$.BasePath}}/resources/{{.Resource}}">Open data preview →</a></article>{{else}}<div class="notice">No generated resources yet. Use Studio Generator or <code>ctg make:resource</code>.</div>{{end}}</section>
 </main></div></body></html>`))
 
-var resourcePreviewTemplate = template.Must(template.New("copytygo-studio-resource-preview").Funcs(template.FuncMap{
+var resourcePreviewTemplate = template.Must(template.New("copytygo-studio-resource-preview").Funcs(template.FuncMap{"logo": branding.LogoURL}).Funcs(template.FuncMap{
 	"value": func(row map[string]any, key string) any { return row[key] },
 }).Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{.Name}} · CopyTyGo Studio</title><style>` + studioStyle + `
 .back{display:inline-block;margin-top:18px;text-decoration:none}.errorbox{margin-top:20px;padding:14px;border:1px solid #6b2a31;background:#2a1518;color:#ffc5cb;border-radius:10px}.scroll{overflow:auto}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a class="active" href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>{{.Name}}</h1><div style="color:#6f84a2;margin-top:6px">{{.Page.Total}} active row(s) · first 50 shown</div></div><span class="pill">Resource Preview</span></div><a class="back" href="{{.BasePath}}/resources">← All resources</a>
 {{if .Error}}<div class="errorbox">{{.Error}}</div>{{else}}<div class="scroll"><table><thead><tr>{{range .Columns}}<th>{{.}}</th>{{end}}</tr></thead><tbody>{{range .Page.Data}}{{$row := .}}<tr>{{range $.Columns}}<td><code>{{value $row .}}</code></td>{{end}}</tr>{{else}}<tr><td colspan="99" style="color:#6f84a2">No data.</td></tr>{{end}}</tbody></table></div>{{end}}
 </main></div></body></html>`))
 
-var errorsTemplate = template.Must(template.New("copytygo-studio-errors").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var errorsTemplate = template.Must(template.New("copytygo-studio-errors").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Errors · CopyTyGo Studio</title><style>` + studioStyle + `
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:24px}.toolbar button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:9px 12px;cursor:pointer}.panic{color:#ff8e98}.muted{color:#758aa8;font-size:12px}.msg{max-width:520px;word-break:break-word}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a class="active" href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Error Inspector</h1><div style="color:#6f84a2;margin-top:6px">Recent handler errors and panics from the local application</div></div><span class="pill">{{len .Errors}} retained</span></div>
 <div class="toolbar"><div class="muted">Newest first</div><form method="post" action="{{.BasePath}}/errors/clear"><button type="submit">Clear</button></form></div>
@@ -1003,11 +1004,11 @@ var errorsTemplate = template.Must(template.New("copytygo-studio-errors").Parse(
 {{range .Errors}}<tr><td class="{{if .Panic}}panic{{end}}">{{if .Panic}}Panic{{else}}Error{{end}}</td><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td class="msg">{{.Message}}</td><td class="muted"><code>{{.RequestID}}</code></td><td class="muted">{{.At}}</td></tr>{{else}}<tr><td colspan="6" class="muted">No errors captured.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-var servicesTemplate = template.Must(template.New("copytygo-studio-services").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var servicesTemplate = template.Must(template.New("copytygo-studio-services").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Services · CopyTyGo Studio</title><style>` + studioStyle + `
 .service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}.service{border:1px solid #1e2d43;background:#0b1525;border-radius:14px;padding:20px}.service h3{margin:0 0 5px}.meta{color:#758aa8;font-size:12px;line-height:1.7;word-break:break-word}.metric{font-size:28px;font-weight:800;margin:10px 0}.actions{margin-top:14px}.actions button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:9px 12px;cursor:pointer}.listener{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #1e2d43;font-size:13px}@media(max-width:800px){.service-grid{grid-template-columns:1fr}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a class="active" href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Application Services</h1><div style="color:#6f84a2;margin-top:6px">Cache, events, storage and mail registered in the service container</div></div><span class="pill">{{.Environment}}</span></div>
 <section class="service-grid">
@@ -1017,24 +1018,24 @@ var servicesTemplate = template.Must(template.New("copytygo-studio-services").Pa
 <article class="service"><h3>Events</h3><div class="metric">{{len .Events}}</div><div class="meta">registered event names</div>{{range .Events}}<div class="listener"><code>{{.Event}}</code><span>{{.Listeners}} listener(s)</span></div>{{else}}<div class="meta">No event listeners registered yet.</div>{{end}}</article>
 </section></main></div></body></html>`))
 
-var healthTemplate = template.Must(template.New("copytygo-studio-health").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var healthTemplate = template.Must(template.New("copytygo-studio-health").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Health · CopyTyGo Studio</title><style>` + studioStyle + `
 .good{color:#74d99f}.bad{color:#ff8e98}.muted{color:#758aa8;font-size:12px}.health-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px}.health-card{border:1px solid #1e2d43;background:#0b1525;border-radius:14px;padding:18px}.health-card h3{margin:0 0 10px}.message{margin-top:8px;color:#8094b1;font-size:12px;word-break:break-word}@media(max-width:800px){.health-grid{grid-template-columns:1fr}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a class="active" href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Runtime Health</h1><div style="color:#6f84a2;margin-top:6px">Live dependency checks for the running application</div></div><span class="pill {{if eq .Status "healthy"}}good{{else}}bad{{end}}">{{.Status}}</span></div>
 {{if .Error}}<div class="notice bad">{{.Error}}</div>{{end}}
 <section class="health-grid">{{range .Results}}<article class="health-card"><h3>{{.Name}}</h3><div class="{{if eq .Status "healthy"}}good{{else}}bad{{end}}">{{.Status}}</div><div class="muted">{{.DurationMS}} ms</div>{{if .Message}}<div class="message">{{.Message}}</div>{{end}}</article>{{else}}<div class="notice">No health checks registered.</div>{{end}}</section>
 </main></div></body></html>`))
 
-var authTemplate = template.Must(template.New("copytygo-studio-auth").Funcs(template.FuncMap{
+var authTemplate = template.Must(template.New("copytygo-studio-auth").Funcs(template.FuncMap{"logo": branding.LogoURL}).Funcs(template.FuncMap{
 	"cell": func(row map[string]any, key string) any { return row[key] },
 }).Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Auth · CopyTyGo Studio</title><style>` + studioStyle + `
 .good{color:#74d99f}.warn{color:#ffcf70}.bad{color:#ff8e98}.muted{color:#758aa8;font-size:12px}.safe{margin-top:18px;padding:12px 14px;border:1px solid #28415f;background:#0b1829;border-radius:10px;color:#8fa7c6;font-size:13px}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a class="active" href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Authentication</h1><div style="color:#6f84a2;margin-top:6px">Auth scaffold and safe user inspection</div></div>{{if .Installed}}<span class="pill good">Installed{{if .MultiRole}} · Multi Role{{else}} · Single Role{{end}}</span>{{else}}<span class="pill warn">Not Installed</span>{{end}}</div>
 {{if not .Installed}}<div class="notice">Authentication is not installed. Use <code>ctg install:auth single</code> or <code>ctg install:auth multi</code>.</div>{{else}}
@@ -1044,11 +1045,11 @@ var authTemplate = template.Must(template.New("copytygo-studio-auth").Funcs(temp
 {{range .Users}}<tr><td>{{cell . "id"}}</td><td>{{cell . "name"}}</td><td>{{cell . "email"}}</td>{{if $.MultiRole}}<td>{{cell . "role"}}</td>{{end}}<td class="muted">{{cell . "created_at"}}</td><td class="muted">{{cell . "updated_at"}}</td></tr>{{else}}<tr><td colspan="6" class="muted">No users found.</td></tr>{{end}}
 </tbody></table>{{end}}{{end}}</main></div></body></html>`))
 
-var modelsTemplate = template.Must(template.New("copytygo-studio-models").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+var modelsTemplate = template.Must(template.New("copytygo-studio-models").Funcs(template.FuncMap{"logo": branding.LogoURL}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="{{logo}}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Models · CopyTyGo Studio</title><style>` + studioStyle + `
 .model-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}.model{border:1px solid #1e2d43;background:#0b1525;border-radius:14px;padding:18px}.model h3{margin:0 0 4px}.muted{color:#758aa8;font-size:12px}.field{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #1e2d43;font-size:13px}@media(max-width:850px){.model-grid{grid-template-columns:1fr}.field{grid-template-columns:1fr}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{logo}}" alt="CopyTyGo logo" style="width:46px;height:46px;object-fit:contain;display:block;margin-bottom:10px;background:#fff;padding:5px;border-radius:10px">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a class="active" href="{{.BasePath}}/models">Models</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="{{.BasePath}}/auth">Auth</a><a href="{{.BasePath}}/services">Services</a><a href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Models</h1><div style="color:#6f84a2;margin-top:6px">AST-based model structure inspection</div></div><span class="pill">{{len .Models}} model(s)</span></div>
 {{if .Error}}<div class="notice">{{.Error}}</div>{{end}}

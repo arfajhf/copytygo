@@ -1,5 +1,17 @@
 # Changelog
 
+## v4.0.4
+
+- Replaced default welcome, auth, Studio and frontend starter branding with the supplied CopyTyGo logo.
+- Moved welcome login/register actions to a responsive top navbar.
+- Added post-login dashboards with current account details and role-specific navigation.
+- Added multi-role administrator user counts, searchable/paginated user lists and create/edit/delete forms.
+- Added local `ctg auth:admin <email>` setup for the first administrator without public privilege escalation.
+- Revalidated browser identity and role from the database on each protected request; deleted users lose access immediately.
+- Protected admin writes with CSRF, transaction-level authorization, password hashing, field validation and own-account removal checks.
+- Automatically upgraded unchanged v4.0.3 auth layouts/routes on reinstall while preserving customized files.
+- Added role/CRUD regression coverage and real MySQL/PostgreSQL browser administration integration tests.
+
 ## v4.0.3
 
 - Added editable default login, registration and signed-in account pages to install:auth.

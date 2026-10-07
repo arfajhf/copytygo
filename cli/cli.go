@@ -100,5 +100,6 @@ func (cli *CLI) printHelp() {
 	fmt.Println("\nSecurity/Auth:")
 	fmt.Println("  key:generate")
 	fmt.Println("  install:auth [single|multi]")
+	fmt.Println("  auth:admin <email>          Promote an existing multi-role account locally")
 	fmt.Println()
 }
