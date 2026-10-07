@@ -159,9 +159,11 @@ func (app *Application) Run() error {
 	fmt.Println("Environment :", environment)
 	fmt.Println("Debug       :", debug)
 	fmt.Println()
-	fmt.Println(
-		"Server running at http://" + address,
-	)
+	fmt.Println("Application  : http://" + address)
+	if !strings.EqualFold(environment, "production") && config.GetBool("COPYTYGO_STUDIO", true) {
+		fmt.Println("Studio       : http://" + address + "/__copytygo")
+	}
+	fmt.Println("Documentation:", config.Get("COPYTYGO_DOCS_URL", version.DocsURL))
 	fmt.Println()
 
 	server := &http.Server{
