@@ -123,3 +123,23 @@ func RegisterDefaults(services *container.Container) error {
 
 	return nil
 }
+
+
+func RunHealth(ctx context.Context, services *container.Container) (health.Status, []health.Result, error) {
+	if services == nil {
+		return health.Unhealthy, nil, fmt.Errorf("copytygo foundation: service container is required")
+	}
+
+	service, err := services.Resolve(HealthService)
+	if err != nil {
+		return health.Unhealthy, nil, err
+	}
+
+	registry, ok := service.(*health.Registry)
+	if !ok {
+		return health.Unhealthy, nil, fmt.Errorf("copytygo foundation: health service has unexpected type %T", service)
+	}
+
+	results := registry.Run(ctx, 5*time.Second)
+	return health.Overall(results), results, nil
+}
