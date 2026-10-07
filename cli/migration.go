@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v3/config"
-	"github.com/arfajhf/copytygo/v3/database"
-	"github.com/arfajhf/copytygo/v3/database/drivers"
-	"github.com/arfajhf/copytygo/v3/database/migration"
+	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v4/database"
+	"github.com/arfajhf/copytygo/v4/database/drivers"
+	"github.com/arfajhf/copytygo/v4/database/migration"
 )
 
 type MigrationRegistrar func() error

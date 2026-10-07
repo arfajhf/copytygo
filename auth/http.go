@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/arfajhf/copytygo/v3/core"
+	"github.com/arfajhf/copytygo/v4/core"
 )
 
 func RegisterHandler(defaultRole string) core.Handler {
