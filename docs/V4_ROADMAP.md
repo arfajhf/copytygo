@@ -51,7 +51,7 @@ CopyTyGo v4 is the feature-complete framework milestone. It combines a mature ba
 - [x] Structured observability
 - [x] Nested route groups and API versioning
 - [x] HTTP client retry safety
-- [ ] Final database-queue end-to-end smoke test on MySQL and PostgreSQL
+- [x] Final database-queue end-to-end smoke test on MySQL and PostgreSQL
 - [ ] Final Windows Native/Lite application smoke test
 
 ## v4 Release Gate
