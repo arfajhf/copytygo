@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.0.1
+
+- Made plain `ctg dev` remember Windows policy fallback per project in the local user cache.
+- Removed raw native execution-policy errors when automatic Lite startup is available.
+- Added `ctg dev --native` to retry native execution after a remembered fallback.
+- Preserved compilation and source-file permission errors rather than hiding them behind Lite.
+- Added regression tests and a Windows process smoke test covering policy fallback followed by `install:auth`.
+
 ## v4.0.0
 
 - Migrated the framework module to `github.com/arfajhf/copytygo/v4`.

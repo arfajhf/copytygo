@@ -9,10 +9,20 @@ ctg dev
   -> go run ./cmd/app
        -> success: Native Runtime
        -> supported Windows Application Control block:
+            -> remember the decision in the local user cache
             -> automatic Lite Runtime fallback
+  -> remembered policy block on later runs: Lite Runtime directly
 ```
 
-Force Lite Runtime:
+The user-facing command remains `ctg dev`. Installing auth or editing source does not reset a remembered Windows policy block. Runtime decisions are stored per project in the user cache, outside the project source.
+
+Retry Native Runtime after a policy change:
+
+```powershell
+ctg dev --native
+```
+
+Force Lite for one run:
 
 ```powershell
 ctg dev --lite
