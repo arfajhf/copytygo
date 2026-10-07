@@ -111,9 +111,9 @@ CREATE TABLE IF NOT EXISTS %s (
 	payload TEXT NOT NULL,
 	attempts INTEGER NOT NULL DEFAULT 0,
 	max_attempts INTEGER NOT NULL DEFAULT 3,
-	available_at TIMESTAMP NOT NULL,
-	reserved_at TIMESTAMP NULL,
-	created_at TIMESTAMP NOT NULL,
+	available_at TIMESTAMP(6) NOT NULL,
+	reserved_at TIMESTAMP(6) NULL,
+	created_at TIMESTAMP(6) NOT NULL,
 	PRIMARY KEY (id)
 )`, q.Table)
 
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS %s (
 	payload TEXT NOT NULL,
 	attempts INTEGER NOT NULL,
 	error TEXT NOT NULL,
-	failed_at TIMESTAMP NOT NULL,
+	failed_at TIMESTAMP(6) NOT NULL,
 	PRIMARY KEY (id)
 )`, q.FailedTable)
 
