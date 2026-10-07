@@ -68,6 +68,26 @@ func RegisterDeveloperCommands(app *CLI) {
 		}
 		return MakeService(args[0], filepath.Join("app", "services"))
 	})
+	app.Command("make:job", func(args []string) error {
+		if len(args) < 1 { return fmt.Errorf("usage: ctg make:job <name>") }
+		return MakeJob(args[0], filepath.Join("app", "jobs"))
+	})
+	app.Command("make:listener", func(args []string) error {
+		if len(args) < 1 { return fmt.Errorf("usage: ctg make:listener <name>") }
+		return MakeListener(args[0], filepath.Join("app", "listeners"))
+	})
+	app.Command("make:seeder", func(args []string) error {
+		if len(args) < 1 { return fmt.Errorf("usage: ctg make:seeder <name>") }
+		return MakeSeeder(args[0], filepath.Join("database", "seeders"))
+	})
+	app.Command("make:factory", func(args []string) error {
+		if len(args) < 1 { return fmt.Errorf("usage: ctg make:factory <name>") }
+		return MakeFactory(args[0], filepath.Join("database", "factories"))
+	})
+	app.Command("make:mail", func(args []string) error {
+		if len(args) < 1 { return fmt.Errorf("usage: ctg make:mail <name>") }
+		return MakeMail(args[0], filepath.Join("app", "mails"))
+	})
 	app.Command("key:generate", func(_ []string) error {
 		key, err := GenerateKey()
 		if err != nil {
