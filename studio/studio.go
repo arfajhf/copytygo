@@ -308,14 +308,52 @@ func Register(app *core.Application, options ...Options) bool {
 	}).Name("copytygo.studio.api.services")
 
 	app.Get(path+"/queue", func(ctx *core.Context) error {
+		manager := queue.Current()
+		memoryStats := queue.Stats{}
+		failures := []queue.Failure{}
+		durableStats := queue.DurableStats{}
+		var pendingDB int64
+		var failedDB int64
+		var queueError string
+
+		if manager.Memory != nil {
+			memoryStats = manager.Memory.Stats()
+			failures = manager.Memory.Failures()
+		}
+		if manager.DatabaseWorker != nil {
+			durableStats = manager.DatabaseWorker.Stats()
+		}
+		if manager.Database != nil {
+			if count, err := manager.Database.Pending(ctx.Request.Context()); err == nil {
+				pendingDB = count
+			} else {
+				queueError = err.Error()
+			}
+			if count, err := manager.Database.Failed(ctx.Request.Context()); err == nil {
+				failedDB = count
+			} else if queueError == "" {
+				queueError = err.Error()
+			}
+		}
+
 		payload := struct {
 			viewData
-			Stats    queue.Stats
-			Failures []queue.Failure
+			Driver       string
+			MemoryStats  queue.Stats
+			DurableStats queue.DurableStats
+			PendingDB    int64
+			FailedDB     int64
+			Failures     []queue.Failure
+			Error        string
 		}{
-			viewData: data(),
-			Stats:    queue.Default.Stats(),
-			Failures: queue.Default.Failures(),
+			viewData:     data(),
+			Driver:       manager.Driver,
+			MemoryStats:  memoryStats,
+			DurableStats: durableStats,
+			PendingDB:    pendingDB,
+			FailedDB:     failedDB,
+			Failures:     failures,
+			Error:        queueError,
 		}
 		var out strings.Builder
 		if err := queueTemplate.Execute(&out, payload); err != nil {
@@ -325,10 +363,23 @@ func Register(app *core.Application, options ...Options) bool {
 	}).Name("copytygo.studio.queue")
 
 	app.Get(path+"/api/queue", func(ctx *core.Context) error {
-		return ctx.JSON(core.Map{
-			"stats":    queue.Default.Stats(),
-			"failures": queue.Default.Failures(),
-		})
+		manager := queue.Current()
+		result := core.Map{
+			"driver": manager.Driver,
+		}
+		if manager.Driver == "database" && manager.Database != nil {
+			pending, _ := manager.Database.Pending(ctx.Request.Context())
+			failed, _ := manager.Database.Failed(ctx.Request.Context())
+			result["pending"] = pending
+			result["failed"] = failed
+			if manager.DatabaseWorker != nil {
+				result["worker"] = manager.DatabaseWorker.Stats()
+			}
+		} else if manager.Memory != nil {
+			result["stats"] = manager.Memory.Stats()
+			result["failures"] = manager.Memory.Failures()
+		}
+		return ctx.JSON(result)
 	}).Name("copytygo.studio.api.queue")
 
 	app.Get(path+"/scheduler", func(ctx *core.Context) error {
@@ -785,8 +836,14 @@ var queueTemplate = template.Must(template.New("copytygo-studio-queue").Parse(`<
 .state{color:#74d99f}.stopped{color:#ffcf70}.error{color:#ff8e98}.small{color:#758aa8;font-size:12px}.stats4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:24px}@media(max-width:800px){.stats4{grid-template-columns:repeat(2,1fr)}}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
 <nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="{{.BasePath}}/resources">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a class="active" href="{{.BasePath}}/queue">Queue</a><a href="{{.BasePath}}/scheduler">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="{{.BasePath}}/errors">Errors</a><a href="{{.BasePath}}/logs">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/health">Health</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
-<main class="main"><div class="top"><div><h1>Queue</h1><div style="color:#6f84a2;margin-top:6px">Background job worker runtime</div></div>{{if .Stats.Started}}<span class="pill state">Running · {{.Stats.Concurrency}} worker(s)</span>{{else}}<span class="pill stopped">Stopped</span>{{end}}</div>
-<section class="stats4"><div class="card"><div class="label">Pending</div><div class="value">{{.Stats.Pending}}</div></div><div class="card"><div class="label">Running</div><div class="value">{{.Stats.Running}}</div></div><div class="card"><div class="label">Completed</div><div class="value">{{.Stats.Completed}}</div></div><div class="card"><div class="label">Failed</div><div class="value">{{.Stats.Failed}}</div></div></section>
+<main class="main"><div class="top"><div><h1>Queue</h1><div style="color:#6f84a2;margin-top:6px">Background job worker runtime · driver: <strong>{{.Driver}}</strong></div></div>
+{{if eq .Driver "database"}}<span class="pill state">Durable Queue</span>{{else}}{{if .MemoryStats.Started}}<span class="pill state">Running · {{.MemoryStats.Concurrency}} worker(s)</span>{{else}}<span class="pill stopped">Stopped</span>{{end}}{{end}}</div>
+{{if eq .Driver "database"}}
+<section class="stats4"><div class="card"><div class="label">Pending</div><div class="value">{{.PendingDB}}</div></div><div class="card"><div class="label">Running</div><div class="value">{{.DurableStats.Running}}</div></div><div class="card"><div class="label">Completed</div><div class="value">{{.DurableStats.Completed}}</div></div><div class="card"><div class="label">Failed</div><div class="value">{{.FailedDB}}</div></div></section>
+{{else}}
+<section class="stats4"><div class="card"><div class="label">Pending</div><div class="value">{{.MemoryStats.Pending}}</div></div><div class="card"><div class="label">Running</div><div class="value">{{.MemoryStats.Running}}</div></div><div class="card"><div class="label">Completed</div><div class="value">{{.MemoryStats.Completed}}</div></div><div class="card"><div class="label">Failed</div><div class="value">{{.MemoryStats.Failed}}</div></div></section>
+{{end}}
+{{if .Error}}<div class="notice error">{{.Error}}</div>{{end}}
 <table><thead><tr><th>Failed Job</th><th>Attempts</th><th>Error</th><th>Time</th></tr></thead><tbody>{{range .Failures}}<tr><td>{{.Name}}</td><td>{{.Attempts}}</td><td class="error">{{.Error}}</td><td class="small">{{.At}}</td></tr>{{else}}<tr><td colspan="4" class="small">No failed jobs.</td></tr>{{end}}</tbody></table>
 </main></div></body></html>`))
 
