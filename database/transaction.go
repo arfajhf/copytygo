@@ -4,21 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/arfajhf/copytygo/v4/database/drivers"
 )
 
 type TxFunc func(*sql.Tx) error
 
-func Transaction(ctx context.Context, fn TxFunc) error {
+func Transaction(ctx context.Context, db *sql.DB, fn TxFunc) error {
+	if db == nil {
+		return fmt.Errorf("copytygo database: database connection is required")
+	}
 	if fn == nil {
 		return fmt.Errorf("copytygo database: transaction callback is required")
-	}
-
-	drivers.Register()
-	db, err := Connect()
-	if err != nil {
-		return err
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
