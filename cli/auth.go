@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
 	"go/format"
 	"os"
@@ -11,6 +12,9 @@ import (
 
 	copyauth "github.com/arfajhf/copytygo/v4/auth"
 )
+
+//go:embed auth_legacy_v403/*
+var legacyAuthStarter embed.FS
 
 func InstallAuth(mode, root string) error {
 	if mode != "single" && mode != "multi" {
@@ -26,7 +30,7 @@ func InstallAuth(mode, root string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	updateRoutes := os.IsNotExist(err) || legacyAuthRoutes(current)
+	updateRoutes := os.IsNotExist(err) || legacyAuthRoutes(current) || unchangedBrowserRoutes(current, module)
 	if !updateRoutes && !strings.Contains(string(current), "appauth.Pages()") {
 		return fmt.Errorf("copytygo: routes/auth.go has custom auth routes; add the browser routes from docs/AUTHENTICATION.md manually")
 	}
@@ -95,14 +99,24 @@ func InstallAuth(mode, root string) error {
 	fmt.Println("2. Start the application: ctg dev")
 	fmt.Println("3. Open /login or /register, or use the buttons on the welcome page.")
 	fmt.Println("Customize: routes/auth.go, app/auth/web.go, app/auth/views/*.html")
-	fmt.Println("Guide: app/auth/README.md. Existing starter files are preserved.")
+	if mode == "multi" {
+		fmt.Println("First admin: register your account, then run ctg auth:admin <email> locally.")
+	}
+	if !updateRoutes && !strings.Contains(string(current), "pages.Dashboard") {
+		fmt.Println("Custom routes preserved: add dashboard/user routes from docs/AUTHENTICATION.md.")
+	}
+	fmt.Println("Guide: app/auth/README.md. Customized files are preserved; unchanged v4.0.3 starter files are upgraded.")
 	return nil
 }
 
 func writeAuthStarterFile(root, path, content string) error {
 	target := filepath.Join(root, filepath.FromSlash(path))
-	if _, err := os.Stat(target); err == nil {
-		return nil
+	if current, err := os.ReadFile(target); err == nil {
+		legacyName := map[string]string{"app/auth/views/layout.html": "layout.html", "app/auth/views/account.html": "account.html", "app/auth/README.md": "README.txt"}[path]
+		legacy, readErr := legacyAuthStarter.ReadFile("auth_legacy_v403/" + legacyName)
+		if legacyName == "" || readErr != nil || !bytes.Equal(current, legacy) {
+			return nil
+		}
 	} else if !os.IsNotExist(err) {
 		return err
 	}
@@ -118,6 +132,19 @@ func writeAuthStarterFile(root, path, content string) error {
 		return err
 	}
 	return os.WriteFile(target, data, 0644)
+}
+
+func unchangedBrowserRoutes(raw []byte, module string) bool {
+	expected, err := legacyAuthStarter.ReadFile("auth_legacy_v403/routes.txt")
+	if err != nil {
+		return false
+	}
+	old, err := format.Source([]byte(fmt.Sprintf(string(expected), module)))
+	if err != nil {
+		return false
+	}
+	actual, err := format.Source(raw)
+	return err == nil && bytes.Equal(bytes.TrimSpace(old), bytes.TrimSpace(actual))
 }
 
 func legacyAuthRoutes(raw []byte) bool {
@@ -249,8 +276,19 @@ func RegisterAuth(app *core.Application) {
  app.Post("/login", pages.Login)
  app.Get("/register", pages.RegisterPage).Name("auth.register")
  app.Post("/register", pages.Register)
+ app.Get("/dashboard", pages.Dashboard).Middleware(pages.Middleware()).Name("auth.dashboard")
  app.Get("/account", pages.Account).Middleware(pages.Middleware()).Name("auth.account")
  app.Post("/logout", pages.Logout).Middleware(pages.Middleware())
+
+ // Multi-role administration. Both middleware checks are required.
+ if appauth.DefaultRole != "" {
+  app.Get("/users", pages.Users).Middleware(pages.Middleware(), pages.RequireAdmin()).Name("auth.users")
+  app.Get("/users/create", pages.UserCreatePage).Middleware(pages.Middleware(), pages.RequireAdmin())
+  app.Post("/users", pages.UserCreate).Middleware(pages.Middleware(), pages.RequireAdmin())
+  app.Get("/users/:id/edit", pages.UserEditPage).Middleware(pages.Middleware(), pages.RequireAdmin())
+  app.Post("/users/:id", pages.UserUpdate).Middleware(pages.Middleware(), pages.RequireAdmin())
+  app.Post("/users/:id/delete", pages.UserDelete).Middleware(pages.Middleware(), pages.RequireAdmin())
+ }
 
  // API: JSON responses and Authorization: Bearer <token>.
  app.Post("/api/auth/register", copyauth.RegisterHandler(appauth.DefaultRole))
@@ -280,7 +318,7 @@ Start here:
 1. Configure your MySQL or PostgreSQL connection in .env.
 2. Run ctg migrate to create the users table.
 3. Run ctg dev, then open the welcome page, /login, or /register.
-4. Registration signs you in automatically and redirects to /account.
+4. Registration signs you in automatically and redirects to /dashboard.
 
 Files you can edit:
 
@@ -289,7 +327,11 @@ Files you can edit:
 - app/auth/views/layout.html: shared layout, responsive CSS, and form helpers.
 - app/auth/views/login.html: login form.
 - app/auth/views/register.html: registration form and password confirmation.
-- app/auth/views/account.html: signed-in page and logout form.
+- app/auth/views/app-layout.html: dashboard navbar, role menu, CSS and logout form.
+- app/auth/views/dashboard.html: member/admin dashboard.
+- app/auth/views/users.html: searchable, paginated admin user list.
+- app/auth/views/user-form.html: admin create/edit form.
+- app/auth/views/account.html: your account details.
 - app/auth/user.go: user structure.
 - app/auth/middleware.go: API authentication and role helpers.
 
@@ -301,9 +343,14 @@ field. Keep that field when changing templates. API endpoints still use bearer
 tokens and do not accept the browser cookie as API authentication.
 
 Public multi-role registration assigns DefaultRole on the server. It never reads
-a role field submitted by the user. Assign privileged roles through trusted
-administrative code.
+a role field submitted by the user. Create the first administrator by registering normally, then running
+ctg auth:admin your-email@example.com on your own terminal inside this project.
+The account's role is read from the database on each browser request. Only admins
+can manage /users. Passwords are hashed and never displayed. Your own admin role
+and account cannot be removed from this menu.
 
-Running install:auth again preserves existing starter files and custom routes.
-An unchanged older CopyTyGo API-only routes file is upgraded automatically.
+Running install:auth again preserves customized files and routes. Unchanged
+v4.0.3 layouts and routes are upgraded automatically and missing files are added.
+Use the same auth mode as the original installation. Custom routes may need the
+dashboard and user routes from docs/AUTHENTICATION.md added manually.
 `

@@ -138,3 +138,39 @@ func TestAuthDoesNotReplaceCustomLegacyRoutes(t *testing.T) {
 		t.Fatal("failed install added partial auth files")
 	}
 }
+
+func TestAuthUpgradesUnchangedV403Starter(t *testing.T) {
+	root := authProject(t)
+	if err := InstallAuth("multi", root); err != nil {
+		t.Fatal(err)
+	}
+	module, err := projectModule(filepath.Join(root, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	route, _ := legacyAuthStarter.ReadFile("auth_legacy_v403/routes.txt")
+	raw, err := format.Source([]byte(fmt.Sprintf(string(route), module)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "routes/auth.go"), raw, 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"layout", "account"} {
+		old, _ := legacyAuthStarter.ReadFile("auth_legacy_v403/" + name + ".html")
+		if err := os.WriteFile(filepath.Join(root, "app/auth/views/"+name+".html"), old, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := InstallAuth("multi", root); err != nil {
+		t.Fatal(err)
+	}
+	routes, _ := os.ReadFile(filepath.Join(root, "routes/auth.go"))
+	if !strings.Contains(string(routes), "pages.Dashboard") || !strings.Contains(string(routes), "pages.RequireAdmin") {
+		t.Fatal("v4.0.3 routes did not upgrade")
+	}
+	layout, _ := os.ReadFile(filepath.Join(root, "app/auth/views/layout.html"))
+	if !strings.Contains(string(layout), ".LogoURL") || strings.Contains(string(layout), ">CT</span>") {
+		t.Fatal("default logo did not upgrade")
+	}
+}

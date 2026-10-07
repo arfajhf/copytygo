@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/arfajhf/copytygo/v4/branding"
 	"github.com/arfajhf/copytygo/v4/version"
 )
 
@@ -77,7 +78,7 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"routes",
 	}
 	if options.Frontend != "api" {
-		dirs = append(dirs, "frontend/src")
+		dirs = append(dirs, "frontend/src", "frontend/public")
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(filepath.Join(name, d), 0755); err != nil {
@@ -174,6 +175,9 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 			"\nAuth: " + options.Auth + "\n",
 	}
 
+	if options.Frontend != "api" {
+		files["frontend/public/logo.png"] = string(branding.Logo)
+	}
 	for path, content := range frontendFiles(options.Frontend) {
 		files[path] = content
 	}
@@ -212,31 +216,31 @@ func frontendFiles(kind string) map[string]string {
 
 	case "react":
 		return map[string]string{
-			"frontend/package.json": `{"name":"copytygo-react","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"dependencies":{"react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/node":"^24.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","@vitejs/plugin-react":"^5.0.0","typescript":"^5.9.0","vite":"^6.0.0"}}`,
+			"frontend/package.json":  `{"name":"copytygo-react","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"dependencies":{"react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/node":"^24.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","@vitejs/plugin-react":"^5.0.0","typescript":"^5.9.0","vite":"^6.0.0"}}`,
 			"frontend/tsconfig.json": `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"jsx":"react-jsx","types":["vite/client","node"],"noEmit":true},"include":["src/**/*.ts","src/**/*.tsx","vite.config.ts"]}`,
 			"frontend/vite.config.ts": `import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 export default defineConfig({ plugins:[react()], server:{ proxy:{ "/api":"http://127.0.0.1:8080" } } });`,
-			"frontend/index.html": `<div id="root"></div><script type="module" src="/src/main.tsx"></script>`,
+			"frontend/index.html": `<link rel="icon" href="/logo.png"><div id="root"></div><script type="module" src="/src/main.tsx"></script>`,
 			"frontend/src/main.tsx": `import React from "react";
 import { createRoot } from "react-dom/client";
-createRoot(document.getElementById("root")!).render(<React.StrictMode><main><h1>CopyTyGo + React</h1><p>Your frontend is ready.</p></main></React.StrictMode>);`,
+createRoot(document.getElementById("root")!).render(<React.StrictMode><main><img src="/logo.png" alt="CopyTyGo logo" width="72" height="72" style={{objectFit:"contain"}} /><h1>CopyTyGo + React</h1><p>Your frontend is ready.</p></main></React.StrictMode>);`,
 			"frontend/src/api.ts": frontendAPI,
 		}
 
 	case "vue":
 		return map[string]string{
-			"frontend/package.json": `{"name":"copytygo-vue","private":true,"scripts":{"dev":"vite","build":"vue-tsc --noEmit && vite build"},"dependencies":{"vue":"^3.5.0"},"devDependencies":{"@types/node":"^24.0.0","@vitejs/plugin-vue":"^6.0.0","typescript":"^5.9.0","vite":"^6.0.0","vue-tsc":"^3.0.0"}}`,
+			"frontend/package.json":  `{"name":"copytygo-vue","private":true,"scripts":{"dev":"vite","build":"vue-tsc --noEmit && vite build"},"dependencies":{"vue":"^3.5.0"},"devDependencies":{"@types/node":"^24.0.0","@vitejs/plugin-vue":"^6.0.0","typescript":"^5.9.0","vite":"^6.0.0","vue-tsc":"^3.0.0"}}`,
 			"frontend/tsconfig.json": `{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable","ESNext.Disposable"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"types":["vite/client","node"],"noEmit":true},"include":["src/**/*.ts","src/**/*.vue","vite.config.ts"]}`,
 			"frontend/vite.config.ts": `import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 export default defineConfig({ plugins:[vue()], server:{ proxy:{ "/api":"http://127.0.0.1:8080" } } });`,
-			"frontend/index.html": `<div id="app"></div><script type="module" src="/src/main.ts"></script>`,
+			"frontend/index.html": `<link rel="icon" href="/logo.png"><div id="app"></div><script type="module" src="/src/main.ts"></script>`,
 			"frontend/src/main.ts": `import { createApp } from "vue";
 import App from "./App.vue";
 createApp(App).mount("#app");`,
-			"frontend/src/App.vue": `<template><main><h1>CopyTyGo + Vue</h1><p>Your frontend is ready.</p></main></template>`,
-			"frontend/src/api.ts": frontendAPI,
+			"frontend/src/App.vue": `<template><main><img src="/logo.png" alt="CopyTyGo logo" width="72" height="72" style="object-fit:contain"><h1>CopyTyGo + Vue</h1><p>Your frontend is ready.</p></main></template>`,
+			"frontend/src/api.ts":  frontendAPI,
 			"frontend/src/vite-env.d.ts": `/// <reference types="vite/client" />
 declare module "*.vue" {
   import type { DefineComponent } from "vue";
@@ -330,7 +334,7 @@ export default defineConfig({
   },
 });
 `
-const frontendHTML = `<div id="app"></div><script type="module" src="/src/main.ts"></script>`
+const frontendHTML = `<link rel="icon" href="/logo.png"><div id="app"></div><script type="module" src="/src/main.ts"></script>`
 const frontendAPI = `export type ApiError = {
   error?: {
     status?: number;
@@ -433,7 +437,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 async function boot() {
   const data = await api.get<Health>("/api/health");
-  app.innerHTML = "<h1>" + data.framework + "</h1><p>" + data.status + "</p>";
+  app.innerHTML = '<img src="/logo.png" alt="CopyTyGo logo" width="72" height="72" style="object-fit:contain">' + "<h1>" + data.framework + "</h1><p>" + data.status + "</p>";
 }
 
 void boot();

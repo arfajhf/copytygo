@@ -1,8 +1,4 @@
 {{define "content"}}
-<div class="success">You're signed in</div>
-<h2 id="page-title">Hello, {{.Name}}</h2>
-<p class="subtitle">Your account is ready. You can continue to the home page or log out below.</p>
-<dl class="details"><div><dt>Name</dt><dd>{{.Name}}</dd></div><div><dt>Email address</dt><dd>{{.Email}}</dd></div>{{if .Role}}<div><dt>Role</dt><dd>{{.Role}}</dd></div>{{end}}</dl>
-<form method="post" action="/logout"><input type="hidden" name="_token" value="{{.CSRF}}"><button class="submit" type="submit" data-loading-label="Logging out…">Log out</button></form>
-<p class="switch"><a href="/">Continue to home</a></p>
+<div class="heading"><div><div class="eyebrow">Your profile</div><h1>My account</h1><p class="subtitle">Your current account details.</p></div></div>
+<section class="panel form-panel">{{if .Message}}<div class="notice" role="alert">{{.Message}}</div>{{end}}<h2>{{.Name}}</h2><dl class="details"><div><dt>Name</dt><dd>{{.Name}}</dd></div><div><dt>Email address</dt><dd>{{.Email}}</dd></div>{{if .Role}}<div><dt>Role</dt><dd>{{.Role}}</dd></div>{{end}}</dl><a class="btn" href="/dashboard">Back to dashboard</a></section>
 {{end}}
