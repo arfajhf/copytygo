@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.0.0-dev
+## v4.0.0-rc.1
 
 - Migrated the framework module to `github.com/arfajhf/copytygo/v4`.
 - Added the CopyTyGo welcome page with Documentation, Studio and GitHub links.
