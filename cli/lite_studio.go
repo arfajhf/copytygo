@@ -5,11 +5,15 @@ import (
 	"html"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/arfajhf/copytygo/v4/config"
+	copycontainer "github.com/arfajhf/copytygo/v4/container"
 	"github.com/arfajhf/copytygo/v4/database"
 	"github.com/arfajhf/copytygo/v4/database/drivers"
+	"github.com/arfajhf/copytygo/v4/database/query"
+	"github.com/arfajhf/copytygo/v4/foundation"
 	"github.com/arfajhf/copytygo/v4/version"
 )
 
@@ -48,6 +52,106 @@ func handleLiteStudio(w http.ResponseWriter, req *http.Request) bool {
 			body.WriteString("</tbody></table>")
 		}
 		writeLiteStudioPage(w, "Route Explorer", base, body.String())
+		return true
+
+	case req.Method == http.MethodGet && req.URL.Path == base+"/models":
+		models, err := DiscoverModels("app/models")
+		var body strings.Builder
+		if err != nil {
+			body.WriteString(liteStudioError(err))
+		} else {
+			body.WriteString(`<div class="grid">`)
+			for _, model := range models {
+				body.WriteString(`<div class="card"><div class="label">Model</div><div class="value">` + html.EscapeString(model.Name) + `</div><p class="muted">` + html.EscapeString(model.File) + ` · ` + fmt.Sprint(len(model.Fields)) + ` field(s)</p></div>`)
+			}
+			if len(models) == 0 {
+				body.WriteString(`<div class="notice">No models found.</div>`)
+			}
+			body.WriteString("</div>")
+		}
+		writeLiteStudioPage(w, "Models", base, body.String())
+		return true
+
+	case req.Method == http.MethodGet && req.URL.Path == base+"/auth":
+		raw, err := os.ReadFile("app/auth/user.go")
+		if err != nil {
+			if os.IsNotExist(err) {
+				writeLiteStudioPage(w, "Authentication", base, `<div class="notice">Authentication is not installed. Use <code>ctg install:auth single</code> or <code>ctg install:auth multi</code>.</div>`)
+				return true
+			}
+			writeLiteStudioPage(w, "Authentication", base, liteStudioError(err))
+			return true
+		}
+
+		multiRole := strings.Contains(string(raw), "Role string")
+		drivers.Register()
+		db, connectErr := database.Connect()
+		if connectErr != nil {
+			writeLiteStudioPage(w, "Authentication", base, liteStudioError(connectErr))
+			return true
+		}
+
+		columns := []string{"id", "name", "email", "created_at", "updated_at"}
+		if multiRole {
+			columns = []string{"id", "name", "email", "role", "created_at", "updated_at"}
+		}
+		users, queryErr := query.Table(db, config.Get("DB_DRIVER", "mysql"), "users").
+			Select(columns...).
+			OrderBy("id", "DESC").
+			Limit(50).
+			AllMaps(req.Context())
+		if queryErr != nil {
+			writeLiteStudioPage(w, "Authentication", base, liteStudioError(queryErr))
+			return true
+		}
+
+		var body strings.Builder
+		body.WriteString(`<div class="notice good">Auth installed. Password hashes are never selected by this inspector.</div>`)
+		body.WriteString("<table><thead><tr><th>ID</th><th>Name</th><th>Email</th>")
+		if multiRole {
+			body.WriteString("<th>Role</th>")
+		}
+		body.WriteString("</tr></thead><tbody>")
+		for _, user := range users {
+			body.WriteString("<tr><td>" + html.EscapeString(fmt.Sprint(user["id"])) + "</td><td>" + html.EscapeString(fmt.Sprint(user["name"])) + "</td><td>" + html.EscapeString(fmt.Sprint(user["email"])) + "</td>")
+			if multiRole {
+				body.WriteString("<td>" + html.EscapeString(fmt.Sprint(user["role"])) + "</td>")
+			}
+			body.WriteString("</tr>")
+		}
+		body.WriteString("</tbody></table>")
+		writeLiteStudioPage(w, "Authentication", base, body.String())
+		return true
+
+	case req.Method == http.MethodGet && req.URL.Path == base+"/services":
+		body := liteStudioCards(
+			[2]string{"Cache", "Memory"},
+			[2]string{"Storage", config.Get("STORAGE_PATH", "storage/app")},
+			[2]string{"Mail", config.Get("MAIL_HOST", "127.0.0.1") + ":" + fmt.Sprint(config.GetInt("MAIL_PORT", 1025))},
+		)
+		body += `<div class="notice">Lite Studio shows configured service defaults. Runtime service-container state is available in Native Studio.</div>`
+		writeLiteStudioPage(w, "Application Services", base, body)
+		return true
+
+	case req.Method == http.MethodGet && req.URL.Path == base+"/health":
+		services := copycontainer.New()
+		if err := foundation.RegisterDefaults(services); err != nil {
+			writeLiteStudioPage(w, "Runtime Health", base, liteStudioError(err))
+			return true
+		}
+		status, results, err := foundation.RunHealth(req.Context(), services)
+		var body strings.Builder
+		body.WriteString(`<div class="notice"><strong>Status: ` + html.EscapeString(string(status)) + `</strong></div>`)
+		if err != nil {
+			body.WriteString(liteStudioError(err))
+		} else {
+			body.WriteString("<table><thead><tr><th>Check</th><th>Status</th><th>Latency</th><th>Message</th></tr></thead><tbody>")
+			for _, result := range results {
+				body.WriteString("<tr><td><strong>" + html.EscapeString(result.Name) + "</strong></td><td>" + html.EscapeString(string(result.Status)) + "</td><td>" + fmt.Sprint(result.DurationMS) + " ms</td><td>" + html.EscapeString(result.Message) + "</td></tr>")
+			}
+			body.WriteString("</tbody></table>")
+		}
+		writeLiteStudioPage(w, "Runtime Health", base, body.String())
 		return true
 
 	case req.Method == http.MethodGet && req.URL.Path == base+"/resources":
@@ -226,12 +330,16 @@ func writeLiteStudioPage(w http.ResponseWriter, title, base, content string) {
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Lite Studio · `+version.Framework+`</small></div><nav>`+
 		nav("Dashboard","")+
 		nav("Routes","/routes")+
+		nav("Models","/models")+
 		nav("Resources","/resources")+
 		nav("Database","/database")+
 		nav("Migrations","/migrations")+
+		nav("Auth","/auth")+
+		nav("Services","/services")+
 		nav("Queue","/queue")+
 		nav("Scheduler","/scheduler")+
 		nav("Generator","/generator")+
+		nav("Health","/health")+
 		nav("Doctor","/doctor")+
 		`</nav></aside><main class="main"><h1>`+html.EscapeString(title)+`</h1><span class="pill">Lite Runtime</span>`+content+`</main></div></body></html>`)
 }
