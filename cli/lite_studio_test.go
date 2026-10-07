@@ -53,3 +53,28 @@ func TestLiteWelcomeLinksStudio(t *testing.T) {
 		}
 	}
 }
+
+
+func TestLiteStudioInspectorPages(t *testing.T) {
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("COPYTYGO_STUDIO", "true")
+	t.Setenv("APP_KEY", "12345678901234567890123456789012")
+
+	for _, path := range []string{
+		"/__copytygo/models",
+		"/__copytygo/auth",
+		"/__copytygo/services",
+	} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if !handleLiteStudio(rec, req) {
+			t.Fatalf("expected %s to be handled", path)
+		}
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s expected 200, got %d", path, rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), "Lite Runtime") {
+			t.Fatalf("%s did not render Lite Studio", path)
+		}
+	}
+}
