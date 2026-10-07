@@ -4,13 +4,14 @@ CopyTyGo is a full-stack Go framework focused on productive application developm
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> v4 is currently under development on the `dev/v4` branch. The final `v4.0.0` release is not published yet.
+> Stable release: `v4.0.0`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
 
 ## Quick start
 
-Install the current v4 development build from a v4 release candidate or commit, then create a project:
+Install the final v4 CLI, then create a project:
 
 ```powershell
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.0
 ctg new
 ```
 
@@ -20,6 +21,8 @@ The interactive installer can configure:
 - no auth, single-role auth, or multi-role auth
 - TypeScript, React, Vue, or API-only frontend
 - CopyTyGo Studio
+
+Ensure the Go binary directory, normally `%USERPROFILE%\go\bin` on Windows, is on your PATH.
 
 The classic non-interactive workflow remains available:
 
@@ -279,7 +282,7 @@ Force Lite:
 ctg dev --lite
 ```
 
-Lite Runtime includes the welcome page and Studio inspection/generation tools. Execution of arbitrary project Go background jobs remains Native-only by design.
+Lite Runtime includes the welcome page, Studio inspection tools, and the same resource/scaffold generators as Native Studio. Request, error and log runtime inspection remain available in Native Studio. Execution of arbitrary project Go background jobs remains Native-only by design.
 
 Production always uses the native application binary:
 

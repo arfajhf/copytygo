@@ -236,9 +236,12 @@ func handleLiteStudio(w http.ResponseWriter, req *http.Request) bool {
 		body := `<form class="form" method="post" action="` + base + `/generator/resource">
 <label>Resource name</label><input name="name" placeholder="Product" required>
 <label>Fields</label><textarea name="fields" placeholder="name:string&#10;price:decimal&#10;stock:integer&#10;active:boolean&#10;description:text?"></textarea>
-<p class="muted">One field per line or separated by spaces.</p><button>Create Resource</button></form>`
+<p class="muted">One field per line or separated by spaces.</p><button>Create Resource</button></form>
+<form class="form" method="post" action="` + base + `/generator/scaffold">
+<label>Type</label><select name="type"><option value="model">Model</option><option value="middleware">Middleware</option><option value="service">Service</option><option value="job">Job</option><option value="listener">Listener</option><option value="seeder">Seeder</option><option value="factory">Factory</option><option value="mail">Mail</option></select>
+<label>Name</label><input name="name" placeholder="SendWelcomeEmail" required><button>Create Scaffold</button></form>`
 		if created := req.URL.Query().Get("created"); created != "" {
-			body = `<div class="notice good">Resource <strong>` + html.EscapeString(created) + `</strong> created.</div>` + body
+			body = `<div class="notice good">Generated <strong>` + html.EscapeString(created) + `</strong> created.</div>` + body
 		}
 		if queryErr := req.URL.Query().Get("error"); queryErr != "" {
 			body = `<div class="notice bad">` + html.EscapeString(queryErr) + `</div>` + body
@@ -257,6 +260,20 @@ func handleLiteStudio(w http.ResponseWriter, req *http.Request) bool {
 			http.Redirect(w, req, base+"/generator?error="+url.QueryEscape(err.Error()), http.StatusFound)
 		} else {
 			http.Redirect(w, req, base+"/generator?created="+url.QueryEscape(name), http.StatusFound)
+		}
+		return true
+
+	case req.Method == http.MethodPost && req.URL.Path == base+"/generator/scaffold":
+		if err := req.ParseForm(); err != nil {
+			http.Redirect(w, req, base+"/generator?error="+url.QueryEscape("Invalid form"), http.StatusFound)
+			return true
+		}
+		kind := strings.ToLower(strings.TrimSpace(req.FormValue("type")))
+		name := strings.TrimSpace(req.FormValue("name"))
+		if err := MakeScaffold(kind, name); err != nil {
+			http.Redirect(w, req, base+"/generator?error="+url.QueryEscape(err.Error()), http.StatusFound)
+		} else {
+			http.Redirect(w, req, base+"/generator?created="+url.QueryEscape(kind+" "+name), http.StatusFound)
 		}
 		return true
 
@@ -326,21 +343,21 @@ func writeLiteStudioPage(w http.ResponseWriter, title, base, content string) {
 		return `<a href="` + base + href + `">` + label + `</a>`
 	}
 	fmt.Fprint(w, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>`+html.EscapeString(title)+` · CopyTyGo Studio</title><style>
-:root{font-family:Inter,system-ui;background:#070d18;color:#e7edf7}*{box-sizing:border-box}body{margin:0}.layout{min-height:100vh;display:grid;grid-template-columns:230px 1fr}.side{padding:24px 18px;border-right:1px solid #1d2a3d;background:#09111f}.brand{font-weight:800;font-size:20px;margin:5px 8px 22px}.brand small{display:block;color:#647896;font-size:11px;margin-top:4px}nav a{display:block;color:#8ea2bf;text-decoration:none;padding:10px 11px;border-radius:9px}.main{padding:34px}.pill{display:inline-block;border:1px solid #29405e;border-radius:999px;padding:7px 10px;color:#91a8c7;font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px}.card,.notice,.form{border:1px solid #1e2d43;background:#0b1525;border-radius:14px;padding:18px}.label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#667b99}.value{font-size:24px;font-weight:750;margin-top:9px}.notice{margin-top:20px;color:#91a5c3;line-height:1.6}.good{color:#74d99f}.bad{color:#ff8e98}.muted{color:#758aa8;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:24px;background:#0b1525}th,td{padding:12px;border-bottom:1px solid #1e2d43;text-align:left;font-size:13px}th{color:#758aa8}.actions{display:flex;gap:10px;margin-top:20px}.actions form{margin:0}.form{max-width:760px;margin-top:24px}.form label{display:block;margin:14px 0 7px;color:#758aa8;font-size:12px;text-transform:uppercase}.form input,.form textarea{width:100%;background:#08111f;border:1px solid #263852;color:#e7edf7;border-radius:9px;padding:11px}.form textarea{min-height:150px}button{border:1px solid #344863;background:#f4f7fb;color:#0c1525;border-radius:8px;padding:10px 13px;font-weight:700;cursor:pointer}.checks{margin-top:20px}.check{display:grid;grid-template-columns:25px 180px 1fr;padding:12px;border-bottom:1px solid #1e2d43}@media(max-width:800px){.layout{grid-template-columns:1fr}.side{display:none}.main{padding:22px}.grid{grid-template-columns:1fr}}
+:root{font-family:Inter,system-ui;background:#070d18;color:#e7edf7}*{box-sizing:border-box}body{margin:0}.layout{min-height:100vh;display:grid;grid-template-columns:230px 1fr}.side{padding:24px 18px;border-right:1px solid #1d2a3d;background:#09111f}.brand{font-weight:800;font-size:20px;margin:5px 8px 22px}.brand small{display:block;color:#647896;font-size:11px;margin-top:4px}nav a{display:block;color:#8ea2bf;text-decoration:none;padding:10px 11px;border-radius:9px}.main{padding:34px}.pill{display:inline-block;border:1px solid #29405e;border-radius:999px;padding:7px 10px;color:#91a8c7;font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px}.card,.notice,.form{border:1px solid #1e2d43;background:#0b1525;border-radius:14px;padding:18px}.label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#667b99}.value{font-size:24px;font-weight:750;margin-top:9px}.notice{margin-top:20px;color:#91a5c3;line-height:1.6}.good{color:#74d99f}.bad{color:#ff8e98}.muted{color:#758aa8;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:24px;background:#0b1525}th,td{padding:12px;border-bottom:1px solid #1e2d43;text-align:left;font-size:13px}th{color:#758aa8}.actions{display:flex;gap:10px;margin-top:20px}.actions form{margin:0}.form{max-width:760px;margin-top:24px}.form label{display:block;margin:14px 0 7px;color:#758aa8;font-size:12px;text-transform:uppercase}.form input,.form textarea,.form select{width:100%;background:#08111f;border:1px solid #263852;color:#e7edf7;border-radius:9px;padding:11px}.form textarea{min-height:150px}button{border:1px solid #344863;background:#f4f7fb;color:#0c1525;border-radius:8px;padding:10px 13px;font-weight:700;cursor:pointer}.checks{margin-top:20px}.check{display:grid;grid-template-columns:25px 180px 1fr;padding:12px;border-bottom:1px solid #1e2d43}@media(max-width:800px){.layout{grid-template-columns:1fr}.side{display:none}.main{padding:22px}.grid{grid-template-columns:1fr}}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Lite Studio · `+version.Framework+`</small></div><nav>`+
-		nav("Dashboard","")+
-		nav("Routes","/routes")+
-		nav("Models","/models")+
-		nav("Resources","/resources")+
-		nav("Database","/database")+
-		nav("Migrations","/migrations")+
-		nav("Auth","/auth")+
-		nav("Services","/services")+
-		nav("Queue","/queue")+
-		nav("Scheduler","/scheduler")+
-		nav("Generator","/generator")+
-		nav("Health","/health")+
-		nav("Doctor","/doctor")+
+		nav("Dashboard", "")+
+		nav("Routes", "/routes")+
+		nav("Models", "/models")+
+		nav("Resources", "/resources")+
+		nav("Database", "/database")+
+		nav("Migrations", "/migrations")+
+		nav("Auth", "/auth")+
+		nav("Services", "/services")+
+		nav("Queue", "/queue")+
+		nav("Scheduler", "/scheduler")+
+		nav("Generator", "/generator")+
+		nav("Health", "/health")+
+		nav("Doctor", "/doctor")+
 		`</nav></aside><main class="main"><h1>`+html.EscapeString(title)+`</h1><span class="pill">Lite Runtime</span>`+content+`</main></div></body></html>`)
 }
 

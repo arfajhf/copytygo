@@ -56,7 +56,7 @@ CopyTyGo v4 is the feature-complete framework milestone. It combines a mature ba
 
 ## v4 Release Gate
 
-v4 becomes RC only when:
+v4 release validation:
 
 1. CI is green for tests, race tests, vet, all-package build, Linux CLI and Windows CLI.
 2. A fresh project can be created with the interactive installer.
@@ -67,3 +67,5 @@ v4 becomes RC only when:
 7. Windows smoke testing passes on a fresh project.
 
 v4 should already be usable for real application development. v5 is reserved for stabilization, official documentation/examples, distribution polish, security/performance review and public launch.
+
+Final `v4.0.0` also verifies `go install` and a generated application against the published tag without a local module replacement. User acceptance testing on the target Windows machine follows the GitHub release, before starting v5.

@@ -12,6 +12,30 @@ import (
 
 var safeName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
+// MakeScaffold is shared by Native and Lite Studio.
+func MakeScaffold(kind, name string) error {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "model":
+		return MakeModel(name, "app/models")
+	case "middleware":
+		return MakeMiddleware(name, "app/middleware")
+	case "service":
+		return MakeService(name, "app/services")
+	case "job":
+		return MakeJob(name, "app/jobs")
+	case "listener":
+		return MakeListener(name, "app/listeners")
+	case "seeder":
+		return MakeSeeder(name, "database/seeders")
+	case "factory":
+		return MakeFactory(name, "database/factories")
+	case "mail":
+		return MakeMail(name, "app/mails")
+	default:
+		return fmt.Errorf("copytygo studio: unsupported generator type %q", kind)
+	}
+}
+
 func writeGenerated(path, content string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
@@ -160,7 +184,6 @@ func GenerateKey() (string, error) {
 	}
 	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
-
 
 func MakeJob(name, dir string) error {
 	if !safeName.MatchString(name) {

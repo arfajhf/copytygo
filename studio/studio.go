@@ -2,17 +2,13 @@ package studio
 
 import (
 	"fmt"
+	"html/template"
 	"net/url"
 	"os"
 	"sort"
-	"html/template"
 	"strings"
 
 	"github.com/arfajhf/copytygo/v4/cache"
-	"github.com/arfajhf/copytygo/v4/events"
-	"github.com/arfajhf/copytygo/v4/foundation"
-	"github.com/arfajhf/copytygo/v4/health"
-	"github.com/arfajhf/copytygo/v4/storage"
 	"github.com/arfajhf/copytygo/v4/cli"
 	"github.com/arfajhf/copytygo/v4/config"
 	"github.com/arfajhf/copytygo/v4/core"
@@ -20,9 +16,13 @@ import (
 	"github.com/arfajhf/copytygo/v4/database/drivers"
 	"github.com/arfajhf/copytygo/v4/database/migration"
 	"github.com/arfajhf/copytygo/v4/database/query"
+	"github.com/arfajhf/copytygo/v4/events"
+	"github.com/arfajhf/copytygo/v4/foundation"
+	"github.com/arfajhf/copytygo/v4/health"
 	"github.com/arfajhf/copytygo/v4/logging"
 	"github.com/arfajhf/copytygo/v4/queue"
 	"github.com/arfajhf/copytygo/v4/scheduler"
+	"github.com/arfajhf/copytygo/v4/storage"
 	"github.com/arfajhf/copytygo/v4/version"
 )
 
@@ -539,7 +539,7 @@ func Register(app *core.Application, options ...Options) bool {
 			Errors []core.ErrorRecord
 		}{
 			viewData: data(),
-			Errors:    errorInspector.Records(),
+			Errors:   errorInspector.Records(),
 		}
 		var out strings.Builder
 		if err := errorsTemplate.Execute(&out, payload); err != nil {
@@ -743,7 +743,7 @@ func Register(app *core.Application, options ...Options) bool {
 			viewData
 			Requests []core.RequestRecord
 		}{
-			viewData:  data(),
+			viewData: data(),
 			Requests: inspector.Records(),
 		}
 		var out strings.Builder
@@ -798,27 +798,7 @@ func Register(app *core.Application, options ...Options) bool {
 		kind := strings.ToLower(strings.TrimSpace(ctx.Input("type")))
 		name := strings.TrimSpace(ctx.Input("name"))
 
-		var err error
-		switch kind {
-		case "model":
-			err = cli.MakeModel(name, "app/models")
-		case "middleware":
-			err = cli.MakeMiddleware(name, "app/middleware")
-		case "service":
-			err = cli.MakeService(name, "app/services")
-		case "job":
-			err = cli.MakeJob(name, "app/jobs")
-		case "listener":
-			err = cli.MakeListener(name, "app/listeners")
-		case "seeder":
-			err = cli.MakeSeeder(name, "database/seeders")
-		case "factory":
-			err = cli.MakeFactory(name, "database/factories")
-		case "mail":
-			err = cli.MakeMail(name, "app/mails")
-		default:
-			err = fmt.Errorf("copytygo studio: unsupported generator type %q", kind)
-		}
+		err := cli.MakeScaffold(kind, name)
 
 		if err != nil {
 			return ctx.Redirect(path + "/generator?error=" + urlQueryEscape(err.Error()))
@@ -871,7 +851,6 @@ var routesTemplate = template.Must(template.New("copytygo-studio-routes").Parse(
 {{range .Routes}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{if .Name}}{{.Name}}{{else}}—{{end}}</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-
 var generatorTemplate = template.Must(template.New("copytygo-studio-generator").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Generator · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -900,7 +879,6 @@ textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padd
 <button type="submit">Create Scaffold</button>
 </form></main></div></body></html>`))
 
-
 var requestsTemplate = template.Must(template.New("copytygo-studio-requests").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Requests · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -915,7 +893,6 @@ button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8
 {{range .Requests}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{.Status}}</td><td>{{.DurationMS}} ms</td><td><code>{{.RequestID}}</code></td></tr>{{else}}<tr><td colspan="5" class="muted">No requests captured yet.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-
 var databaseTemplate = template.Must(template.New("copytygo-studio-database").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Database · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -926,7 +903,6 @@ var databaseTemplate = template.Must(template.New("copytygo-studio-database").Pa
 <main class="main"><div class="top"><div><h1>Database</h1><div style="color:#6f84a2;margin-top:6px">Connection overview without exposing credentials</div></div>{{if .Connected}}<span class="pill ok">Connected</span>{{else}}<span class="pill bad">Disconnected</span>{{end}}</div>
 <section class="dbgrid"><div class="dbitem"><div class="label">Driver</div><div class="value">{{.Driver}}</div></div><div class="dbitem"><div class="label">Database</div><div class="value">{{.Database}}</div></div><div class="dbitem"><div class="label">Host</div><div class="value">{{.Host}}</div></div><div class="dbitem"><div class="label">Port</div><div class="value">{{.Port}}</div></div></section>
 <div class="message">{{.Message}}</div></main></div></body></html>`))
-
 
 var doctorTemplate = template.Must(template.New("copytygo-studio-doctor").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -939,7 +915,6 @@ var doctorTemplate = template.Must(template.New("copytygo-studio-doctor").Parse(
 <section class="summary"><div class="card"><div class="label">Passed</div><div class="value good">{{.Passed}}</div></div><div class="card"><div class="label">Failed</div><div class="value {{if .Failed}}bad{{else}}good{{end}}">{{.Failed}}</div></div></section>
 <div class="checks">{{range .Results}}<div class="check"><div class="{{if .OK}}good{{else}}bad{{end}}">{{if .OK}}✓{{else}}×{{end}}</div><strong>{{.Name}}</strong><div class="reason">{{if .Error}}{{.Error}}{{else}}Healthy{{end}}</div></div>{{end}}</div>
 </main></div></body></html>`))
-
 
 var migrationsTemplate = template.Must(template.New("copytygo-studio-migrations").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -954,7 +929,6 @@ var migrationsTemplate = template.Must(template.New("copytygo-studio-migrations"
 {{range .Statuses}}<tr><td class="{{if .Ran}}ran{{else}}pending{{end}}">{{if .Ran}}Ran{{else}}Pending{{end}}</td><td>{{if .Ran}}{{.Batch}}{{else}}—{{end}}</td><td><code>{{.Migration}}</code></td></tr>{{else}}<tr><td colspan="3" style="color:#6f84a2">No migrations registered.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
 
-
 var logsTemplate = template.Must(template.New("copytygo-studio-logs").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Logs · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -967,7 +941,6 @@ var logsTemplate = template.Must(template.New("copytygo-studio-logs").Parse(`<!d
 <table><thead><tr><th>Level</th><th>Message</th><th>Fields</th><th>Time</th></tr></thead><tbody>
 {{range .Entries}}<tr><td><span class="level {{.Level}}">{{.Level}}</span></td><td>{{.Message}}</td><td class="fields">{{printf "%v" .Fields}}</td><td class="fields">{{.At}}</td></tr>{{else}}<tr><td colspan="4" class="fields">No logs captured yet.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
-
 
 var queueTemplate = template.Must(template.New("copytygo-studio-queue").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -996,7 +969,6 @@ var schedulerTemplate = template.Must(template.New("copytygo-studio-scheduler").
 <table><thead><tr><th>Task</th><th>Schedule</th><th>Runs</th><th>Last Run</th><th>Next Run</th><th>Last Error</th></tr></thead><tbody>{{range .Entries}}<tr><td><strong>{{.Name}}</strong></td><td>{{if .Cron}}<code>{{.Cron}}</code>{{else}}{{.Interval}}{{end}}</td><td>{{.Runs}}</td><td class="small">{{.LastRun}}</td><td class="small">{{.NextRun}}</td><td class="error">{{.LastError}}</td></tr>{{else}}<tr><td colspan="6" class="small">No scheduled tasks registered.</td></tr>{{end}}</tbody></table>
 </main></div></body></html>`))
 
-
 var resourcesTemplate = template.Must(template.New("copytygo-studio-resources").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Resources · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -1019,7 +991,6 @@ var resourcePreviewTemplate = template.Must(template.New("copytygo-studio-resour
 {{if .Error}}<div class="errorbox">{{.Error}}</div>{{else}}<div class="scroll"><table><thead><tr>{{range .Columns}}<th>{{.}}</th>{{end}}</tr></thead><tbody>{{range .Page.Data}}{{$row := .}}<tr>{{range $.Columns}}<td><code>{{value $row .}}</code></td>{{end}}</tr>{{else}}<tr><td colspan="99" style="color:#6f84a2">No data.</td></tr>{{end}}</tbody></table></div>{{end}}
 </main></div></body></html>`))
 
-
 var errorsTemplate = template.Must(template.New("copytygo-studio-errors").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Errors · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -1031,7 +1002,6 @@ var errorsTemplate = template.Must(template.New("copytygo-studio-errors").Parse(
 <table><thead><tr><th>Type</th><th>Method</th><th>Path</th><th>Message</th><th>Request ID</th><th>Time</th></tr></thead><tbody>
 {{range .Errors}}<tr><td class="{{if .Panic}}panic{{end}}">{{if .Panic}}Panic{{else}}Error{{end}}</td><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td class="msg">{{.Message}}</td><td class="muted"><code>{{.RequestID}}</code></td><td class="muted">{{.At}}</td></tr>{{else}}<tr><td colspan="6" class="muted">No errors captured.</td></tr>{{end}}
 </tbody></table></main></div></body></html>`))
-
 
 var servicesTemplate = template.Must(template.New("copytygo-studio-services").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1047,7 +1017,6 @@ var servicesTemplate = template.Must(template.New("copytygo-studio-services").Pa
 <article class="service"><h3>Events</h3><div class="metric">{{len .Events}}</div><div class="meta">registered event names</div>{{range .Events}}<div class="listener"><code>{{.Event}}</code><span>{{.Listeners}} listener(s)</span></div>{{else}}<div class="meta">No event listeners registered yet.</div>{{end}}</article>
 </section></main></div></body></html>`))
 
-
 var healthTemplate = template.Must(template.New("copytygo-studio-health").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Health · CopyTyGo Studio</title><style>` + studioStyle + `
@@ -1058,7 +1027,6 @@ var healthTemplate = template.Must(template.New("copytygo-studio-health").Parse(
 {{if .Error}}<div class="notice bad">{{.Error}}</div>{{end}}
 <section class="health-grid">{{range .Results}}<article class="health-card"><h3>{{.Name}}</h3><div class="{{if eq .Status "healthy"}}good{{else}}bad{{end}}">{{.Status}}</div><div class="muted">{{.DurationMS}} ms</div>{{if .Message}}<div class="message">{{.Message}}</div>{{end}}</article>{{else}}<div class="notice">No health checks registered.</div>{{end}}</section>
 </main></div></body></html>`))
-
 
 var authTemplate = template.Must(template.New("copytygo-studio-auth").Funcs(template.FuncMap{
 	"cell": func(row map[string]any, key string) any { return row[key] },
@@ -1075,7 +1043,6 @@ var authTemplate = template.Must(template.New("copytygo-studio-auth").Funcs(temp
 <table><thead><tr><th>ID</th><th>Name</th><th>Email</th>{{if .MultiRole}}<th>Role</th>{{end}}<th>Created</th><th>Updated</th></tr></thead><tbody>
 {{range .Users}}<tr><td>{{cell . "id"}}</td><td>{{cell . "name"}}</td><td>{{cell . "email"}}</td>{{if $.MultiRole}}<td>{{cell . "role"}}</td>{{end}}<td class="muted">{{cell . "created_at"}}</td><td class="muted">{{cell . "updated_at"}}</td></tr>{{else}}<tr><td colspan="6" class="muted">No users found.</td></tr>{{end}}
 </tbody></table>{{end}}{{end}}</main></div></body></html>`))
-
 
 var modelsTemplate = template.Must(template.New("copytygo-studio-models").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

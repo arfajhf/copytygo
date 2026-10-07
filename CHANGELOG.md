@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.0.0-rc.1
+## v4.0.0
 
 - Migrated the framework module to `github.com/arfajhf/copytygo/v4`.
 - Added the CopyTyGo welcome page with Documentation, Studio and GitHub links.
@@ -31,6 +31,8 @@
 - Added HTTP testing helpers and framework fakes.
 - Added CLI and Studio generators for jobs, listeners, seeders, factories and mail classes.
 - Added production documentation and v4 release-gate tracking.
+- Completed Native/Lite visual scaffold generator parity.
+- Gated final releases on successful CI and verified installation from the published tag.
 
 ## v1.0.0
 

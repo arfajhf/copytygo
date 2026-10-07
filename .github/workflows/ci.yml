@@ -62,6 +62,11 @@ jobs:
 
           go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
           go mod tidy
+          "$TMP/ctg" make:job SendWelcomeEmail
+          "$TMP/ctg" make:listener NotifyAdmin
+          "$TMP/ctg" make:seeder UserSeeder
+          "$TMP/ctg" make:factory User
+          "$TMP/ctg" make:mail Welcome
           go test ./...
           mkdir -p build
           go build -o build/smoke-app ./cmd/app

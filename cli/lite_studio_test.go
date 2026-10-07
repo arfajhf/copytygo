@@ -3,9 +3,78 @@ package cli
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestLiteStudioScaffolds(t *testing.T) {
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("COPYTYGO_STUDIO", "true")
+	root := t.TempDir()
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(previous) })
+
+	for _, tc := range []struct{ kind, path string }{
+		{"model", "app/models/sample.go"},
+		{"middleware", "app/middleware/sample.go"},
+		{"service", "app/services/sample.go"},
+		{"job", "app/jobs/sample.go"},
+		{"listener", "app/listeners/sample.go"},
+		{"seeder", "database/seeders/sample.go"},
+		{"factory", "database/factories/sample.go"},
+		{"mail", "app/mails/sample.go"},
+	} {
+		t.Run(tc.kind, func(t *testing.T) {
+			form := url.Values{"type": {tc.kind}, "name": {"Sample"}}
+			req := httptest.NewRequest(http.MethodPost, "/__copytygo/generator/scaffold", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			rec := httptest.NewRecorder()
+			if !handleLiteStudio(rec, req) {
+				t.Fatal("scaffold route not handled")
+			}
+			if rec.Code != http.StatusFound || !strings.Contains(rec.Header().Get("Location"), "created=") {
+				t.Fatalf("scaffold failed: status=%d location=%s", rec.Code, rec.Header().Get("Location"))
+			}
+			if _, err := os.Stat(filepath.Join(root, tc.path)); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "app/jobs/registry.go"))
+	if err != nil || !strings.Contains(string(raw), "Sample{}.Handle") {
+		t.Fatalf("generated job not registered: %v", err)
+	}
+	for _, kind := range []string{"unknown", "job"} {
+		form := url.Values{"type": {kind}, "name": {"../Outside"}}
+		req := httptest.NewRequest(http.MethodPost, "/__copytygo/generator/scaffold", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		handleLiteStudio(rec, req)
+		if !strings.Contains(rec.Header().Get("Location"), "error=") {
+			t.Fatal("invalid scaffold accepted")
+		}
+	}
+	t.Setenv("APP_ENV", "production")
+	req := httptest.NewRequest(http.MethodPost, "/__copytygo/generator/scaffold", strings.NewReader("type=job&name=Blocked"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	handleLiteStudio(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("production scaffold status=%d", rec.Code)
+	}
+	if _, err := os.Stat(filepath.Join(root, "app/jobs/blocked.go")); !os.IsNotExist(err) {
+		t.Fatal("production wrote a scaffold")
+	}
+}
 
 func TestLiteStudioDashboard(t *testing.T) {
 	t.Setenv("APP_ENV", "local")
@@ -53,7 +122,6 @@ func TestLiteWelcomeLinksStudio(t *testing.T) {
 		}
 	}
 }
-
 
 func TestLiteStudioInspectorPages(t *testing.T) {
 	t.Setenv("APP_ENV", "local")
