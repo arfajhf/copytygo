@@ -6,14 +6,14 @@ CopyTyGo is a full-stack Go framework focused on productive application developm
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> Stable release: `v4.0.4`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
+> Stable release: `v4.0.5`. Go 1.27.1 or newer is required. Node.js is needed only for frontend development.
 
 ## Quick start
 
 Install the final v4 CLI, then create a project:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.4
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.5
 ctg new
 ```
 

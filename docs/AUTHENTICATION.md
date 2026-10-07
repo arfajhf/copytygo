@@ -113,8 +113,8 @@ and deleted users are redirected to login. Bearer APIs remain a separate flow.
 Stop the running server. Update the CLI and project module:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.4
-go get github.com/arfajhf/copytygo/v4@v4.0.4
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.5
+go get github.com/arfajhf/copytygo/v4@v4.0.5
 go mod tidy
 ```
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.0.5
+
+- Moved the welcome navbar outside the centered welcome content to the top edge of the page.
+- Matched the dashboard navbar with a full-width white bar, application branding on the left, and login/register actions on the right.
+- Kept the welcome card centered independently and adapted navbar spacing for small screens and long application names.
+
 ## v4.0.4
 
 - Replaced default welcome, auth, Studio and frontend starter branding with the supplied CopyTyGo logo.
