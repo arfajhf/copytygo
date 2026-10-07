@@ -78,6 +78,8 @@ func RegisterDeveloperCommands(app *CLI) {
 	app.Command("db:check", DatabaseCheck)
 	app.Command("update", Update)
 	app.Command("dev", Dev)
+	app.Command("open", func(_ []string) error { return OpenApplication(false) })
+	app.Command("studio", func(_ []string) error { return OpenApplication(true) })
 	app.Command("doctor", Doctor)
 	app.Command("route:list", func(_ []string) error { return RouteList("routes") })
 	app.Command("build", func(_ []string) error {
