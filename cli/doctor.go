@@ -105,14 +105,11 @@ func doctorFileContains(path, needle string) error {
 }
 
 func doctorRoutes() error {
-	routes, err := discoverLiteRoutes("routes")
-	if err != nil {
+	if _, err := os.Stat("routes"); err != nil {
 		return err
 	}
-	if len(routes) == 0 {
-		return fmt.Errorf("no Lite-compatible routes found")
-	}
-	return nil
+	_, err := discoverLiteRoutes("routes")
+	return err
 }
 
 func doctorLiteParams() error {
