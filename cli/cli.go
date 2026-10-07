@@ -69,7 +69,7 @@ func (cli *CLI) printHelp() {
 	fmt.Printf("\nCopyTyGo v%s\n\n", version.Framework)
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
-	fmt.Println("  new <name>                 Create a CopyTyGo project")
+	fmt.Println("  new [name] [-i|--interactive] Create a project or open the setup wizard")
 	fmt.Println("  dev [--lite]               Run development server with automatic Lite fallback")
 	fmt.Println("  open                       Open application in browser")
 	fmt.Println("  studio                     Open CopyTyGo Studio in browser")
