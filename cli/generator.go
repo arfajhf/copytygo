@@ -168,15 +168,25 @@ func MakeJob(name, dir string) error {
 	}
 	body := fmt.Sprintf(`package jobs
 
-import "context"
+import (
+	"context"
+
+	"github.com/arfajhf/copytygo/v4/queue"
+)
+
+// copytygo:job %s
 
 type %s struct{}
 
-func (%s) Handle(ctx context.Context) error {
+func (%s) Handle(ctx context.Context, payload queue.Payload) error {
 	return nil
 }
-`, name, name)
-	return writeGenerated(filepath.Join(dir, strings.ToLower(name)+".go"), body)
+`, name, name, name)
+
+	if err := writeGenerated(filepath.Join(dir, strings.ToLower(name)+".go"), body); err != nil {
+		return err
+	}
+	return GenerateJobRegistry(dir)
 }
 
 func MakeListener(name, dir string) error {
