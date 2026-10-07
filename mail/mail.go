@@ -42,6 +42,7 @@ func (s *SMTP) Send(message Message) error {
 	if len(message.To) == 0 {
 		return fmt.Errorf("copytygo mail: recipient is required")
 	}
+
 	from := strings.TrimSpace(message.From)
 	if from == "" {
 		from = strings.TrimSpace(s.config.From)
@@ -54,14 +55,10 @@ func (s *SMTP) Send(message Message) error {
 	}
 
 	var body bytes.Buffer
-	body.WriteString("From: " + from + "
-")
-	body.WriteString("To: " + strings.Join(message.To, ", ") + "
-")
-	body.WriteString("Subject: " + sanitizeHeader(message.Subject) + "
-")
-	body.WriteString("MIME-Version: 1.0
-")
+	body.WriteString("From: " + sanitizeHeader(from) + "\r\n")
+	body.WriteString("To: " + sanitizeHeader(strings.Join(message.To, ", ")) + "\r\n")
+	body.WriteString("Subject: " + sanitizeHeader(message.Subject) + "\r\n")
+	body.WriteString("MIME-Version: 1.0\r\n")
 
 	content := message.Text
 	contentType := "text/plain"
@@ -69,9 +66,7 @@ func (s *SMTP) Send(message Message) error {
 		content = message.HTML
 		contentType = "text/html"
 	}
-	body.WriteString("Content-Type: " + contentType + "; charset=UTF-8
-
-")
+	body.WriteString("Content-Type: " + contentType + "; charset=UTF-8\r\n\r\n")
 	body.WriteString(content)
 
 	address := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
@@ -79,6 +74,7 @@ func (s *SMTP) Send(message Message) error {
 	if s.config.Username != "" {
 		auth = smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
 	}
+
 	if err := smtp.SendMail(address, auth, from, message.To, body.Bytes()); err != nil {
 		return fmt.Errorf("copytygo mail: send SMTP message: %w", err)
 	}
@@ -86,9 +82,8 @@ func (s *SMTP) Send(message Message) error {
 }
 
 func sanitizeHeader(value string) string {
-	value = strings.ReplaceAll(value, "", "")
-	value = strings.ReplaceAll(value, "
-", "")
+	value = strings.ReplaceAll(value, "\r", "")
+	value = strings.ReplaceAll(value, "\n", "")
 	return value
 }
 
