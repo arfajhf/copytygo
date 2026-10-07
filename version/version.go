@@ -2,8 +2,8 @@ package version
 
 import "runtime/debug"
 
-const Framework = "2.0.0"
-const StableModule = "v2.0.0"
+const Framework = "3.0.0"
+const StableModule = "v3.0.0"
 
 func Module() string {
 	info, ok := debug.ReadBuildInfo()

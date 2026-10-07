@@ -2,11 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/arfajhf/copytygo/v2/config"
-	"github.com/arfajhf/copytygo/v2/database"
-	"github.com/arfajhf/copytygo/v2/database/drivers"
-	"github.com/arfajhf/copytygo/v2/database/migration"
+	"github.com/arfajhf/copytygo/v3/config"
+	"github.com/arfajhf/copytygo/v3/database"
+	"github.com/arfajhf/copytygo/v3/database/drivers"
+	"github.com/arfajhf/copytygo/v3/database/migration"
 )
 
 type MigrationRegistrar func() error
@@ -64,6 +65,9 @@ func RegisterMigrationCommands(
 	app.Command(
 		"migrate:rollback",
 		func(args []string) error {
+			if err := requireProductionForce(args, "migrate:rollback"); err != nil {
+				return err
+			}
 
 			migrator, cleanup, err :=
 				prepareMigrator(
@@ -85,7 +89,10 @@ func RegisterMigrationCommands(
 		},
 	)
 
-	app.Command("migrate:reset", func(_ []string) error {
+	app.Command("migrate:reset", func(args []string) error {
+		if err := requireProductionForce(args, "migrate:reset"); err != nil {
+			return err
+		}
 		migrator, cleanup, err := prepareMigrator(envPath, register)
 		if err != nil {
 			return err
@@ -93,7 +100,10 @@ func RegisterMigrationCommands(
 		defer cleanup()
 		return migrator.Reset()
 	})
-	app.Command("migrate:fresh", func(_ []string) error {
+	app.Command("migrate:fresh", func(args []string) error {
+		if err := requireProductionForce(args, "migrate:fresh"); err != nil {
+			return err
+		}
 		migrator, cleanup, err := prepareMigrator(envPath, register)
 		if err != nil {
 			return err
@@ -149,4 +159,23 @@ func prepareMigrator(
 	}
 
 	return migrator, cleanup, nil
+}
+
+
+func requireProductionForce(args []string, action string) error {
+	if err := config.LoadEnv(".env"); err != nil {
+		return err
+	}
+
+	if strings.ToLower(strings.TrimSpace(config.Get("APP_ENV", "local"))) != "production" {
+		return nil
+	}
+
+	for _, arg := range args {
+		if arg == "--force" {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("copytygo: %s is destructive in production; rerun with --force", action)
 }

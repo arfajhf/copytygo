@@ -93,6 +93,52 @@ func (b *Builder) WhereEq(column string, value any) *Builder {
 	return b.Where(column, "=", value)
 }
 
+func (b *Builder) WhereNull(column string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if !validIdentifier(column) {
+		b.err = fmt.Errorf("copytygo: invalid column name %q", column)
+		return b
+	}
+	b.where = append(b.where, column+" IS NULL")
+	return b
+}
+
+func (b *Builder) WhereNotNull(column string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if !validIdentifier(column) {
+		b.err = fmt.Errorf("copytygo: invalid column name %q", column)
+		return b
+	}
+	b.where = append(b.where, column+" IS NOT NULL")
+	return b
+}
+
+func (b *Builder) WhereAnyLike(columns []string, value string) *Builder {
+	if b.err != nil {
+		return b
+	}
+	if len(columns) == 0 || value == "" {
+		return b
+	}
+
+	parts := make([]string, 0, len(columns))
+	for _, column := range columns {
+		if !validIdentifier(column) {
+			b.err = fmt.Errorf("copytygo: invalid search column %q", column)
+			return b
+		}
+		b.args = append(b.args, "%"+value+"%")
+		parts = append(parts, fmt.Sprintf("%s LIKE %s", column, b.placeholder(len(b.args))))
+	}
+
+	b.where = append(b.where, "("+strings.Join(parts, " OR ")+")")
+	return b
+}
+
 func (b *Builder) OrderBy(column, direction string) *Builder {
 	if b.err != nil {
 		return b

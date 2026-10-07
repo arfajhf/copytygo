@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arfajhf/copytygo/v2/version"
+	"github.com/arfajhf/copytygo/v3/version"
 )
 
 type CommandHandler func(args []string) error
@@ -71,7 +71,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("\nProject:")
 	fmt.Println("  new <name>                 Create a CopyTyGo project")
 	fmt.Println("  dev [--lite]               Run development server with automatic Lite fallback")
-	fmt.Println("  doctor [--db]              Check project, runtime, security and optional DB")
+	fmt.Println("  doctor [--db] [--production] Check project, runtime, security, DB and production config")
 	fmt.Println("  build                      Build application")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
@@ -86,9 +86,9 @@ func (cli *CLI) printHelp() {
 	fmt.Println("\nDatabase:")
 	fmt.Println("  migrate")
 	fmt.Println("  migrate:status")
-	fmt.Println("  migrate:rollback")
-	fmt.Println("  migrate:reset")
-	fmt.Println("  migrate:fresh")
+	fmt.Println("  migrate:rollback [--force]")
+	fmt.Println("  migrate:reset [--force]")
+	fmt.Println("  migrate:fresh [--force]")
 	fmt.Println("  db:check                    Check database connection")
 	fmt.Println("\nSecurity/Auth:")
 	fmt.Println("  key:generate")

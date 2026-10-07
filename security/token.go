@@ -13,11 +13,21 @@ import (
 type Claims struct {
 	Subject   string            `json:"sub"`
 	Role      string            `json:"role,omitempty"`
+	IssuedAt  int64             `json:"iat"`
 	ExpiresAt int64             `json:"exp"`
 	Data      map[string]string `json:"data,omitempty"`
 }
 
 func SignToken(secret string, claims Claims) (string, error) {
+	if len(secret) < 32 {
+		return "", fmt.Errorf("copytygo: token secret must be at least 32 characters")
+	}
+	if strings.TrimSpace(claims.Subject) == "" {
+		return "", fmt.Errorf("copytygo: token subject is required")
+	}
+	if claims.IssuedAt == 0 {
+		claims.IssuedAt = time.Now().Unix()
+	}
 	if claims.ExpiresAt == 0 {
 		claims.ExpiresAt = time.Now().Add(24 * time.Hour).Unix()
 	}
@@ -33,6 +43,9 @@ func SignToken(secret string, claims Claims) (string, error) {
 }
 func VerifyToken(secret, token string) (Claims, error) {
 	var claims Claims
+	if len(secret) < 32 {
+		return claims, fmt.Errorf("copytygo: token secret must be at least 32 characters")
+	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {
 		return claims, fmt.Errorf("copytygo: invalid token")
@@ -51,7 +64,13 @@ func VerifyToken(secret, token string) (Claims, error) {
 	if err = json.Unmarshal(raw, &claims); err != nil {
 		return claims, err
 	}
-	if claims.ExpiresAt < time.Now().Unix() {
+	if strings.TrimSpace(claims.Subject) == "" {
+		return claims, fmt.Errorf("copytygo: invalid token subject")
+	}
+	if claims.IssuedAt > time.Now().Add(time.Minute).Unix() {
+		return claims, fmt.Errorf("copytygo: token issued in the future")
+	}
+	if claims.ExpiresAt <= time.Now().Unix() {
 		return claims, fmt.Errorf("copytygo: token expired")
 	}
 	return claims, nil

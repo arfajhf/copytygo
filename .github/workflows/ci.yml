@@ -11,7 +11,7 @@ on:
 
 jobs:
   test:
-    name: Test and build
+    name: Test, vet and build
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +30,21 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Race test
+        run: go test -race ./...
+
       - name: Vet
         run: go vet ./...
 
-      - name: Build CLI
+      - name: Build all packages
+        run: go build ./...
+
+      - name: Build CLI Linux
         run: go build -o build/ctg ./cmd/ctg
+
+      - name: Build CLI Windows
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build -o build/ctg.exe ./cmd/ctg

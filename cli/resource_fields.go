@@ -103,6 +103,7 @@ func writeResourceModel(name string, fields []ResourceField) error {
 	}
 	body.WriteString("\tCreatedAt string `json:\"created_at\"`\n")
 	body.WriteString("\tUpdatedAt string `json:\"updated_at\"`\n")
+	body.WriteString("\tDeletedAt *string `json:\"deleted_at,omitempty\"`\n")
 	body.WriteString("}\n")
 
 	return writeGenerated(
@@ -120,28 +121,42 @@ func writeResourceController(name string, fields []ResourceField) error {
 
 	var rules strings.Builder
 	var values strings.Builder
+	searchable := []string{}
+	filterable := []string{}
+	sortable := []string{"id", "created_at", "updated_at"}
+
 	for _, field := range fields {
 		rule := validationRuleForResourceField(field)
 		if rule != "" {
 			rules.WriteString(fmt.Sprintf("\t\t\"%s\": %q,\n", field.Name, rule))
 		}
 		values.WriteString(fmt.Sprintf("\t\t\"%s\": ctx.Input(\"%s\"),\n", field.Name, field.Name))
+		filterable = append(filterable, field.Name)
+		sortable = append(sortable, field.Name)
+		if field.Type == "string" || field.Type == "text" {
+			searchable = append(searchable, field.Name)
+		}
 	}
 
 	body := fmt.Sprintf(`package controllers
 
-import "github.com/arfajhf/copytygo/v2/core"
+import "github.com/arfajhf/copytygo/v3/core"
 
 // copytygo:resource %s
 
 type %s struct{}
 
 func (%s) Index(ctx *core.Context) error {
-	return ctx.DBIndex("%s")
+	return ctx.DBIndex("%s", core.DBIndexOptions{
+		Searchable: %#v,
+		Filterable: %#v,
+		Sortable:    %#v,
+		SoftDeletes: true,
+	})
 }
 
 func (%s) Show(ctx *core.Context) error {
-	return ctx.DBShow("%s", ctx.Param("id"))
+	return ctx.DBShow("%s", ctx.Param("id"), core.DBResourceOptions{SoftDeletes: true})
 }
 
 func (%s) Store(ctx *core.Context) error {
@@ -151,7 +166,7 @@ func (%s) Store(ctx *core.Context) error {
 	}
 
 	return ctx.DBStore("%s", core.Map{
-%s	})
+%s	}, core.DBResourceOptions{SoftDeletes: true})
 }
 
 func (%s) Update(ctx *core.Context) error {
@@ -161,16 +176,16 @@ func (%s) Update(ctx *core.Context) error {
 	}
 
 	return ctx.DBUpdate("%s", ctx.Param("id"), core.Map{
-%s	})
+%s	}, core.DBResourceOptions{SoftDeletes: true})
 }
 
 func (%s) Destroy(ctx *core.Context) error {
-	return ctx.DBDestroy("%s", ctx.Param("id"))
+	return ctx.DBDestroy("%s", ctx.Param("id"), core.DBResourceOptions{SoftDeletes: true})
 }
 `,
 		resource,
 		controller,
-		controller, resource,
+		controller, resource, searchable, filterable, sortable,
 		controller, resource,
 		controller, rules.String(), resource, values.String(),
 		controller, rules.String(), resource, values.String(),
@@ -205,8 +220,8 @@ func writeResourceMigration(name string, fields []ResourceField) error {
 	content := fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v2/database/migration"
-	"github.com/arfajhf/copytygo/v2/database/schema"
+	"github.com/arfajhf/copytygo/v3/database/migration"
+	"github.com/arfajhf/copytygo/v3/database/schema"
 )
 
 func Register%s() error {
@@ -216,6 +231,7 @@ func Register%s() error {
 			return schema.Create(%q, func(table *schema.Table) {
 				table.ID()
 %s				table.Timestamps()
+				table.SoftDeletes()
 			})
 		},
 		func() *schema.Blueprint {
@@ -269,6 +285,12 @@ func validationRuleForResourceField(field ResourceField) string {
 	switch field.Type {
 	case "integer", "bigint":
 		rules = append(rules, "integer")
+	case "decimal":
+		rules = append(rules, "numeric")
+	case "boolean":
+		rules = append(rules, "boolean")
+	case "uuid":
+		rules = append(rules, "uuid")
 	}
 	return strings.Join(rules, "|")
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const frameworkModule = "github.com/arfajhf/copytygo/v2"
+const frameworkModule = "github.com/arfajhf/copytygo/v3"
 
 func Update(args []string) error {
 	target := "latest"

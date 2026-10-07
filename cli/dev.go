@@ -21,12 +21,12 @@ import (
 	"sync"
 	"strings"
 
-	copyauth "github.com/arfajhf/copytygo/v2/auth"
-	"github.com/arfajhf/copytygo/v2/config"
-	"github.com/arfajhf/copytygo/v2/database"
-	"github.com/arfajhf/copytygo/v2/database/drivers"
-	"github.com/arfajhf/copytygo/v2/security"
-	"github.com/arfajhf/copytygo/v2/validation"
+	copyauth "github.com/arfajhf/copytygo/v3/auth"
+	"github.com/arfajhf/copytygo/v3/config"
+	"github.com/arfajhf/copytygo/v3/database"
+	"github.com/arfajhf/copytygo/v3/database/drivers"
+	"github.com/arfajhf/copytygo/v3/security"
+	"github.com/arfajhf/copytygo/v3/validation"
 )
 
 type liteRoute struct {
@@ -42,6 +42,10 @@ type liteRoute struct {
 	ResourceData   string
 	AuthAction     string
 	AuthRole       string
+	Searchable     []string
+	Filterable     []string
+	Sortable       []string
+	SoftDeletes    bool
 }
 
 type liteMemoryBucket struct {
@@ -327,17 +331,37 @@ func handleLiteDatabaseRoute(w http.ResponseWriter, req *http.Request, route lit
 		})
 		return
 	}
+	if route.SoftDeletes {
+		resource.WithSoftDeletes()
+	}
 
 	id := renderLiteBody(route.ResourceID, req, params)
 
 	switch route.ResourceAction {
 	case "db:index":
-		items, err := resource.Index()
+		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+		perPage, _ := strconv.Atoi(req.URL.Query().Get("per_page"))
+		filters := make(map[string]string)
+		for _, field := range route.Filterable {
+			filters[field] = req.URL.Query().Get("filter[" + field + "]")
+		}
+
+		result, err := resource.List(database.ResourceListOptions{
+			Page:          page,
+			PerPage:       perPage,
+			Search:        req.URL.Query().Get("q"),
+			SearchColumns: route.Searchable,
+			Sort:          req.URL.Query().Get("sort"),
+			Order:         req.URL.Query().Get("order"),
+			Filters:       filters,
+			Filterable:    route.Filterable,
+			Sortable:      route.Sortable,
+		})
 		if err != nil {
 			writeLiteDatabaseError(w, err)
 			return
 		}
-		writeLiteJSON(w, http.StatusOK, map[string]any{"data": items})
+		writeLiteJSON(w, http.StatusOK, result)
 
 	case "db:show":
 		item, found, err := resource.Show(id)
@@ -951,12 +975,22 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			return route, true
 
 		case "DBIndex":
-			if len(call.Args) != 1 {
+			if len(call.Args) < 1 || len(call.Args) > 2 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
 			if !ok {
 				return liteRoute{}, false
+			}
+			if len(call.Args) == 2 {
+				searchable, filterable, sortable, softDeletes, ok := parseLiteDBIndexOptions(call.Args[1])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.Searchable = searchable
+				route.Filterable = filterable
+				route.Sortable = sortable
+				route.SoftDeletes = softDeletes
 			}
 			route.ResourceAction = "db:index"
 			route.Resource = resource
@@ -964,7 +998,7 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			return route, true
 
 		case "DBShow":
-			if len(call.Args) != 2 {
+			if len(call.Args) < 2 || len(call.Args) > 3 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -978,11 +1012,18 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ResourceAction = "db:show"
 			route.Resource = resource
 			route.ResourceID = id
+			if len(call.Args) == 3 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[2])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.ContentType = "application/json; charset=utf-8"
 			return route, true
 
 		case "DBStore":
-			if len(call.Args) != 2 {
+			if len(call.Args) < 2 || len(call.Args) > 3 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -996,12 +1037,19 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ResourceAction = "db:store"
 			route.Resource = resource
 			route.ResourceData = data
+			if len(call.Args) == 3 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[2])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.Status = http.StatusCreated
 			route.ContentType = "application/json; charset=utf-8"
 			return route, true
 
 		case "DBUpdate":
-			if len(call.Args) != 3 {
+			if len(call.Args) < 3 || len(call.Args) > 4 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -1020,11 +1068,18 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.Resource = resource
 			route.ResourceID = id
 			route.ResourceData = data
+			if len(call.Args) == 4 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[3])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.ContentType = "application/json; charset=utf-8"
 			return route, true
 
 		case "DBDestroy":
-			if len(call.Args) != 2 {
+			if len(call.Args) < 2 || len(call.Args) > 3 {
 				return liteRoute{}, false
 			}
 			resource, ok := stringLiteral(call.Args[0])
@@ -1038,6 +1093,13 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 			route.ResourceAction = "db:destroy"
 			route.Resource = resource
 			route.ResourceID = id
+			if len(call.Args) == 3 {
+				softDeletes, ok := parseLiteDBResourceOptions(call.Args[2])
+				if !ok {
+					return liteRoute{}, false
+				}
+				route.SoftDeletes = softDeletes
+			}
 			route.Status = http.StatusNoContent
 			return route, true
 
@@ -1134,6 +1196,96 @@ func parseLiteHandler(method, path string, handler *ast.FuncLit) (liteRoute, boo
 		}
 	}
 	return liteRoute{}, false
+}
+
+func parseLiteDBIndexOptions(expr ast.Expr) ([]string, []string, []string, bool, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, nil, nil, false, false
+	}
+
+	var searchable []string
+	var filterable []string
+	var sortable []string
+	softDeletes := false
+
+	for _, element := range composite.Elts {
+		kv, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+
+		if key.Name == "SoftDeletes" {
+			ident, ok := kv.Value.(*ast.Ident)
+			if !ok || (ident.Name != "true" && ident.Name != "false") {
+				return nil, nil, nil, false, false
+			}
+			softDeletes = ident.Name == "true"
+			continue
+		}
+
+		values, ok := liteStringSlice(kv.Value)
+		if !ok {
+			return nil, nil, nil, false, false
+		}
+
+		switch key.Name {
+		case "Searchable":
+			searchable = values
+		case "Filterable":
+			filterable = values
+		case "Sortable":
+			sortable = values
+		}
+	}
+
+	return searchable, filterable, sortable, softDeletes, true
+}
+
+func parseLiteDBResourceOptions(expr ast.Expr) (bool, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return false, false
+	}
+	for _, element := range composite.Elts {
+		kv, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok || key.Name != "SoftDeletes" {
+			continue
+		}
+		ident, ok := kv.Value.(*ast.Ident)
+		if !ok || (ident.Name != "true" && ident.Name != "false") {
+			return false, false
+		}
+		return ident.Name == "true", true
+	}
+	return false, true
+}
+
+func liteStringSlice(expr ast.Expr) ([]string, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, false
+	}
+
+	values := make([]string, 0, len(composite.Elts))
+	for _, element := range composite.Elts {
+		value, ok := stringLiteral(element)
+		if !ok {
+			return nil, false
+		}
+		values = append(values, value)
+	}
+
+	return values, true
 }
 
 func stringLiteral(expr ast.Expr) (string, bool) {
@@ -1355,6 +1507,12 @@ func liteValidateRequest(req *http.Request, rules map[string]string) map[string]
 				v.Email(field)
 			case rule == "integer":
 				v.Integer(field)
+			case rule == "numeric":
+				v.Numeric(field)
+			case rule == "boolean":
+				v.Boolean(field)
+			case rule == "uuid":
+				v.UUID(field)
 			case strings.HasPrefix(rule, "min:"):
 				if n, err := strconv.Atoi(strings.TrimPrefix(rule, "min:")); err == nil {
 					v.Min(field, n)

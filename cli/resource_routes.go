@@ -83,10 +83,10 @@ func GenerateResourceRoutes(root string) error {
 	if len(resources) > 0 {
 		builder.WriteString("import (\n")
 		builder.WriteString("\t\"" + module + "/app/controllers\"\n")
-		builder.WriteString("\t\"github.com/arfajhf/copytygo/v2/core\"\n")
+		builder.WriteString("\t\"github.com/arfajhf/copytygo/v3/core\"\n")
 		builder.WriteString(")\n\n")
 	} else {
-		builder.WriteString("import \"github.com/arfajhf/copytygo/v2/core\"\n\n")
+		builder.WriteString("import \"github.com/arfajhf/copytygo/v3/core\"\n\n")
 	}
 
 	builder.WriteString("func RegisterGeneratedResources(app *core.Application) {\n")

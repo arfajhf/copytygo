@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/arfajhf/copytygo/v2/config"
-	"github.com/arfajhf/copytygo/v2/core"
+	"github.com/arfajhf/copytygo/v3/config"
+	"github.com/arfajhf/copytygo/v3/core"
 	"log"
 	"time"
 )

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arfajhf/copytygo/v2/core"
+	"github.com/arfajhf/copytygo/v3/core"
 )
 
 func TestRoutesRegisterAuthEndpoints(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRoutesRegisterAuthEndpoints(t *testing.T) {
 }
 
 func TestAuthMiddlewareAndRoleGuard(t *testing.T) {
-	t.Setenv("APP_KEY", "copytygo-test-secret")
+	t.Setenv("APP_KEY", "copytygo-test-secret-0123456789abcdef")
 
 	token, err := Issue("7", "admin", map[string]string{
 		"name": "Test Admin",
@@ -63,7 +63,7 @@ func TestAuthMiddlewareAndRoleGuard(t *testing.T) {
 }
 
 func TestRoleGuardRejectsWrongRole(t *testing.T) {
-	t.Setenv("APP_KEY", "copytygo-test-secret")
+	t.Setenv("APP_KEY", "copytygo-test-secret-0123456789abcdef")
 
 	token, err := Issue("7", "user", nil, time.Minute)
 	if err != nil {

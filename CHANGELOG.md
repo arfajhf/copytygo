@@ -62,3 +62,26 @@
 - Added source-based project migration discovery for the CopyTyGo schema DSL.
 - Made generated migration function IDs collision-resistant while keeping legacy registry compatibility.
 
+## v3.0.0
+
+- Added paginated database resource listings with page/per_page metadata.
+- Added safe resource search across generated string/text fields.
+- Added generated filter and sort allowlists for resource endpoints.
+- Added query parameters for q, sort, order and filter[field].
+- Added numeric, boolean and UUID validation rules.
+- Added type-aware resource validation for decimal, boolean and UUID fields.
+- Added Lite Runtime support for v3 resource list options.
+- Added tests for extended validation and multi-column search.
+- Added production HTTP server timeouts and graceful shutdown.
+- Added consistent JSON 404 and 405 responses.
+- Added request IDs and structured request logging.
+- Added production diagnostics through `ctg doctor --production`.
+- Added automatic `updated_at` values for resource updates.
+- Added generated soft deletes with `deleted_at`.
+- Added Lite Runtime parsing/execution support for generated soft-delete resources.
+- Added soft-delete support to the project migration source loader.
+- Hardened signed auth tokens with minimum secret length, subject checks, issued-at and expiration validation.
+- Protected destructive migration commands in production behind `--force`.
+- Added generated production server timeout settings and richer health responses.
+- Added production-focused tests for JSON errors, request IDs and signed tokens.
+

@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v2/database/migration"
-	"github.com/arfajhf/copytygo/v2/database/schema"
+	"github.com/arfajhf/copytygo/v3/database/migration"
+	"github.com/arfajhf/copytygo/v3/database/schema"
 )
 
 type migrationColumnSpec struct {
@@ -241,6 +241,11 @@ func parseMigrationTableOperation(expr ast.Expr) (func(*schema.Table), error) {
 			table.Timestamps()
 		}, nil
 	}
+	if spec.Method == "SoftDeletes" {
+		return func(table *schema.Table) {
+			table.SoftDeletes()
+		}, nil
+	}
 
 	return func(table *schema.Table) {
 		column := applyMigrationColumn(table, spec)
@@ -317,6 +322,12 @@ func parseMigrationBaseColumn(method string, args []ast.Expr) (migrationColumnSp
 			return migrationColumnSpec{}, false, fmt.Errorf("Timestamps does not accept arguments")
 		}
 		return migrationColumnSpec{}, true, nil
+	}
+	if method == "SoftDeletes" {
+		if len(args) != 0 {
+			return migrationColumnSpec{}, false, fmt.Errorf("SoftDeletes does not accept arguments")
+		}
+		return migrationColumnSpec{Method: method}, false, nil
 	}
 
 	spec := migrationColumnSpec{Method: method}

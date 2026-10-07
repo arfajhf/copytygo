@@ -332,17 +332,15 @@ func (router *Router) ServeHTTP(
 	}
 
 	if pathMatched {
-
-		http.Error(
-			w,
-			"Method Not Allowed",
-			http.StatusMethodNotAllowed,
-		)
-
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, _ = w.Write([]byte(`{"error":{"status":405,"message":"Method Not Allowed"}}`))
 		return
 	}
 
-	http.NotFound(w, r)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write([]byte(`{"error":{"status":404,"message":"Not Found"}}`))
 }
 
 // ----------------------------------------------------

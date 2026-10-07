@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arfajhf/copytygo/v2/database/schema"
-	"github.com/arfajhf/copytygo/v2/database/schema/dialect"
+	"github.com/arfajhf/copytygo/v3/database/schema"
+	"github.com/arfajhf/copytygo/v3/database/schema/dialect"
 )
 
 type Migrator struct {

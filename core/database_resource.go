@@ -2,13 +2,14 @@ package core
 
 import (
 	"net/http"
+	"strconv"
 
-	"github.com/arfajhf/copytygo/v2/config"
-	"github.com/arfajhf/copytygo/v2/database"
-	"github.com/arfajhf/copytygo/v2/database/drivers"
+	"github.com/arfajhf/copytygo/v3/config"
+	"github.com/arfajhf/copytygo/v3/database"
+	"github.com/arfajhf/copytygo/v3/database/drivers"
 )
 
-func databaseResource(table string) (*database.Resource, error) {
+func databaseResource(table string, softDeletes bool) (*database.Resource, error) {
 	drivers.Register()
 
 	db, err := database.Connect()
@@ -16,29 +17,74 @@ func databaseResource(table string) (*database.Resource, error) {
 		return nil, err
 	}
 
-	return database.NewResource(
+	resource, err := database.NewResource(
 		db,
 		config.Get("DB_DRIVER", "mysql"),
 		table,
 	)
+	if err != nil {
+		return nil, err
+	}
+	if softDeletes {
+		resource.WithSoftDeletes()
+	}
+	return resource, nil
 }
 
-func (ctx *Context) DBIndex(table string) error {
-	resource, err := databaseResource(table)
+type DBResourceOptions struct {
+	SoftDeletes bool
+}
+
+type DBIndexOptions struct {
+	Searchable  []string
+	Filterable  []string
+	Sortable    []string
+	SoftDeletes bool
+}
+
+func (ctx *Context) DBIndex(table string, configs ...DBIndexOptions) error {
+	var config DBIndexOptions
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+
+	resource, err := databaseResource(table, config.SoftDeletes)
 	if err != nil {
 		return err
 	}
 
-	items, err := resource.Index()
+	page, _ := strconv.Atoi(ctx.Query("page"))
+	perPage, _ := strconv.Atoi(ctx.Query("per_page"))
+
+	filters := make(map[string]string)
+	for _, field := range config.Filterable {
+		filters[field] = ctx.Query("filter[" + field + "]")
+	}
+
+	result, err := resource.List(database.ResourceListOptions{
+		Page:          page,
+		PerPage:       perPage,
+		Search:        ctx.Query("q"),
+		SearchColumns: config.Searchable,
+		Sort:          ctx.Query("sort"),
+		Order:         ctx.Query("order"),
+		Filters:       filters,
+		Filterable:    config.Filterable,
+		Sortable:      config.Sortable,
+	})
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(Map{"data": items})
+	return ctx.JSON(result)
 }
 
-func (ctx *Context) DBShow(table, id string) error {
-	resource, err := databaseResource(table)
+func (ctx *Context) DBShow(table, id string, configs ...DBResourceOptions) error {
+	var config DBResourceOptions
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+	resource, err := databaseResource(table, config.SoftDeletes)
 	if err != nil {
 		return err
 	}
@@ -54,8 +100,12 @@ func (ctx *Context) DBShow(table, id string) error {
 	return ctx.JSON(item)
 }
 
-func (ctx *Context) DBStore(table string, values Map) error {
-	resource, err := databaseResource(table)
+func (ctx *Context) DBStore(table string, values Map, configs ...DBResourceOptions) error {
+	var config DBResourceOptions
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+	resource, err := databaseResource(table, config.SoftDeletes)
 	if err != nil {
 		return err
 	}
@@ -68,8 +118,12 @@ func (ctx *Context) DBStore(table string, values Map) error {
 	return ctx.Status(http.StatusCreated).JSON(item)
 }
 
-func (ctx *Context) DBUpdate(table, id string, values Map) error {
-	resource, err := databaseResource(table)
+func (ctx *Context) DBUpdate(table, id string, values Map, configs ...DBResourceOptions) error {
+	var config DBResourceOptions
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+	resource, err := databaseResource(table, config.SoftDeletes)
 	if err != nil {
 		return err
 	}
@@ -85,8 +139,12 @@ func (ctx *Context) DBUpdate(table, id string, values Map) error {
 	return ctx.JSON(item)
 }
 
-func (ctx *Context) DBDestroy(table, id string) error {
-	resource, err := databaseResource(table)
+func (ctx *Context) DBDestroy(table, id string, configs ...DBResourceOptions) error {
+	var config DBResourceOptions
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+	resource, err := databaseResource(table, config.SoftDeletes)
 	if err != nil {
 		return err
 	}

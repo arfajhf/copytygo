@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v2/version"
+	"github.com/arfajhf/copytygo/v3/version"
 )
 
 func NewProject(name string) error {
@@ -24,9 +24,9 @@ func NewProject(name string) error {
 	}
 	key, _ := GenerateKey()
 	files := map[string]string{
-		"go.mod":                 "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v2 " + version.StableModule + "\n",
-		".env":                   "APP_NAME=" + name + "\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=" + key + "\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=" + name + "\nDB_USERNAME=root\nDB_PASSWORD=\n",
-		".env.example":           "APP_NAME=CopyTyGo\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=copytygo\nDB_USERNAME=root\nDB_PASSWORD=\n",
+		"go.mod":                 "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v3 " + version.StableModule + "\n",
+		".env":                   "APP_NAME=" + name + "\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=" + key + "\nSERVER_READ_HEADER_TIMEOUT=5\nSERVER_READ_TIMEOUT=15\nSERVER_WRITE_TIMEOUT=30\nSERVER_IDLE_TIMEOUT=60\nSERVER_SHUTDOWN_TIMEOUT=10\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=" + name + "\nDB_USERNAME=root\nDB_PASSWORD=\n",
+		".env.example":           "APP_NAME=CopyTyGo\nAPP_ENV=local\nAPP_DEBUG=true\nAPP_HOST=127.0.0.1\nAPP_PORT=8080\nAPP_KEY=\nSERVER_READ_HEADER_TIMEOUT=5\nSERVER_READ_TIMEOUT=15\nSERVER_WRITE_TIMEOUT=30\nSERVER_IDLE_TIMEOUT=60\nSERVER_SHUTDOWN_TIMEOUT=10\nDB_DRIVER=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=copytygo\nDB_USERNAME=root\nDB_PASSWORD=\n",
 		"cmd/app/main.go":        strings.ReplaceAll(projectMain, "{{MODULE}}", name),
 		"routes/web.go":          projectRoutes,
 		"frontend/package.json":  frontendPackage,
@@ -51,26 +51,36 @@ const projectMain = `package main
 
 import (
     "log"
-    "github.com/arfajhf/copytygo/v2/config"
-    "github.com/arfajhf/copytygo/v2/core"
+    "github.com/arfajhf/copytygo/v3/config"
+    "github.com/arfajhf/copytygo/v3/core"
     "{{MODULE}}/routes"
 )
 
 func main() {
     if err := config.LoadEnv(".env"); err != nil { log.Fatal(err) }
     app := core.New()
-    app.Use(core.SecurityHeaders(), core.BodyLimit(2<<20))
+    app.Use(core.RequestID(), core.RequestLogger(), core.SecurityHeaders(), core.BodyLimit(2<<20))
     routes.Register(app)
     log.Fatal(app.Run())
 }
 `
 const projectRoutes = `package routes
 
-import "github.com/arfajhf/copytygo/v2/core"
+import (
+    "github.com/arfajhf/copytygo/v3/config"
+    "github.com/arfajhf/copytygo/v3/core"
+    "github.com/arfajhf/copytygo/v3/version"
+)
 
 func Register(app *core.Application) {
     app.Get("/api/health", func(ctx *core.Context) error {
-        return ctx.JSON(core.Map{"framework":"CopyTyGo","status":"ok"})
+        return ctx.JSON(core.Map{
+            "framework": "CopyTyGo",
+            "version": version.Framework,
+            "environment": config.Get("APP_ENV", "local"),
+            "status": "ok",
+            "request_id": core.RequestIDValue(ctx),
+        })
     }).Name("health")
 }
 `
