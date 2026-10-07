@@ -15,6 +15,8 @@ import (
 	"github.com/arfajhf/copytygo/v4/security"
 )
 
+const sessionContextPrefix = "copytygo.session.state:"
+
 type Manager struct {
 	Name     string
 	TTL      time.Duration
@@ -99,6 +101,14 @@ func (m *Manager) Forget(ctx *core.Context) {
 }
 
 func (m *Manager) readPayload(ctx *core.Context) payload {
+	if cached, ok := core.ContextValue[payload](ctx, sessionContextPrefix+m.Name); ok {
+		normalize(&cached)
+		return payload{
+			Values: clone(cached.Values),
+			Flash:  clone(cached.Flash),
+		}
+	}
+
 	result := payload{
 		Values: map[string]string{},
 		Flash:  map[string]string{},
@@ -106,6 +116,7 @@ func (m *Manager) readPayload(ctx *core.Context) payload {
 
 	raw, ok := ctx.Cookie(m.Name)
 	if !ok || raw == "" {
+		ctx.Set(sessionContextPrefix+m.Name, result)
 		return result
 	}
 
@@ -115,7 +126,11 @@ func (m *Manager) readPayload(ctx *core.Context) payload {
 		if decrypted, decryptErr := crypt.DecryptString(raw); decryptErr == nil {
 			if json.Unmarshal([]byte(decrypted), &result) == nil {
 				normalize(&result)
-				return result
+				ctx.Set(sessionContextPrefix+m.Name, result)
+				return payload{
+					Values: clone(result.Values),
+					Flash:  clone(result.Flash),
+				}
 			}
 		}
 	}
@@ -127,6 +142,7 @@ func (m *Manager) readPayload(ctx *core.Context) payload {
 			result.Values = values
 		}
 	}
+	ctx.Set(sessionContextPrefix+m.Name, result)
 	return result
 }
 
@@ -151,6 +167,10 @@ func (m *Manager) writePayload(ctx *core.Context, session payload) error {
 		return err
 	}
 
+	ctx.Set(sessionContextPrefix+m.Name, payload{
+		Values: clone(session.Values),
+		Flash:  clone(session.Flash),
+	})
 	ctx.SetCookie(&http.Cookie{
 		Name:     m.Name,
 		Value:    value,
