@@ -11,6 +11,7 @@ import (
 	"github.com/arfajhf/copytygo/v4/core"
 	"github.com/arfajhf/copytygo/v4/database"
 	"github.com/arfajhf/copytygo/v4/database/drivers"
+	"github.com/arfajhf/copytygo/v4/database/migration"
 	"github.com/arfajhf/copytygo/v4/version"
 )
 
@@ -105,6 +106,54 @@ func Register(app *core.Application, options ...Options) bool {
 			"count": len(data().Routes),
 		})
 	}).Name("copytygo.studio.api.routes")
+
+	app.Get(path+"/migrations", func(ctx *core.Context) error {
+		statuses, err := cli.ProjectMigrationStatus()
+		payload := struct {
+			viewData
+			Statuses []migration.StatusRecord
+			Message  string
+			Error    string
+		}{
+			viewData: data(),
+			Statuses: statuses,
+			Message:  ctx.Query("message"),
+		}
+		if err != nil {
+			payload.Error = err.Error()
+		}
+		if queryErr := ctx.Query("error"); queryErr != "" {
+			payload.Error = queryErr
+		}
+
+		var out strings.Builder
+		if err := migrationsTemplate.Execute(&out, payload); err != nil {
+			return fmt.Errorf("copytygo studio migrations: %w", err)
+		}
+		return ctx.HTML(out.String())
+	}).Name("copytygo.studio.migrations")
+
+	app.Post(path+"/migrations/run", func(ctx *core.Context) error {
+		if err := cli.ProjectMigrate(); err != nil {
+			return ctx.Redirect(path + "/migrations?error=" + urlQueryEscape(err.Error()))
+		}
+		return ctx.Redirect(path + "/migrations?message=" + urlQueryEscape("Migrations completed"))
+	}).Name("copytygo.studio.migrations.run")
+
+	app.Post(path+"/migrations/rollback", func(ctx *core.Context) error {
+		if err := cli.ProjectRollback(); err != nil {
+			return ctx.Redirect(path + "/migrations?error=" + urlQueryEscape(err.Error()))
+		}
+		return ctx.Redirect(path + "/migrations?message=" + urlQueryEscape("Last migration batch rolled back"))
+	}).Name("copytygo.studio.migrations.rollback")
+
+	app.Get(path+"/api/migrations", func(ctx *core.Context) error {
+		statuses, err := cli.ProjectMigrationStatus()
+		if err != nil {
+			return err
+		}
+		return ctx.JSON(core.Map{"data": statuses})
+	}).Name("copytygo.studio.api.migrations")
 
 	app.Get(path+"/doctor", func(ctx *core.Context) error {
 		results := cli.RunDoctorChecks([]string{"--db"})
@@ -258,7 +307,7 @@ table{width:100%;border-collapse:collapse;margin-top:24px;border:1px solid #1e2d
 var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a class="active" href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<nav><a class="active" href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>{{.AppName}}</h1><div style="color:#6f84a2;margin-top:6px">Local development workspace</div></div><span class="pill">{{.Environment}}</span></div>
 <section class="cards"><div class="card"><div class="label">Framework</div><div class="value">{{.Version}}</div></div><div class="card"><div class="label">Routes</div><div class="value">{{.RouteCount}}</div></div><div class="card"><div class="label">Runtime</div><div class="value">Ready</div></div></section>
 <div class="notice"><strong>Studio is connected to the running application.</strong><br>Route Explorer is live now. Other v4 ecosystem modules plug into this same workspace as they are completed. <a href="{{.DocsURL}}" target="_blank" rel="noreferrer">Open documentation</a>.</div>
@@ -267,7 +316,7 @@ var dashboardTemplate = template.Must(template.New("copytygo-studio").Parse(`<!d
 var routesTemplate = template.Must(template.New("copytygo-studio-routes").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Routes · CopyTyGo Studio</title><style>` + studioStyle + `</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a class="active" href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a class="active" href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Route Explorer</h1><div style="color:#6f84a2;margin-top:6px">{{.RouteCount}} registered routes</div></div><span class="pill">{{.Environment}}</span></div>
 <table><thead><tr><th>Method</th><th>Path</th><th>Name</th></tr></thead><tbody>
 {{range .Routes}}<tr><td><strong>{{.Method}}</strong></td><td><code>{{.Path}}</code></td><td>{{if .Name}}{{.Name}}{{else}}—{{end}}</td></tr>{{end}}
@@ -284,7 +333,7 @@ textarea{min-height:150px;resize:vertical}button{border:0;border-radius:9px;padd
 .flash{margin-top:18px;padding:13px 15px;border-radius:10px;background:#10233a;border:1px solid #29405e}.error{background:#2a1518;border-color:#6b2a31;color:#ffc5cb}
 .hint{color:#6f84a2;font-size:13px;line-height:1.6;margin-top:7px}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a class="active" href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a class="active" href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Visual Generator</h1><div style="color:#6f84a2;margin-top:6px">Generate framework code without leaving Studio</div></div><span class="pill">{{.Environment}}</span></div>
 {{if .Created}}<div class="flash">Resource <strong>{{.Created}}</strong> created successfully. Model, controller, migration and routes were generated.</div>{{end}}
 {{if .Error}}<div class="flash error">{{.Error}}</div>{{end}}
@@ -303,7 +352,7 @@ var requestsTemplate = template.Must(template.New("copytygo-studio-requests").Pa
 button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:9px 12px;cursor:pointer}
 .status-ok{color:#74d99f}.status-warn{color:#ffcf70}.status-error{color:#ff8e98}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a class="active" href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a class="active" href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Request Inspector</h1><div style="color:#6f84a2;margin-top:6px">Recent requests captured from the running local application</div></div><span class="pill">{{.Environment}}</span></div>
 <div class="toolbar"><div class="muted">{{len .Requests}} requests retained</div><form method="post" action="{{.BasePath}}/requests/clear"><button type="submit">Clear</button></form></div>
 <table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Latency</th><th>Request ID</th></tr></thead><tbody>
@@ -317,7 +366,7 @@ var databaseTemplate = template.Must(template.New("copytygo-studio-database").Pa
 .dbgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}.dbitem{border:1px solid #1e2d43;background:#0b1525;border-radius:13px;padding:18px}.dbitem .value{font-size:18px}.ok{color:#74d99f}.bad{color:#ff8e98}.message{margin-top:18px;padding:14px 16px;border:1px solid #263a55;border-radius:11px;background:#0b1525;color:#9eb0c9;word-break:break-word}
 @media(max-width:700px){.dbgrid{grid-template-columns:1fr}}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a class="active" href="{{.BasePath}}/database">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a class="active" href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Database</h1><div style="color:#6f84a2;margin-top:6px">Connection overview without exposing credentials</div></div>{{if .Connected}}<span class="pill ok">Connected</span>{{else}}<span class="pill bad">Disconnected</span>{{end}}</div>
 <section class="dbgrid"><div class="dbitem"><div class="label">Driver</div><div class="value">{{.Driver}}</div></div><div class="dbitem"><div class="label">Database</div><div class="value">{{.Database}}</div></div><div class="dbitem"><div class="label">Host</div><div class="value">{{.Host}}</div></div><div class="dbitem"><div class="label">Port</div><div class="value">{{.Port}}</div></div></section>
 <div class="message">{{.Message}}</div></main></div></body></html>`))
@@ -329,8 +378,22 @@ var doctorTemplate = template.Must(template.New("copytygo-studio-doctor").Parse(
 .summary{display:flex;gap:12px;margin-top:24px}.summary .card{min-width:140px}.check{display:grid;grid-template-columns:26px 180px 1fr;gap:10px;align-items:start;padding:13px 15px;border-bottom:1px solid #1e2d43}.checks{margin-top:20px;border:1px solid #1e2d43;border-radius:14px;background:#0b1525;overflow:hidden}.good{color:#74d99f}.bad{color:#ff8e98}.reason{color:#8094b1;font-size:13px;word-break:break-word}
 @media(max-width:700px){.check{grid-template-columns:26px 1fr}.reason{grid-column:2}}
 </style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
-<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="#">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a class="active" href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a class="active" href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Doctor</h1><div style="color:#6f84a2;margin-top:6px">Framework, project, security and database diagnostics</div></div><span class="pill">{{.Environment}}</span></div>
 <section class="summary"><div class="card"><div class="label">Passed</div><div class="value good">{{.Passed}}</div></div><div class="card"><div class="label">Failed</div><div class="value {{if .Failed}}bad{{else}}good{{end}}">{{.Failed}}</div></div></section>
 <div class="checks">{{range .Results}}<div class="check"><div class="{{if .OK}}good{{else}}bad{{end}}">{{if .OK}}✓{{else}}×{{end}}</div><strong>{{.Name}}</strong><div class="reason">{{if .Error}}{{.Error}}{{else}}Healthy{{end}}</div></div>{{end}}</div>
 </main></div></body></html>`))
+
+
+var migrationsTemplate = template.Must(template.New("copytygo-studio-migrations").Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Migrations · CopyTyGo Studio</title><style>` + studioStyle + `
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.actions form{margin:0}.actions button{border:1px solid #344863;background:#101c2e;color:#dce8fb;border-radius:8px;padding:10px 13px;cursor:pointer}.actions .primary{background:#f4f7fb;color:#0c1525;border-color:#f4f7fb}.flash{margin-top:18px;padding:13px 15px;border-radius:10px;background:#10233a;border:1px solid #29405e}.flash.error{background:#2a1518;border-color:#6b2a31;color:#ffc5cb}.ran{color:#74d99f}.pending{color:#ffcf70}
+</style></head><body><div class="layout"><aside class="side"><div class="brand">CopyTyGo<small>Studio · {{.Version}}</small></div>
+<nav><a href="{{.BasePath}}">Dashboard</a><a href="{{.BasePath}}/routes">Routes</a><a href="#">Resources</a><a href="{{.BasePath}}/database">Database</a><a class="active" href="{{.BasePath}}/migrations">Migrations</a><a href="#">Queue</a><a href="#">Scheduler</a><a href="{{.BasePath}}/requests">Requests</a><a href="#">Logs</a><a href="{{.BasePath}}/generator">Generator</a><a href="{{.BasePath}}/doctor">Doctor</a></nav></aside>
+<main class="main"><div class="top"><div><h1>Migrations</h1><div style="color:#6f84a2;margin-top:6px">Inspect and run project database migrations</div></div><span class="pill">{{.Environment}}</span></div>
+<div class="actions"><form method="post" action="{{.BasePath}}/migrations/run"><button class="primary" type="submit">Run Migrations</button></form><form method="post" action="{{.BasePath}}/migrations/rollback"><button type="submit">Rollback Last Batch</button></form></div>
+{{if .Message}}<div class="flash">{{.Message}}</div>{{end}}{{if .Error}}<div class="flash error">{{.Error}}</div>{{end}}
+<table><thead><tr><th>Status</th><th>Batch</th><th>Migration</th></tr></thead><tbody>
+{{range .Statuses}}<tr><td class="{{if .Ran}}ran{{else}}pending{{end}}">{{if .Ran}}Ran{{else}}Pending{{end}}</td><td>{{if .Ran}}{{.Batch}}{{else}}—{{end}}</td><td><code>{{.Migration}}</code></td></tr>{{else}}<tr><td colspan="3" style="color:#6f84a2">No migrations registered.</td></tr>{{end}}
+</tbody></table></main></div></body></html>`))
