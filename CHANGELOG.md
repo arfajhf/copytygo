@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.0.3
+
+- Added editable default login, registration and signed-in account pages to install:auth.
+- Added welcome-page login/register links only when matching browser routes are installed.
+- Added encrypted HttpOnly web sessions, CSRF checks, password confirmation, clear validation messages and logout.
+- Made generated auth routes explicit and documented the files developers can customize.
+- Preserved customized auth starter files on reinstall and safely upgraded unchanged older API-only route scaffolds.
+- Kept bearer-token APIs independent from browser cookies and supported their new explicit handlers in Lite.
+- Added browser auth integration tests for MySQL and PostgreSQL plus Windows form smoke coverage.
+
 ## v4.0.2
 
 - Made plain `ctg dev` always execute the full Native application.

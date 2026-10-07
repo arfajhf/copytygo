@@ -701,6 +701,11 @@ func parseLiteRouteFile(path string) ([]liteRoute, error) {
 			return true
 		}
 
+		if authRoute := parseLiteAuthHandler(path, method, routePath, call.Args[1]); authRoute != nil {
+			routes = append(routes, *authRoute)
+			return true
+		}
+
 		if method == "RESOURCE" {
 			instance, ok := call.Args[1].(*ast.Ident)
 			if !ok {
@@ -1560,4 +1565,83 @@ func readFirstLine(data string) string {
 		return scanner.Text()
 	}
 	return ""
+}
+
+// Recognize the explicit bearer-token handlers emitted by install:auth.
+func parseLiteAuthHandler(path, method, routePath string, expression ast.Expr) *liteRoute {
+	call, ok := expression.(*ast.CallExpr)
+	if !ok {
+		return nil
+	}
+	handler, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	pkg, ok := handler.X.(*ast.Ident)
+	if !ok || pkg.Name != "copyauth" {
+		return nil
+	}
+	route := &liteRoute{Method: method, Path: routePath, Status: http.StatusOK, ContentType: "application/json; charset=utf-8"}
+	switch handler.Sel.Name {
+	case "RegisterHandler":
+		if method != "POST" || len(call.Args) != 1 {
+			return nil
+		}
+		role, found := stringLiteral(call.Args[0])
+		if !found {
+			constant, ok := call.Args[0].(*ast.SelectorExpr)
+			if !ok || constant.Sel.Name != "DefaultRole" {
+				return nil
+			}
+			owner, ok := constant.X.(*ast.Ident)
+			if !ok || owner.Name != "appauth" {
+				return nil
+			}
+			role, found = liteAuthDefaultRole(filepath.Join(filepath.Dir(filepath.Dir(path)), "app", "auth", "web.go"))
+		}
+		if !found {
+			return nil
+		}
+		route.AuthAction, route.AuthRole, route.Status = "register", role, http.StatusCreated
+		route.Validation = map[string]string{"name": "required|min:3", "email": "required|email", "password": "required|min:8"}
+	case "LoginHandler":
+		if method != "POST" || len(call.Args) != 0 {
+			return nil
+		}
+		route.AuthAction = "login"
+		route.Validation = map[string]string{"email": "required|email", "password": "required|min:8"}
+	case "MeHandler":
+		if method != "GET" || len(call.Args) != 0 {
+			return nil
+		}
+		route.AuthAction = "me"
+	default:
+		return nil
+	}
+	return route
+}
+
+func liteAuthDefaultRole(path string) (string, bool) {
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		return "", false
+	}
+	for _, declaration := range file.Decls {
+		constants, ok := declaration.(*ast.GenDecl)
+		if !ok || constants.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range constants.Specs {
+			values, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range values.Names {
+				if name.Name == "DefaultRole" && i < len(values.Values) {
+					return stringLiteral(values.Values[i])
+				}
+			}
+		}
+	}
+	return "", false
 }

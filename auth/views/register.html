@@ -1,0 +1,13 @@
+{{define "content"}}
+<h2 id="page-title">Create your account</h2>
+<p class="subtitle">A few details and you're ready to get started.</p>
+<form method="post" action="/register">
+<input type="hidden" name="_token" value="{{.CSRF}}">
+<div class="field"><label for="name">Full name</label><input id="name" name="name" autocomplete="name" value="{{.Name}}" placeholder="Your name" required minlength="3" autofocus aria-invalid="{{if index .Errors "name"}}true{{else}}false{{end}}" aria-describedby="name-error">{{with index .Errors "name"}}<div class="error" id="name-error">{{range .}}<div>Name {{.}}</div>{{end}}</div>{{end}}</div>
+<div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" value="{{.Email}}" placeholder="you@example.com" required aria-invalid="{{if index .Errors "email"}}true{{else}}false{{end}}" aria-describedby="email-error">{{with index .Errors "email"}}<div class="error" id="email-error">{{range .}}<div>Email {{.}}</div>{{end}}</div>{{end}}</div>
+<div class="field"><label for="password">Password</label><div class="password"><input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" aria-invalid="{{if index .Errors "password"}}true{{else}}false{{end}}" aria-describedby="password-hint password-error"><button class="toggle" type="button" data-toggle-password aria-controls="password" aria-pressed="false" aria-label="Show or hide password">Show</button></div><span class="hint" id="password-hint">Use at least 8 characters.</span>{{with index .Errors "password"}}<div class="error" id="password-error">{{range .}}<div>Password {{.}}</div>{{end}}</div>{{end}}</div>
+<div class="field"><label for="password_confirmation">Confirm password</label><div class="password"><input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required minlength="8" aria-invalid="{{if index .Errors "password_confirmation"}}true{{else}}false{{end}}" aria-describedby="confirmation-error"><button class="toggle" type="button" data-toggle-password aria-controls="password_confirmation" aria-pressed="false" aria-label="Show or hide confirmation password">Show</button></div>{{with index .Errors "password_confirmation"}}<div class="error" id="confirmation-error">{{range .}}<div>Confirmation {{.}}</div>{{end}}</div>{{end}}</div>
+<button class="submit" type="submit" data-loading-label="Creating account…">Create account</button>
+</form>
+<p class="switch">Already have an account? <a href="/login">Log in</a></p>
+{{end}}

@@ -9,10 +9,12 @@ import (
 )
 
 type WelcomeOptions struct {
-	AppName   string
-	DocsURL   string
-	GitHubURL string
-	StudioURL string
+	AppName     string
+	DocsURL     string
+	GitHubURL   string
+	StudioURL   string
+	LoginURL    string
+	RegisterURL string
 }
 
 const defaultGitHubURL = "https://github.com/arfajhf/copytygo"
@@ -52,6 +54,8 @@ func Welcome(options ...WelcomeOptions) Handler {
 			GitHubURL   string
 			StudioURL   string
 			ShowStudio  bool
+			LoginURL    string
+			RegisterURL string
 		}{
 			AppName:     appName,
 			Version:     version.Framework,
@@ -60,6 +64,26 @@ func Welcome(options ...WelcomeOptions) Handler {
 			GitHubURL:   githubURL,
 			StudioURL:   studioURL,
 			ShowStudio:  !strings.EqualFold(config.Get("APP_ENV", "local"), "production"),
+		}
+		loginURL, registerURL := opts.LoginURL, opts.RegisterURL
+		if loginURL == "" {
+			loginURL = "/login"
+		}
+		if registerURL == "" {
+			registerURL = "/register"
+		}
+		if ctx.router != nil {
+			for _, route := range ctx.router.Routes() {
+				if route.Method != "GET" {
+					continue
+				}
+				if route.Path == loginURL {
+					data.LoginURL = loginURL
+				}
+				if route.Path == registerURL {
+					data.RegisterURL = registerURL
+				}
+			}
 		}
 
 		var out strings.Builder
@@ -99,7 +123,9 @@ a.primary{background:#f4f7fb;color:#0c1525;border-color:#f4f7fb}.grid{border-top
 <h1>{{.AppName}}</h1>
 <p class="lead">Build applications with Go using a productive framework experience. Your project is ready — start building from the CLI or open the local development Studio.</p>
 <div class="actions">
-<a class="btn primary" href="{{.DocsURL}}" target="_blank" rel="noreferrer">Documentation</a>
+{{if .LoginURL}}<a class="btn primary" href="{{.LoginURL}}">Log in</a>{{end}}
+{{if .RegisterURL}}<a class="btn" href="{{.RegisterURL}}">Register</a>{{end}}
+<a class="btn {{if not .LoginURL}}primary{{end}}" href="{{.DocsURL}}" target="_blank" rel="noreferrer">Documentation</a>
 {{if .ShowStudio}}<a class="btn" href="{{.StudioURL}}">Open Studio</a>{{end}}
 <a class="btn" href="{{.GitHubURL}}" target="_blank" rel="noreferrer">GitHub</a>
 </div></div>

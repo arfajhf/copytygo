@@ -91,6 +91,8 @@ It also supports code generation.
 
 ## Native-only behavior
 
+The browser authentication starter (HTML forms, encrypted web session, account and logout pages) requires Native Runtime. Lite continues to support the generated bearer-token authentication API.
+
 Lite Runtime is not a general Go interpreter.
 
 Arbitrary project Go code such as custom queue job handlers and scheduler callbacks is not executed inside Lite Runtime.

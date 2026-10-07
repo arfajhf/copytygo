@@ -46,3 +46,21 @@ func TestWelcomeHidesStudioInProduction(t *testing.T) {
 		t.Fatal("welcome page must not expose Studio in production")
 	}
 }
+
+func TestWelcomeOnlyLinksInstalledAuthPages(t *testing.T) {
+	for _, installed := range []bool{false, true} {
+		app := New()
+		app.Get("/", Welcome())
+		if installed {
+			app.Get("/login", func(ctx *Context) error { return ctx.Text("login") })
+			app.Get("/register", func(ctx *Context) error { return ctx.Text("register") })
+		}
+		rec := httptest.NewRecorder()
+		app.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+		for _, path := range []string{"/login", "/register"} {
+			if strings.Contains(rec.Body.String(), `href="`+path+`"`) != installed {
+				t.Fatalf("auth link %s has wrong visibility", path)
+			}
+		}
+	}
+}
