@@ -71,3 +71,45 @@ jobs:
           test -f routes/web.go
           grep -q 'queue.AttachConfigured(app)' cmd/app/main.go
           grep -q 'studio.Register(app)' cmd/app/main.go
+
+  frontend-smoke:
+    name: Frontend starter (${{ matrix.frontend }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        frontend:
+          - typescript
+          - react
+          - vue
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build CLI
+        run: go build -o build/ctg ./cmd/ctg
+
+      - name: Generate and build frontend preset
+        shell: bash
+        run: |
+          TMP="$(mktemp -d)"
+          cp build/ctg "$TMP/ctg"
+          cd "$TMP"
+
+          printf 'mysql\nnone\n${{ matrix.frontend }}\nyes\n' | ./ctg new frontend-smoke --interactive
+
+          cd frontend-smoke/frontend
+          npm install --no-audit --no-fund
+          npm run build
