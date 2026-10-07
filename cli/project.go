@@ -116,7 +116,13 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"\nDB_DATABASE=" + name +
 		"\nDB_USERNAME=" + dbUser +
 		"\nDB_PASSWORD=" +
-		"\nQUEUE_WORKERS=1\n"
+		"\nQUEUE_WORKERS=1" +
+		"\nSTORAGE_PATH=storage/app" +
+		"\nMAIL_HOST=127.0.0.1" +
+		"\nMAIL_PORT=1025" +
+		"\nMAIL_USERNAME=" +
+		"\nMAIL_PASSWORD=" +
+		"\nMAIL_FROM=noreply@copytygo.local\n"
 
 	envExample := "APP_NAME=CopyTyGo" +
 		"\nAPP_ENV=local" +
@@ -137,7 +143,13 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"\nDB_DATABASE=copytygo" +
 		"\nDB_USERNAME=" + dbUser +
 		"\nDB_PASSWORD=" +
-		"\nQUEUE_WORKERS=1\n"
+		"\nQUEUE_WORKERS=1" +
+		"\nSTORAGE_PATH=storage/app" +
+		"\nMAIL_HOST=127.0.0.1" +
+		"\nMAIL_PORT=1025" +
+		"\nMAIL_USERNAME=" +
+		"\nMAIL_PASSWORD=" +
+		"\nMAIL_FROM=noreply@copytygo.local\n"
 
 	files := map[string]string{
 		"go.mod":          "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v4 " + version.Module() + "\n",
@@ -231,6 +243,7 @@ import (
     "log"
     "github.com/arfajhf/copytygo/v4/config"
     "github.com/arfajhf/copytygo/v4/core"
+    "github.com/arfajhf/copytygo/v4/foundation"
     "github.com/arfajhf/copytygo/v4/studio"
     "github.com/arfajhf/copytygo/v4/queue"
     "github.com/arfajhf/copytygo/v4/scheduler"
@@ -240,6 +253,7 @@ import (
 func main() {
     if err := config.LoadEnv(".env"); err != nil { log.Fatal(err) }
     app := core.New()
+    if err := foundation.RegisterDefaults(app.Services); err != nil { log.Fatal(err) }
     app.Use(core.RequestID(), core.RequestLogger(), core.SecurityHeaders(), core.BodyLimit(2<<20))
     queue.Attach(app, queue.Default, config.GetInt("QUEUE_WORKERS", 1))
     scheduler.Attach(app, scheduler.Default)
