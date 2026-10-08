@@ -55,6 +55,9 @@ func InstallAuth(mode, root string) error {
 		"app/auth/README.md":     authScaffoldReadme,
 	}
 	if frontendEnabled {
+		if err := ensurePublicAssets(root); err != nil {
+			return err
+		}
 		for _, path := range []string{"auth.html", "vite.auth.config.ts", "src/auth/api.ts", "src/auth/views.ts", "src/auth/main.ts", "src/auth/style.css"} {
 			raw, err := legacyAuthStarter.ReadFile("auth_frontend/" + path)
 			if err != nil {
@@ -104,7 +107,9 @@ func InstallAuth(mode, root string) error {
 	}
 	if frontendEnabled && strings.Contains(web, `app.Get("/", core.Welcome()).Name("welcome")`) {
 		web = strings.Replace(web, `app.Get("/", core.Welcome()).Name("welcome")`, `app.Get("/", frontend.Page()).Name("welcome")`, 1)
-		web = strings.Replace(web, `"github.com/arfajhf/copytygo/v4/core"`, `"github.com/arfajhf/copytygo/v4/core"`+"\n"+`"github.com/arfajhf/copytygo/v4/frontend"`, 1)
+		if !strings.Contains(web, `"github.com/arfajhf/copytygo/v4/frontend"`) {
+			web = strings.Replace(web, `"github.com/arfajhf/copytygo/v4/core"`, `"github.com/arfajhf/copytygo/v4/core"`+"\n"+`"github.com/arfajhf/copytygo/v4/frontend"`, 1)
+		}
 	}
 	source, err := format.Source([]byte(web))
 	if err != nil {
@@ -122,6 +127,7 @@ func InstallAuth(mode, root string) error {
 	if frontendEnabled {
 		fmt.Println("3. Open the application URL. Login/register, dashboard and Users are TypeScript UI.")
 		fmt.Println("Customize: frontend/src/auth/*.ts, frontend/src/auth/style.css, routes/auth.go")
+		fmt.Println("Public assets: frontend/public/ (logo.png and images/). Use /images/name.png in your TypeScript UI.")
 		fmt.Println("ctg dev starts Go + Vite; ctg build compiles TypeScript + Go. Node.js is required to develop/build the frontend.")
 	} else {
 		fmt.Println("API-only project: use /api/auth/register, /api/auth/login and /api/auth/me.")
@@ -357,6 +363,9 @@ Edit the frontend:
 - frontend/src/auth/main.ts: page routing, form submission and interactions.
 - frontend/src/auth/api.ts: typed JSON client and API response types.
 - frontend/src/auth/style.css: responsive styling.
+- frontend/public/logo.png: application logo, served at /logo.png.
+- frontend/public/images/: your images, served at /images/filename.png.
+- frontend/ASSETS.md: source paths and browser URL examples.
 - frontend/vite.auth.config.ts: auth entry plus your existing frontend preset.
 
 Edit the backend:

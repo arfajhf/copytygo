@@ -102,3 +102,85 @@ func TestDevWebSocketUpgradeThroughRequestMiddleware(t *testing.T) {
 		t.Fatalf("upgrade tunnel failed: %q %v", received, err)
 	}
 }
+
+func TestPublicAssetsOnApplicationOriginInDevAndProduction(t *testing.T) {
+	for _, environment := range []string{"local", "production"} {
+		t.Run(environment, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			t.Setenv("APP_ENV", environment)
+			directory := filepath.Join("frontend", "dist")
+			if environment == "local" {
+				directory = filepath.Join("frontend", "public")
+				vite := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("vite module")) }))
+				defer vite.Close()
+				t.Setenv("COPYTYGO_VITE_ORIGIN", vite.URL)
+			} else {
+				t.Setenv("COPYTYGO_VITE_ORIGIN", "http://127.0.0.1:1")
+			}
+			t.Setenv("COPYTYGO_FRONTEND_DIST", filepath.Join("frontend", "dist"))
+			for _, path := range []string{"images/products/book.txt", "banner.txt", "logo.png", "api/private.txt", "API/private.txt", "__copytygo/private.txt", "__Copytygo/private.txt", ".env"} {
+				target := filepath.Join(directory, path)
+				os.MkdirAll(filepath.Dir(target), 0755)
+				os.WriteFile(target, []byte("public asset"), 0644)
+			}
+			app := core.New()
+			Assets(app)
+			app.Get("/api/health", func(ctx *core.Context) error { return ctx.Text("Go API") })
+			for _, test := range []struct {
+				method, path string
+				status       int
+				body         string
+			}{
+				{"GET", "/images/products/book.txt", 200, "public asset"},
+				{"GET", "/banner.txt", 200, "public asset"},
+				{"GET", "/logo.png", 200, "public asset"},
+				{"HEAD", "/logo.png", 200, ""},
+				{"GET", "/api/health", 200, "Go API"},
+				{"GET", "/api/private.txt", 404, ""},
+				{"GET", "/API/private.txt", 404, ""},
+				{"GET", "/__copytygo/private.txt", 404, ""},
+				{"GET", "/__Copytygo/private.txt", 404, ""},
+				{"GET", "/.env", 404, ""},
+				{"GET", "/images/../.env", 404, ""},
+				{"GET", "/images", 404, ""},
+			} {
+				response := httptest.NewRecorder()
+				app.ServeHTTP(response, httptest.NewRequest(test.method, test.path, nil))
+				if response.Code != test.status || test.body != "" && response.Body.String() != test.body {
+					t.Fatalf("%s %s: %d %s", test.method, test.path, response.Code, response.Body.String())
+				}
+			}
+			os.WriteFile(filepath.Join(directory, "images", "new.txt"), []byte("new asset"), 0644)
+			response := httptest.NewRecorder()
+			app.ServeHTTP(response, httptest.NewRequest("GET", "/images/new.txt", nil))
+			if response.Code != 200 {
+				t.Fatal("new image requires restart")
+			}
+		})
+	}
+}
+
+func TestPublicAssetsWithoutViteAndRepeatedRegistration(t *testing.T) {
+	t.Chdir(t.TempDir())
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("COPYTYGO_VITE_ORIGIN", "")
+	t.Setenv("COPYTYGO_FRONTEND_DIST", "frontend/dist")
+	os.MkdirAll("frontend/public/images", 0755)
+	os.MkdirAll("frontend/dist/assets", 0755)
+	os.WriteFile("frontend/public/images/banner.txt", []byte("source image"), 0644)
+	os.WriteFile("frontend/dist/assets/main.js", []byte("compiled module"), 0644)
+	app := core.New()
+	Assets(app)
+	before := len(app.Routes())
+	Assets(app)
+	if len(app.Routes()) != before {
+		t.Fatal("duplicate frontend routes on auth installation")
+	}
+	for path, want := range map[string]string{"/images/banner.txt": "source image", "/assets/main.js": "compiled module"} {
+		response := httptest.NewRecorder()
+		app.ServeHTTP(response, httptest.NewRequest("GET", path, nil))
+		if response.Code != 200 || response.Body.String() != want {
+			t.Fatalf("%s: %d %s", path, response.Code, response.Body.String())
+		}
+	}
+}

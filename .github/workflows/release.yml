@@ -184,7 +184,12 @@ jobs:
           # Verify the published tag's TS auth scaffold and production bundle.
           kill "$APP_PID"
           wait "$APP_PID" || true
+          rm -rf frontend/public
           "$CTG" install:auth multi
+          test -f frontend/public/logo.png
+          mkdir -p frontend/public/images/products
+          cp frontend/public/logo.png frontend/public/images/products/banner.png
+          printf 'public asset smoke\n' > frontend/public/photo.txt
           test ! -d app/auth/views
           test -f frontend/src/auth/views.ts
           "$CTG" build
@@ -208,6 +213,12 @@ jobs:
           test -n "$AUTH_SCRIPT"
           curl -fsS "http://127.0.0.1:18084$AUTH_SCRIPT" > "$TMP/auth.js"
           grep -q '/api/session' "$TMP/auth.js"
+          curl -fsS http://127.0.0.1:18084/logo.png > "$TMP/logo.png"
+          cmp frontend/public/logo.png "$TMP/logo.png"
+          curl -fsS http://127.0.0.1:18084/images/products/banner.png > "$TMP/banner.png"
+          cmp frontend/public/images/products/banner.png "$TMP/banner.png"
+          curl -fsS http://127.0.0.1:18084/photo.txt > "$TMP/photo.txt"
+          cmp frontend/public/photo.txt "$TMP/photo.txt"
           curl -fsS http://127.0.0.1:18084/api/session > "$TMP/session.json"
           jq -e '.csrf != "" and .user == null' "$TMP/session.json"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18084/__copytygo)" = "404"

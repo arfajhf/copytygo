@@ -29,6 +29,14 @@ Use Node.js 22+ and Go 1.27.1+. `ctg dev` installs frontend dependencies when ne
 
 Auth UI uses TypeScript under the existing frontend folder, including React/Vue presets. Your existing frontend index and preset are preserved; the auth starter has a separate entry you can customize or integrate into your chosen framework. No Go HTML view files are generated. TypeScript edits reload through Vite; restart after Go edits. API-only projects generate bearer routes without a frontend or Node dependency.
 
+## Public assets and logo
+
+Put images in `frontend/public/images/`, and use `/images/name.png` in your TypeScript UI.
+The logo lives at `frontend/public/logo.png` and is referenced as `/logo.png`.
+Auth installation and `ctg dev`/`ctg build` restore missing default assets while preserving custom files.
+Public files work through the Go application URL in development and from the compiled bundle in production.
+See [public asset examples](PUBLIC_ASSETS.md) or `frontend/ASSETS.md` in your project.
+
 ## JSON APIs and sessions
 
 | Method | Endpoint | Access |
@@ -71,8 +79,8 @@ This type-checks/builds TypeScript and compiles Go. Deploy the complete `build/`
 Stop the server, then update the CLI and module inside your project:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.5
-go get github.com/arfajhf/copytygo/v4@v4.0.5
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.6
+go get github.com/arfajhf/copytygo/v4@v4.0.6
 go mod tidy
 ctg install:auth multi
 ctg dev

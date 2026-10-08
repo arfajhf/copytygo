@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.0.6
+
+- Restore frontend/public/, the supplied logo.png and an images directory for older auth projects during install:auth, ctg dev and ctg build, preserving custom assets.
+- Serve all public assets at their root URLs in development and from the compiled frontend in production, including nested images, fonts and arbitrary filenames.
+- Keep backend routes ahead of public files and reserve API/Studio namespaces. Block hidden files, directory listings, traversal and symlinks escaping the public root.
+- Include public asset setup in new frontend projects without requiring auth, and document source paths versus browser URLs.
+- Add upgrade, public-file, backend priority and production asset regressions plus Windows/release asset smoke checks.
+
 ## v4.0.5
 
 - Moved the default auth UI into TypeScript under frontend/src/auth: welcome, login/register, role dashboards, account and admin Users CRUD.

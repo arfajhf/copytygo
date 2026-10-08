@@ -102,6 +102,20 @@ func TestNewProjectPresets(t *testing.T) {
 				t.Fatal("job registry not generated")
 			}
 
+			if tc.frontend {
+				routes, err := os.ReadFile(filepath.Join(tc.name, "routes/web.go"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !strings.Contains(string(routes), "frontend.Assets(app)") && tc.options.Auth == "none" {
+					t.Fatal("non-auth frontend project lacks public asset serving")
+				}
+				for _, path := range []string{"frontend/public/logo.png", "frontend/public/images/.gitkeep", "frontend/ASSETS.md"} {
+					if _, err := os.Stat(filepath.Join(tc.name, path)); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
 			_, frontendErr := os.Stat(filepath.Join(tc.name, "frontend", "package.json"))
 			if tc.frontend && frontendErr != nil {
 				t.Fatalf("expected frontend package: %v", frontendErr)
