@@ -33,6 +33,7 @@ type RouteGroup struct {
 type Router struct {
 	routes      []*Route
 	middlewares []Middleware
+	staticFiles []staticMount
 }
 
 func NewRouter() *Router {
@@ -372,6 +373,10 @@ func (router *Router) ServeHTTP(
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_, _ = w.Write([]byte(`{"error":{"status":405,"message":"Method Not Allowed"}}`))
+		return
+	}
+
+	if router.serveStatic(w, r) {
 		return
 	}
 

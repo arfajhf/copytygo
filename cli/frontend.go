@@ -22,6 +22,9 @@ func npmCommand(args ...string) *exec.Cmd {
 	return exec.Command("npm", args...)
 }
 func ensureAuthFrontend() error {
+	if err := ensurePublicAssets("."); err != nil {
+		return err
+	}
 	if _, err := exec.LookPath("node"); err != nil {
 		return fmt.Errorf("copytygo: TypeScript frontend requires Node.js 22+. Install Node.js, then run ctg dev again")
 	}
@@ -41,6 +44,11 @@ func ensureAuthFrontend() error {
 }
 func startAuthFrontend() ([]string, func(), error) {
 	cleanup := func() {}
+	if fileExists("frontend/package.json") {
+		if err := ensurePublicAssets("."); err != nil {
+			return nil, cleanup, err
+		}
+	}
 	if !fileExists("frontend/auth.html") {
 		return os.Environ(), cleanup, nil
 	}
@@ -99,13 +107,17 @@ func startAuthFrontend() ([]string, func(), error) {
 	return nil, func() {}, fmt.Errorf("copytygo: TypeScript frontend did not start within 30 seconds")
 }
 func buildAuthFrontend() error {
-	if !fileExists("frontend/auth.html") {
+	if !fileExists("frontend/package.json") {
 		return nil
 	}
 	if err := ensureAuthFrontend(); err != nil {
 		return err
 	}
-	cmd := npmCommand("run", "build", "--", "--config", "vite.auth.config.ts")
+	args := []string{"run", "build"}
+	if fileExists("frontend/auth.html") {
+		args = append(args, "--", "--config", "vite.auth.config.ts")
+	}
+	cmd := npmCommand(args...)
 	cmd.Dir = "frontend"
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -113,7 +125,7 @@ func buildAuthFrontend() error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("copytygo: TypeScript frontend build failed: %w", err)
 	}
-	if !fileExists("frontend/dist/auth.html") {
+	if fileExists("frontend/auth.html") && !fileExists("frontend/dist/auth.html") {
 		return fmt.Errorf("copytygo: frontend build did not produce auth.html; check frontend/vite.auth.config.ts")
 	}
 	if err := os.RemoveAll("build/frontend/dist"); err != nil {

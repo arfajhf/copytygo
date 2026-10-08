@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v4/branding"
 	"github.com/arfajhf/copytygo/v4/version"
 )
 
@@ -176,7 +175,12 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 	}
 
 	if options.Frontend != "api" {
-		files["frontend/public/logo.png"] = string(branding.Logo)
+		files["README.md"] += "\nPublic assets: frontend/public/ (logo.png and images/).\nUse /images/banner.png in TypeScript. See frontend/ASSETS.md.\n"
+		files["routes/web.go"] = strings.Replace(projectRoutes, `"github.com/arfajhf/copytygo/v4/core"`, `"github.com/arfajhf/copytygo/v4/core"`+"\n"+`"github.com/arfajhf/copytygo/v4/frontend"`, 1)
+		files["routes/web.go"] = strings.Replace(files["routes/web.go"], "func Register(app *core.Application) {", "func Register(app *core.Application) {\n frontend.Assets(app)", 1)
+		if err := ensurePublicAssets(name); err != nil {
+			return err
+		}
 	}
 	for path, content := range frontendFiles(options.Frontend) {
 		files[path] = content

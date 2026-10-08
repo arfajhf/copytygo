@@ -138,11 +138,22 @@ jobs:
 
           printf 'mysql\nmulti\n${{ matrix.frontend }}\nyes\n' | ./ctg new frontend-smoke --interactive
 
-          cd frontend-smoke/frontend
+          cd frontend-smoke
+          rm -rf frontend/public
+          ../ctg install:auth multi
+          test -f frontend/public/logo.png
+          test -d frontend/public/images
+          mkdir -p frontend/public/images/products
+          cp frontend/public/logo.png frontend/public/images/products/banner.png
+          printf 'public asset smoke\n' > frontend/public/photo.txt
+          cd frontend
           npm install --no-audit --no-fund
           npm run build -- --config vite.auth.config.ts
           test -f public/logo.png
           test -f dist/auth.html
+          cmp public/logo.png dist/logo.png
+          cmp public/images/products/banner.png dist/images/products/banner.png
+          cmp public/photo.txt dist/photo.txt
           test ! -d ../app/auth/views
 
 
@@ -390,8 +401,13 @@ jobs:
               Stop-DevProcess $nativeDev
             }
 
+            # Simulate upgrading a project whose untracked public folder is absent.
+            Remove-Item -Recurse -Force frontend\public
             & $ctg install:auth multi
             if ($LASTEXITCODE -ne 0) { throw "Auth installation failed" }
+            if (-not (Test-Path frontend\public\logo.png) -or -not (Test-Path frontend\public\images)) { throw "Auth upgrade did not restore public assets" }
+            Copy-Item frontend\public\logo.png frontend\public\images\banner.png
+            Set-Content frontend\public\photo.txt "public asset smoke"
             go mod tidy
             if ($LASTEXITCODE -ne 0) { throw "Auth dependencies failed" }
             Push-Location frontend
@@ -411,6 +427,14 @@ jobs:
               if ($loginPage.Content -notmatch '/src/auth/main.ts' -or $registerPage.Content -notmatch '/src/auth/main.ts') { throw "Native TypeScript auth entry was missing" }
               $ts = Wait-Http "http://127.0.0.1:18085/src/auth/main.ts" 200
               if ($ts.Content -notmatch "getSession") { throw "TypeScript frontend was not served through Native" }
+              $logo = Wait-Http "http://127.0.0.1:18085/logo.png" 200
+              $banner = Wait-Http "http://127.0.0.1:18085/images/banner.png" 200
+              if ($logo.Headers["Content-Type"] -notmatch "image/png" -or $banner.Headers["Content-Type"] -notmatch "image/png") { throw "Public images did not have image content types" }
+              $photo = Wait-Http "http://127.0.0.1:18085/photo.txt" 200
+              if ($photo.Content -notmatch "public asset smoke") { throw "Root public asset did not load" }
+              Set-Content frontend\public\images\added.txt "added during dev"
+              $added = Wait-Http "http://127.0.0.1:18085/images/added.txt" 200
+              if ($added.Content -notmatch "added during dev") { throw "New public asset requires a restart" }
               Wait-Http "http://127.0.0.1:18085/api/session" 200 | Out-Null
               Wait-Http "http://127.0.0.1:18085/api/auth/me" 401 | Out-Null
               foreach ($endpoint in @("login", "register")) {

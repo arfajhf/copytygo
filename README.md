@@ -6,14 +6,14 @@ CopyTyGo is a full-stack Go framework focused on productive application developm
 
 v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
 
-> Stable release: `v4.0.5`. Go 1.27.1 or newer is required. Node.js 22+ is needed for frontend development and builds.
+> Stable release: `v4.0.6`. Go 1.27.1 or newer is required. Node.js 22+ is needed for frontend development and builds.
 
 ## Quick start
 
 Install the final v4 CLI, then create a project:
 
 ```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.5
+go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.6
 ctg new
 ```
 
@@ -326,6 +326,14 @@ ctg build
 ```
 
 For auth projects, `ctg build` packages the compiled TypeScript frontend alongside Go. Deploy the complete `build/` directory and start the binary from that directory. Production does not require Node.js. See [authentication setup and deployment](docs/AUTHENTICATION.md).
+
+## Public images and assets
+
+Store public assets in `frontend/public/`. The starter includes `logo.png` and `images/`.
+Use `/logo.png` or `/images/banner.png` in TypeScript, without the `frontend/public` prefix.
+`ctg dev` serves new images immediately; `ctg build` includes them in the production bundle.
+Missing default assets are restored during auth installation, development and builds while custom files are preserved.
+Read [the public asset guide](docs/PUBLIC_ASSETS.md) for paths and examples.
 
 ## Visual and CLI generators
 

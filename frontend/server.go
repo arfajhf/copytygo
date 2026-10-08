@@ -38,29 +38,35 @@ func Page() core.Handler {
 	}
 }
 
-// Assets registers only frontend assets. Backend API and Studio routes stay Go.
+// Assets serves Vite modules in development and all public files in both
+// development and production. Application/API routes always take precedence.
 func Assets(app *core.Application) {
-	for _, prefix := range []string{"/assets/*path", "/src/*path", "/@vite/*path", "/@id/*path", "/@fs/*path", "/node_modules/*path"} {
-		app.Get(prefix, asset)
-	}
-	app.Get("/logo.png", asset)
-}
-func asset(ctx *core.Context) error {
-	if proxy := devProxy(); proxy != nil {
-		proxy.ServeHTTP(ctx.Response, ctx.Request)
-		return nil
-	}
-	if !strings.HasPrefix(ctx.Request.URL.Path, "/assets/") && ctx.Request.URL.Path != "/logo.png" {
-		return core.NewHTTPError(404, "Not Found")
-	}
-	// FileServer normalizes paths; reject traversal explicitly before serving.
-	for _, part := range strings.Split(ctx.Request.URL.Path, "/") {
-		if part == ".." || strings.Contains(part, "\\") {
-			return core.NewHTTPError(404, "Not Found")
+	const marker = "copytygo.frontend.assets"
+	for _, route := range app.Routes() {
+		if route.NameValue() == marker {
+			return
 		}
 	}
-	http.FileServer(http.Dir(distDirectory())).ServeHTTP(ctx.Response, ctx.Request)
-	return nil
+	for index, prefix := range []string{"/src/*path", "/@vite/*path", "/@id/*path", "/@fs/*path", "/node_modules/*path"} {
+		route := app.Get(prefix, func(ctx *core.Context) error {
+			if proxy := devProxy(); proxy != nil {
+				proxy.ServeHTTP(ctx.Response, ctx.Request)
+				return nil
+			}
+			return core.NewHTTPError(404, "Not Found")
+		})
+		if index == 0 {
+			route.Name(marker)
+		}
+	}
+	options := core.StaticOptions{Exclude: []string{"/api", "/__copytygo"}}
+	if !strings.EqualFold(config.Get("APP_ENV", "local"), "production") {
+		app.Static("/", filepath.Join("frontend", "public"), options)
+		if devProxy() != nil {
+			return
+		}
+	}
+	app.Static("/", distDirectory(), options)
 }
 func distDirectory() string {
 	if dir := config.Get("COPYTYGO_FRONTEND_DIST"); dir != "" {
