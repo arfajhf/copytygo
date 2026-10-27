@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,10 +61,19 @@ var liteMemoryStore = struct {
 }
 
 func Dev(args []string) error {
+	// A stable native binary is also available explicitly on other platforms.
+	if len(args) == 1 && args[0] == "--build" {
+		return devWithRuntimes([]string{"--native"}, runNativeBuildDev, runLiteDev, os.Stdout)
+	}
 	return devWithRuntimes(args, runNativeDev, runLiteDev, os.Stdout)
 }
 
 func runNativeDev() error {
+	// go run launches an executable under a transient Windows temp path.
+	// Build in the project instead to keep the application path predictable.
+	if runtime.GOOS == "windows" {
+		return runNativeBuildDev()
+	}
 	env, cleanup, err := startAuthFrontend()
 	if err != nil {
 		return err
@@ -81,8 +91,7 @@ func runNativeDev() error {
 		return nil
 	}
 
-	message := strings.TrimSpace(stderr.String())
-	return fmt.Errorf("copytygo native runtime: %w: %s", err, message)
+	return nativeExecutionError(err, stderr.String(), runtime.GOOS)
 }
 
 func runLiteDev() error {
