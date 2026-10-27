@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/retry"
+	"github.com/arfajhf/copytygo/v5/retry"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

@@ -1,4 +1,4 @@
-module github.com/arfajhf/copytygo/v4
+module github.com/arfajhf/copytygo/v5
 
 go 1.27.1
 

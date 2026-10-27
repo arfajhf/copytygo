@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/database"
-	"github.com/arfajhf/copytygo/v4/database/drivers"
-	"github.com/arfajhf/copytygo/v4/queue"
+	"github.com/arfajhf/copytygo/v5/database"
+	"github.com/arfajhf/copytygo/v5/database/drivers"
+	"github.com/arfajhf/copytygo/v5/queue"
 )
 
 func TestDurableQueueIntegration(t *testing.T) {
