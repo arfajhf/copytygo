@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/branding"
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/core"
-	"github.com/arfajhf/copytygo/v4/security"
-	"github.com/arfajhf/copytygo/v4/session"
+	"github.com/arfajhf/copytygo/v5/branding"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/security"
+	"github.com/arfajhf/copytygo/v5/session"
 )
 
 //go:embed views/*.html

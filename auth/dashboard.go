@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v5/core"
 )
 
 // RequireAdmin follows Middleware. Handlers also check access themselves.

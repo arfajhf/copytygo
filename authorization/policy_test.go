@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v5/core"
 )
 
 func TestGateMiddleware(t *testing.T) {
