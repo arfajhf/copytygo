@@ -60,7 +60,7 @@ jobs:
           ./ctg new smoke-app
           cd smoke-app
 
-          go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
+          go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
           go mod tidy
           "$TMP/ctg" make:job SendWelcomeEmail
           "$TMP/ctg" make:listener NotifyAdmin
@@ -87,7 +87,7 @@ jobs:
           for MODE in single multi; do
             "$CTG" new "auth-$MODE"
             cd "auth-$MODE"
-            go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
+            go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
             "$CTG" install:auth "$MODE"
             go mod tidy
             go test ./...
@@ -280,7 +280,7 @@ jobs:
           & $ctg new windows-smoke
 
           Set-Location (Join-Path $tmp "windows-smoke")
-          go mod edit "-replace=github.com/arfajhf/copytygo/v4=$root"
+          go mod edit "-replace=github.com/arfajhf/copytygo/v5=$root"
           go mod tidy
           go test ./...
 

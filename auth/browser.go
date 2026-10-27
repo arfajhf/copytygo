@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/core"
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 // BrowserAuth exposes JSON endpoints for the TypeScript frontend. Authentication

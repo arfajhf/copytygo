@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v5/core"
 )
 
 func jsonBrowserApp(t *testing.T) (*core.Application, *BrowserAuth, *memoryUsers) {
