@@ -70,7 +70,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
 	fmt.Println("  new [name] [-i|--interactive] Create a project or open the setup wizard")
-	fmt.Println("  dev [--lite|--native]      Run Native dev; Lite requires --lite")
+	fmt.Println("  dev [--lite|--native|--build] Native dev (stable project build on Windows); Lite explicit")
 	fmt.Println("  open                       Open application in browser")
 	fmt.Println("  studio                     Open CopyTyGo Studio in browser")
 	fmt.Println("  doctor [--db] [--production] Check project, runtime, security, DB and production config")
