@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/logging"
+	"github.com/arfajhf/copytygo/v5/logging"
 )
 
 const RequestIDContextKey = "copytygo.request_id"
