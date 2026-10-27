@@ -9,7 +9,7 @@ This is a launch gate, not a statement that v5 is released.
 - [ ] Confirm Windows Native Runtime on the target Windows 11 machine, including the exact App Control/Defender verdict when a build is denied
 - [x] Implement a stable project-local Windows native development executable without suppressing policy failures
 - [x] Add actionable Windows diagnostic documentation and regression checks
-- [ ] Migrate the Go module and generated templates to the v5 semantic import path `github.com/arfajhf/copytygo/v5`
+- [x] Migrate the Go module and generated templates to the v5 semantic import path `github.com/arfajhf/copytygo/v5`
 - [ ] Test upgrades from existing v4 projects and document breaking changes
 - [ ] Audit old HTML auth templates and remove or label compatibility-only code; TypeScript must remain the default source for generated auth UI
 - [ ] Audit auth, CSRF, static asset serving, file uploads, SQL identifiers, sessions, authorization and production Studio isolation
