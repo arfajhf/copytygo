@@ -61,6 +61,10 @@ var liteMemoryStore = struct {
 }
 
 func Dev(args []string) error {
+	// WSL uses Linux Go for the full application when Windows blocks go.exe.
+	if len(args) == 1 && args[0] == "--wsl" {
+		return runWSLDev()
+	}
 	// A stable native binary is also available explicitly on other platforms.
 	if len(args) == 1 && args[0] == "--build" {
 		return devWithRuntimes([]string{"--native"}, runNativeBuildDev, runLiteDev, os.Stdout)
