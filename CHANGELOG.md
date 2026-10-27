@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (v5 preparation)
+
+- Build and execute a predictable `build/dev/app.exe` on Windows instead of the temporary `go run` executable. `ctg dev --build` enables the same behavior on other OSes.
+- Preserve the native error when Windows application-control policy denies execution and provide targeted event-log guidance instead of bypassing security controls.
+- Add regression coverage and Windows troubleshooting documentation; final v5 module migration and launch are tracked separately.
+
 ## v4.0.6
 
 - Restore frontend/public/, the supplied logo.png and an images directory for older auth projects during install:auth, ctg dev and ctg build, preserving custom assets.
