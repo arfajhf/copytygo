@@ -6,17 +6,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/cache"
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/container"
-	"github.com/arfajhf/copytygo/v4/database"
-	"github.com/arfajhf/copytygo/v4/database/drivers"
-	"github.com/arfajhf/copytygo/v4/events"
-	"github.com/arfajhf/copytygo/v4/health"
-	"github.com/arfajhf/copytygo/v4/mail"
-	"github.com/arfajhf/copytygo/v4/queue"
-	"github.com/arfajhf/copytygo/v4/scheduler"
-	"github.com/arfajhf/copytygo/v4/storage"
+	"github.com/arfajhf/copytygo/v5/cache"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/container"
+	"github.com/arfajhf/copytygo/v5/database"
+	"github.com/arfajhf/copytygo/v5/database/drivers"
+	"github.com/arfajhf/copytygo/v5/events"
+	"github.com/arfajhf/copytygo/v5/health"
+	"github.com/arfajhf/copytygo/v5/mail"
+	"github.com/arfajhf/copytygo/v5/queue"
+	"github.com/arfajhf/copytygo/v5/scheduler"
+	"github.com/arfajhf/copytygo/v5/storage"
 )
 
 const (
