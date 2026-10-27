@@ -1,6 +1,6 @@
 # CopyTyGo v5 Development Runtime (release candidate)
 
-CopyTyGo runs Native Runtime by default. Lite Runtime requires explicit opt-in. On Windows, Native uses a stable project-local executable. See [Windows development troubleshooting](WINDOWS_DEVELOPMENT.md).
+CopyTyGo runs Native Runtime by default. Lite Runtime requires explicit opt-in. On Windows, Native uses a stable project-local executable. If Windows blocks `go.exe`, the optional `ctg dev --wsl` runs the **full Linux Native Runtime**, provided the Windows CLI and WSL tools are available. You can always run Linux `ctg dev` directly in WSL. See [WSL setup](WSL_DEVELOPMENT.md) and [Windows development troubleshooting](WINDOWS_DEVELOPMENT.md).
 
 ## Native execution
 
