@@ -8,6 +8,7 @@ CopyTyGo is a full-stack Go + TypeScript framework. These documents describe the
 2. [Authentication](AUTHENTICATION.md): install single/multi-role authentication, run Vite + native Go, configure sessions and edit the TypeScript views.
 3. [Public assets](PUBLIC_ASSETS.md): publish logo files, images and fonts correctly.
 4. [Development runtime](DEV_RUNTIME.md): understand Native vs Lite and the stable project-local Windows native build.
+5. [WSL development](WSL_DEVELOPMENT.md): run complete native Go + TypeScript while Windows Smart App Control stays enabled.
 5. [Windows troubleshooting](WINDOWS_DEVELOPMENT.md): inspect Defender Antivirus and CodeIntegrity logs safely.
 6. [Production checklist](PRODUCTION.md): environment, database, queue workers, application health and deployment.
 7. [Upgrade v4 to v5](UPGRADE_V5.md): module path, breaking changes and migration checks.
