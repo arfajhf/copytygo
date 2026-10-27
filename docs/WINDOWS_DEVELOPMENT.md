@@ -4,6 +4,8 @@ CopyTyGo runs a full native Go application with `ctg dev`. On Windows, CopyTyGo 
 
 **Important:** A fixed path can make error reports reproducible, but it does not make an unsigned app trusted and cannot bypass Windows security policy.
 
+If the blocked file is Windows `go.exe` itself, use [full Native Runtime within WSL2](WSL_DEVELOPMENT.md) as an alternative to the limited `--lite` mode. WSL keeps Windows Smart App Control enabled; Linux Go builds do not run as Windows `go.exe`.
+
 ## Normal workflow
 
 Run from the generated project directory:
