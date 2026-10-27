@@ -8,14 +8,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v4/branding"
-	"github.com/arfajhf/copytygo/v4/config"
-	copycontainer "github.com/arfajhf/copytygo/v4/container"
-	"github.com/arfajhf/copytygo/v4/database"
-	"github.com/arfajhf/copytygo/v4/database/drivers"
-	"github.com/arfajhf/copytygo/v4/database/query"
-	"github.com/arfajhf/copytygo/v4/foundation"
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/branding"
+	"github.com/arfajhf/copytygo/v5/config"
+	copycontainer "github.com/arfajhf/copytygo/v5/container"
+	"github.com/arfajhf/copytygo/v5/database"
+	"github.com/arfajhf/copytygo/v5/database/drivers"
+	"github.com/arfajhf/copytygo/v5/database/query"
+	"github.com/arfajhf/copytygo/v5/foundation"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 func handleLiteStudio(w http.ResponseWriter, req *http.Request) bool {

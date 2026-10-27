@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v5/config"
 )
 
 func npmCommand(args ...string) *exec.Cmd {
