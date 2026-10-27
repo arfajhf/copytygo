@@ -1,14 +1,21 @@
 # CopyTyGo v4 Development Runtime
 
-CopyTyGo runs Native Runtime by default. Lite Runtime requires explicit opt-in.
+CopyTyGo runs Native Runtime by default. Lite Runtime requires explicit opt-in. On Windows, Native uses a stable project-local executable. See [Windows development troubleshooting](WINDOWS_DEVELOPMENT.md).
 
 ## Native execution
 
 ```text
-ctg dev
-  -> go run ./cmd/app
+ctg dev (Windows)
+  -> go build -o build/dev/app.exe ./cmd/app
+  -> build/dev/app.exe
        -> success: Native Runtime
-       -> failure: return the Native error
+       -> failure: return the Native error, with policy diagnostics when recognized
+
+ctg dev (Linux/macOS)
+  -> go run ./cmd/app
+
+ctg dev --build
+  -> build/dev/app[.exe] and run from the project directory
 
 ctg dev --lite
   -> Lite Runtime
@@ -101,7 +108,7 @@ Studio explicitly marks Queue and Scheduler execution as Native-only in this mod
 
 ## Windows Application Control
 
-If Windows blocks the temporary executable produced by `go run`, `ctg dev` returns the execution error. The CLI does not override operating-system policy or switch to Lite automatically. Resolving an actual policy refusal requires identifying the applicable Windows policy and its trust requirements.
+On Windows, `ctg dev` builds to `build/dev/app.exe` rather than executing Go's transient temp binary. This makes the executable location stable but does not bypass Smart App Control, WDAC or antivirus decisions. An enforced block remains visible with guidance to inspect Event Viewer and Windows Security. See [Windows development](WINDOWS_DEVELOPMENT.md) for exact log commands and trusted resolution options.
 
 An earlier policy refusal does not prevent later Native startup when Windows permits execution.
 
