@@ -307,7 +307,9 @@ Studio also exposes a visual Runtime Health dashboard.
 ctg dev
 ```
 
-On Windows, this compiles and runs `build/dev/app.exe` from the project instead of running a temporary `go run` executable. On Linux/macOS, the default remains `go run`. Use `ctg dev --build` for a project-local build on any OS. This does **not** bypass Windows Defender or App Control: the CLI preserves security-policy errors. See [Windows diagnostics](docs/WINDOWS_DEVELOPMENT.md) and the [v5 launch checklist](docs/V5_LAUNCH_CHECKLIST.md).
+On Windows, this compiles and runs `build/dev/app.exe` from the project instead of running a temporary `go run` executable. On Linux/macOS, the default remains `go run`. Use `ctg dev --build` for a project-local build on any OS. This does **not** bypass Windows Defender or App Control: the CLI preserves security-policy errors.
+
+If Smart App Control blocks Windows `go.exe`, the full Go + TypeScript Native Runtime can run inside WSL2 instead. Use `ctg dev` inside WSL, or the optional `ctg dev --wsl` from an **allowed** Windows CLI with WSL configured. See [WSL Native development](docs/WSL_DEVELOPMENT.md), [Windows diagnostics](docs/WINDOWS_DEVELOPMENT.md) and the [v5 launch checklist](docs/V5_LAUNCH_CHECKLIST.md).
 
 
 CopyTyGo runs the complete generated Go application in Native Runtime on every `ctg dev` startup. Runtime decisions cached by older CLI versions are ignored, including after installing auth or changing project source.
