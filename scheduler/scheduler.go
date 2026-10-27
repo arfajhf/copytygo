@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v5/core"
 )
 
 type Task func(context.Context) error
