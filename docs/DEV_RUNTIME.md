@@ -1,4 +1,4 @@
-# CopyTyGo v4 Development Runtime
+# CopyTyGo v5 Development Runtime (release candidate)
 
 CopyTyGo runs Native Runtime by default. Lite Runtime requires explicit opt-in. On Windows, Native uses a stable project-local executable. See [Windows development troubleshooting](WINDOWS_DEVELOPMENT.md).
 
