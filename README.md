@@ -382,16 +382,16 @@ Studio does not register in production even if the local development setting was
 
 ## Go module path
 
-CopyTyGo v4 follows Go semantic import versioning:
+CopyTyGo v5 uses Go semantic import versioning:
+
+```text
+github.com/arfajhf/copytygo/v5
+```
+
+Existing v4 applications may remain on:
 
 ```text
 github.com/arfajhf/copytygo/v4
 ```
 
-Existing v3 applications may remain on:
-
-```text
-github.com/arfajhf/copytygo/v3
-```
-
-until intentionally upgraded.
+until intentionally upgraded. See the [v5 upgrade guide](docs/UPGRADE_V5.md) and [documentation index](docs/INDEX.md). The candidate module is not installable from a public final tag yet.
