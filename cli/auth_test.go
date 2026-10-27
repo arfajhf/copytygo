@@ -2,7 +2,7 @@ package cli
 
 import (
 	"fmt"
-	copyauth "github.com/arfajhf/copytygo/v4/auth"
+	copyauth "github.com/arfajhf/copytygo/v5/auth"
 	"go/format"
 	"os"
 	"path/filepath"

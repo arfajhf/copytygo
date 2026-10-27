@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/auth"
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/database"
+	"github.com/arfajhf/copytygo/v5/auth"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/database"
 )
 
 func AuthAdmin(args []string) error {

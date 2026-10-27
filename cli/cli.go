@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 type CommandHandler func(args []string) error
