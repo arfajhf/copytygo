@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
-	copycontainer "github.com/arfajhf/copytygo/v4/container"
-	"github.com/arfajhf/copytygo/v4/version"
-	"github.com/arfajhf/copytygo/v4/logging"
+	"github.com/arfajhf/copytygo/v5/config"
+	copycontainer "github.com/arfajhf/copytygo/v5/container"
+	"github.com/arfajhf/copytygo/v5/version"
+	"github.com/arfajhf/copytygo/v5/logging"
 )
 
 type BackgroundTask func(context.Context) error
