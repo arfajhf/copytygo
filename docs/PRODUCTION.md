@@ -1,6 +1,6 @@
-# CopyTyGo v4 production checklist
+# CopyTyGo v5 production checklist (release candidate)
 
-CopyTyGo v4 expands the v3 production foundation with application services, durable queues, runtime health, encrypted sessions, and a development-only Studio.
+CopyTyGo v5 builds on the production foundation from v4 with application services, durable queues, runtime health, encrypted sessions, and a development-only Studio.
 
 ## 1. Environment
 
