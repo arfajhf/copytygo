@@ -4,9 +4,9 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v4/branding"
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/branding"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 type WelcomeOptions struct {
