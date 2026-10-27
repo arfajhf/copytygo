@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/arfajhf/copytygo/v4/database"
-	"github.com/arfajhf/copytygo/v4/database/drivers"
-	"github.com/arfajhf/copytygo/v4/database/query"
+	"github.com/arfajhf/copytygo/v5/database"
+	"github.com/arfajhf/copytygo/v5/database/drivers"
+	"github.com/arfajhf/copytygo/v5/database/query"
 )
 
 type Model struct {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/arfajhf/copytygo/v4/database"
+	"github.com/arfajhf/copytygo/v5/database"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

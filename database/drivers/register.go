@@ -1,6 +1,6 @@
 package drivers
 
-import "github.com/arfajhf/copytygo/v4/database"
+import "github.com/arfajhf/copytygo/v5/database"
 
 func Register() {
 	database.RegisterDriver(
