@@ -1,4 +1,4 @@
-# CopyTyGo v4 architecture
+# CopyTyGo v5 architecture (release candidate)
 
 CopyTyGo v4 is organized around a production HTTP core, application services, background workers, and a local developer workspace called CopyTyGo Studio.
 
@@ -111,7 +111,7 @@ Register/Login
   -> optional role middleware / policy gate
 ```
 
-Browser authentication adds rendered login/register/account pages and stores the signed token inside an encrypted HttpOnly web-session cookie. Form submissions verify the session's CSRF value; sign-in rotates both the session and CSRF value. Bearer-token API middleware remains independent. Generated templates are embedded in the application binary and editable in app/auth/views.
+The default browser authentication UI is authored in TypeScript under `frontend/src/auth/` and built with Vite. Go exposes JSON session APIs with encrypted HttpOnly cookies, CSRF checks, fresh database authorization and independent bearer-token APIs. Older HTML template handlers remain in the framework for compatibility; generated projects use TypeScript views.
 
 Studio's Auth inspector only queries safe user fields and never selects password hashes.
 
