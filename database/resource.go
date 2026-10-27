@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/database/query"
+	"github.com/arfajhf/copytygo/v5/database/query"
 )
 
 var safeIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
