@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 type ProjectOptions struct {
@@ -163,7 +163,7 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"\nMAIL_FROM=noreply@copytygo.local\n"
 
 	files := map[string]string{
-		"go.mod":          "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v4 " + version.Module() + "\n",
+		"go.mod":          "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v5 " + version.Module() + "\n",
 		".env":            env,
 		".env.example":    envExample,
 		"cmd/app/main.go": strings.ReplaceAll(projectMain, "{{MODULE}}", name),
@@ -176,7 +176,7 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 
 	if options.Frontend != "api" {
 		files["README.md"] += "\nPublic assets: frontend/public/ (logo.png and images/).\nUse /images/banner.png in TypeScript. See frontend/ASSETS.md.\n"
-		files["routes/web.go"] = strings.Replace(projectRoutes, `"github.com/arfajhf/copytygo/v4/core"`, `"github.com/arfajhf/copytygo/v4/core"`+"\n"+`"github.com/arfajhf/copytygo/v4/frontend"`, 1)
+		files["routes/web.go"] = strings.Replace(projectRoutes, `"github.com/arfajhf/copytygo/v5/core"`, `"github.com/arfajhf/copytygo/v5/core"`+"\n"+`"github.com/arfajhf/copytygo/v5/frontend"`, 1)
 		files["routes/web.go"] = strings.Replace(files["routes/web.go"], "func Register(app *core.Application) {", "func Register(app *core.Application) {\n frontend.Assets(app)", 1)
 		if err := ensurePublicAssets(name); err != nil {
 			return err
@@ -270,12 +270,12 @@ const projectMain = `package main
 
 import (
     "log"
-    "github.com/arfajhf/copytygo/v4/config"
-    "github.com/arfajhf/copytygo/v4/core"
-    "github.com/arfajhf/copytygo/v4/foundation"
-    "github.com/arfajhf/copytygo/v4/studio"
-    "github.com/arfajhf/copytygo/v4/queue"
-    "github.com/arfajhf/copytygo/v4/scheduler"
+    "github.com/arfajhf/copytygo/v5/config"
+    "github.com/arfajhf/copytygo/v5/core"
+    "github.com/arfajhf/copytygo/v5/foundation"
+    "github.com/arfajhf/copytygo/v5/studio"
+    "github.com/arfajhf/copytygo/v5/queue"
+    "github.com/arfajhf/copytygo/v5/scheduler"
     "{{MODULE}}/app/jobs"
     "{{MODULE}}/routes"
 )
@@ -298,10 +298,10 @@ const projectRoutes = `package routes
 import (
     "net/http"
 
-    "github.com/arfajhf/copytygo/v4/config"
-    "github.com/arfajhf/copytygo/v4/core"
-    "github.com/arfajhf/copytygo/v4/foundation"
-    "github.com/arfajhf/copytygo/v4/version"
+    "github.com/arfajhf/copytygo/v5/config"
+    "github.com/arfajhf/copytygo/v5/core"
+    "github.com/arfajhf/copytygo/v5/foundation"
+    "github.com/arfajhf/copytygo/v5/version"
 )
 
 func Register(app *core.Application) {
