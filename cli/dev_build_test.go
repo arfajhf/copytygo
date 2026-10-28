@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -55,5 +56,22 @@ func TestRecognizesWindowsPolicyBlock(t *testing.T) {
 	}
 	if isApplicationPolicyBlock("The build failed: undefined: service") {
 		t.Fatal("build failure mistaken for application policy")
+	}
+}
+
+func TestNativeStderrWriterStreamsAndCaptures(t *testing.T) {
+	var visible, captured bytes.Buffer
+	writer := nativeStderrWriter(&visible, &captured)
+	for _, message := range []string{"scheduler registered\n", "SmokeJob executed\n"} {
+		if _, err := writer.Write([]byte(message)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expected := "scheduler registered\nSmokeJob executed\n"
+	if visible.String() != expected {
+		t.Fatalf("live stderr missing logs: %q", visible.String())
+	}
+	if captured.String() != expected {
+		t.Fatalf("diagnostic capture missing logs: %q", captured.String())
 	}
 }
