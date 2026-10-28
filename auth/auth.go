@@ -88,6 +88,16 @@ func RequireRole(roles ...string) core.Middleware {
 // Middleware() must run first to authenticate the signed bearer token. Role
 // claims from a token alone are not enough if an admin was demoted/deleted.
 func RequireCurrentRole(multi bool, roles ...string) core.Middleware {
+	return requireStoredRole(databaseUsers{multi: multi}, roles...)
+}
+
+// roleUserFinder allows role revocation behavior to be unit-tested without
+// requiring a live database. Production uses databaseUsers.Find.
+type roleUserFinder interface {
+	Find(context.Context, string) (User, error)
+}
+
+func requireStoredRole(store roleUserFinder, roles ...string) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx *core.Context) error {
 			claims, ok := Claims(ctx)
@@ -96,7 +106,7 @@ func RequireCurrentRole(multi bool, roles ...string) core.Middleware {
 			}
 			requestCtx, cancel := context.WithTimeout(ctx.Request.Context(), 10*time.Second)
 			defer cancel()
-			user, err := (databaseUsers{multi: multi}).Find(requestCtx, claims.Subject)
+			user, err := store.Find(requestCtx, claims.Subject)
 			if errors.Is(err, errUserMissing) {
 				return core.NewHTTPError(http.StatusUnauthorized, "Account no longer exists")
 			}
