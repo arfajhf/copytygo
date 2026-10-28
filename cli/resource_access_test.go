@@ -15,7 +15,7 @@ func TestParseResourceArguments(t *testing.T) {
 		{[]string{"name:string"}, []string{"name:string"}, "default", true},
 		{[]string{"name:string", "--public"}, []string{"name:string"}, "public", true},
 		{[]string{"--access=admin", "name:string"}, []string{"name:string"}, "admin", true},
-		{[]string{"--access=authenticated"}, nil, "authenticated", true},
+		{[]string{"--access=authenticated"}, []string{}, "authenticated", true},
 		{[]string{"--access=everyone"}, nil, "", false},
 		{[]string{"--public", "--access=admin"}, nil, "", false},
 		{[]string{"--no-auth"}, nil, "", false},
