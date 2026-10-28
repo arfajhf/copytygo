@@ -85,7 +85,7 @@ The default browser-generated resource does **not** accept bearer-token requests
 app.ResourceWithMiddleware(
     "/orders",
     controllers.OrderController{},
-    []core.Middleware{copyauth.Middleware(), copyauth.RequireRole("admin")},
+    []core.Middleware{copyauth.Middleware(), copyauth.RequireCurrentRole(true, "admin")},
     nil,
 )
 ```
