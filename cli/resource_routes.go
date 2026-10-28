@@ -173,10 +173,13 @@ func GenerateResourceRoutes(root string) error {
 				}
 				writes = "[]core.Middleware{sessions.CSRF()}"
 			case "bearer":
-				common = "copyauth.Middleware()"
+				// A valid signed token is not enough: account deletion and role
+				// changes must take effect immediately on every resource request.
+				currentRole := "copyauth.RequireCurrentRole(" + fmt.Sprintf("%t", auth.Multi)
 				if access == "admin" || access == "user" {
-					common += ", copyauth.RequireRole(" + fmt.Sprintf("%q", access) + ")"
+					currentRole += ", " + fmt.Sprintf("%q", access)
 				}
+				common = "copyauth.Middleware(), " + currentRole + ")"
 				writes = "nil"
 			}
 			builder.WriteString("\tapp.ResourceWithMiddleware(" + target +
