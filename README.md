@@ -166,6 +166,7 @@ scheduler.Default.Cron(
 
 ```powershell
 ctg make:resource Product name:string price:decimal stock:integer active:boolean description:text?
+# v5 defaults to private resource endpoints. Use --public only when explicitly intended.
 ```
 
 This generates:
@@ -346,7 +347,8 @@ CLI:
 
 ```text
 ctg make:controller <name>
-ctg make:resource <name> [field:type ...]
+ctg make:resource <name> [field:type ...] [--access=default|authenticated|admin|user|public]
+ctg resource:sync
 ctg make:model <name>
 ctg make:migration <name>
 ctg make:middleware <name>
