@@ -93,7 +93,7 @@ func TestResourceUnconfiguredIsFailClosed(t *testing.T) {
 		}
 		response := httptest.NewRecorder()
 		app.ServeHTTP(response, httptest.NewRequest(method, path, nil))
-		if response.Code != 401 || hits != before {
+		if response.Code != 401 || hits != 0 {
 			t.Fatalf("%s %s: status=%d hits=%d", method, path, response.Code, hits)
 		}
 	}
