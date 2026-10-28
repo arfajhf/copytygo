@@ -62,6 +62,8 @@ jobs:
 
           go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
           go mod tidy
+          "$TMP/ctg" make:resource Product name:string price:decimal
+          grep -q 'ResourceAccessUnconfigured' routes/resources.go
           "$TMP/ctg" make:job SendWelcomeEmail
           "$TMP/ctg" make:listener NotifyAdmin
           "$TMP/ctg" make:seeder UserSeeder
@@ -89,6 +91,12 @@ jobs:
             cd "auth-$MODE"
             go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
             "$CTG" install:auth "$MODE"
+            "$CTG" make:resource Product name:string price:decimal
+            grep -q 'sessions.Middleware()' routes/resources.go
+            grep -q 'sessions.CSRF()' routes/resources.go
+            if [ "$MODE" = "multi" ]; then
+              grep -q 'sessions.RequireAdmin()' routes/resources.go
+            fi
             go mod tidy
             go test ./...
             mkdir -p build
