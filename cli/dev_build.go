@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,11 +52,18 @@ func runNativeBuildDev() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
+	cmd.Stderr = nativeStderrWriter(os.Stderr, &stderr)
 	if err := cmd.Run(); err != nil {
 		return nativeExecutionError(err, stderr.String(), runtime.GOOS)
 	}
 	return nil
+}
+
+// nativeStderrWriter streams Go logs immediately while retaining output for
+// actionable diagnostics if the native executable exits with an error.
+// Standard log.Printf writes to stderr by default.
+func nativeStderrWriter(output, capture io.Writer) io.Writer {
+	return io.MultiWriter(output, capture)
 }
 
 // nativeExecutionError keeps the original error and adds an actionable
