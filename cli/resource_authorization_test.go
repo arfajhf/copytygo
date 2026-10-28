@@ -56,13 +56,13 @@ func TestGeneratedResourceAuthorizationModes(t *testing.T) {
 		{"multi browser user", "user", "browser", "user",
 			[]string{"sessions.Middleware()", "copyauth.RequireRole(\"user\")", "sessions.CSRF()"}, []string{"sessions.RequireAdmin()"}},
 		{"multi bearer admin", "user", "bearer", "default",
-			[]string{"copyauth.Middleware()", "copyauth.RequireRole(\"admin\")"}, []string{"sessions.CSRF()"}},
+			[]string{"copyauth.Middleware()", "copyauth.RequireCurrentRole(true, \"admin\")"}, []string{"sessions.CSRF()"}},
 		{"single browser auth", "", "browser", "default",
 			[]string{"sessions.Middleware()", "sessions.CSRF()"}, []string{"RequireAdmin()", "copyauth.RequireRole"}},
 		{"single role admin blocked", "", "browser", "admin",
 			[]string{"core.ResourceAccessUnconfigured()"}, []string{"sessions.RequireAdmin()"}},
 		{"multi bearer authenticated", "user", "bearer", "authenticated",
-			[]string{"copyauth.Middleware()"}, []string{"copyauth.RequireRole"}},
+			[]string{"copyauth.Middleware()", "copyauth.RequireCurrentRole(true)"}, []string{"copyauth.RequireRole"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
