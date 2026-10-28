@@ -20,6 +20,18 @@ When v5 is published, **in a separate upgrade branch**:
 4. Run `go mod tidy`, `go test ./...`, `ctg doctor`, and `ctg build` in your application.
 5. Verify migrations, session/login behavior, admin permissions, APIs, frontend assets, queue workers and deployment before rolling out.
 
+## Breaking change: generated resource routes are protected
+
+Earlier `make:resource` routes could be publicly readable/writable. In v5, newly generated resources are **private by default** and middleware covers read and write requests. Multi-role projects default to admin, single-role projects require a signed-in account, and resource routes without auth now reject requests with HTTP 401.
+
+After updating an existing project to v5, run:
+
+```bash
+ctg resource:sync
+```
+
+This rebuilds `routes/resources.go`, including security on controllers created with older versions. Check each endpoint before deployment. An endpoint that intentionally needs public CRUD must explicitly use `// copytygo:resource-access public` in the generated controller before syncing; public writes require careful abuse controls. Browser-authenticated writes require a valid `X-CSRF-Token` header. See [resource security guide](RESOURCE_SECURITY.md).
+
 ## Changes to review
 
 ### Windows native development
