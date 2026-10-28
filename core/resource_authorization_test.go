@@ -49,22 +49,23 @@ func TestResourceWithMiddlewareSecuresEveryVerb(t *testing.T) {
 		{"PUT", "/products/5"},
 		{"DELETE", "/products/5"},
 	} {
+		before := hits
 		request := httptest.NewRequest(tc.method, tc.path, nil)
 		response := httptest.NewRecorder()
 		app.ServeHTTP(response, request)
-		if response.Code != 401 || hits != 0 {
+		if response.Code != 401 || hits != before {
 			t.Fatalf("%s %s guest: status=%d hits=%d", tc.method, tc.path, response.Code, hits)
 		}
 		request.Header.Set("Authorization", "Bearer valid")
 		response = httptest.NewRecorder()
 		app.ServeHTTP(response, request)
-		if response.Code != 403 || hits != 0 {
+		if response.Code != 403 || hits != before {
 			t.Fatalf("%s %s non-admin: status=%d hits=%d", tc.method, tc.path, response.Code, hits)
 		}
 		request.Header.Set("X-Role", "admin")
 		response = httptest.NewRecorder()
 		app.ServeHTTP(response, request)
-		if tc.method != "GET" && (response.Code != 403 || hits != 0) {
+		if tc.method != "GET" && (response.Code != 403 || hits != before) {
 			t.Fatalf("%s %s missing CSRF: status=%d hits=%d", tc.method, tc.path, response.Code, hits)
 		}
 		if tc.method != "GET" {
@@ -92,7 +93,7 @@ func TestResourceUnconfiguredIsFailClosed(t *testing.T) {
 		}
 		response := httptest.NewRecorder()
 		app.ServeHTTP(response, httptest.NewRequest(method, path, nil))
-		if response.Code != 401 || hits != 0 {
+		if response.Code != 401 || hits != before {
 			t.Fatalf("%s %s: status=%d hits=%d", method, path, response.Code, hits)
 		}
 	}
