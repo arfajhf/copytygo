@@ -180,7 +180,7 @@ This generates:
 - timestamps
 - soft deletes
 
-Resource API:
+Resource API (private by default; browser sessions require CSRF on writes, API-only uses a bearer token and fresh database role checks; see [resource security](docs/RESOURCE_SECURITY.md)):
 
 ```text
 GET     /products
