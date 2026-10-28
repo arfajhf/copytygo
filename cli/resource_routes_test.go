@@ -56,7 +56,7 @@ func TestGenerateResourceRoutes(t *testing.T) {
 	if !strings.Contains(generated, "\"example.com/store/app/controllers\"") {
 		t.Fatalf("missing controller import: %s", generated)
 	}
-	if !strings.Contains(generated, "app.Resource(\"/products\", controllers.ProductController{})") {
+	if !strings.Contains(generated, "app.ResourceWithMiddleware(\"/products\", controllers.ProductController{}, []core.Middleware{core.ResourceAccessUnconfigured()}, nil)") {
 		t.Fatalf("missing generated resource route: %s", generated)
 	}
 
