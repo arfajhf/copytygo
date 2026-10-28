@@ -87,7 +87,7 @@ func runNativeDev() error {
 	cmd.Env = env
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = &stderr
+	cmd.Stderr = nativeStderrWriter(os.Stderr, &stderr)
 	cmd.Stdin = os.Stdin
 
 	err = cmd.Run()
