@@ -168,6 +168,13 @@ jobs:
           test -f database/migrations/registry.go
           test -f .env
           test -f .env.example
+          # Preserve secrets, frontend UI and migration files, except required
+          # Go import-path replacements. Never regenerate an existing schema.
+          cmp "$TMP/legacy-original/.env" .env
+          cmp "$TMP/legacy-original/.env.example" .env.example
+          cmp "$TMP/legacy-original/frontend/src/auth/main.ts" frontend/src/auth/main.ts
+          cmp "$TMP/legacy-original/frontend/public/logo.png" frontend/public/logo.png
+          test "$(find "$TMP/legacy-original/database/migrations" -name '*.go' | wc -l)" -eq "$(find database/migrations -name '*.go' | wc -l)"
 
           # Smoke the upgraded production binary without a database connection.
           # Anonymous access must be denied before any resource DB query.
