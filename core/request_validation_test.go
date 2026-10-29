@@ -1,6 +1,8 @@
 package core
 
 import (
+	"bytes"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -96,5 +98,44 @@ func TestValidatePreservesFormInput(t *testing.T) {
 	app.ServeHTTP(rec, req)
 	if rec.Code != 204 {
 		t.Fatalf("form data failed: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestValidateReadsMultipartFormValues(t *testing.T) {
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	if err := form.WriteField("name", "Profile Avatar"); err != nil {
+		t.Fatal(err)
+	}
+	upload, err := form.CreateFormFile("avatar", "profile.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := upload.Write([]byte("test-image")); err != nil {
+		t.Fatal(err)
+	}
+	if err := form.Close(); err != nil {
+		t.Fatal(err)
+	}
+	app := New()
+	app.Post("/upload", func(ctx *Context) error {
+		if err := ctx.Validate(map[string]string{"name": "required"}); err != nil {
+			return err
+		}
+		if ctx.Input("name") != "Profile Avatar" {
+			t.Fatalf("multipart field lost: %q", ctx.Input("name"))
+		}
+		header, err := ctx.File("avatar")
+		if err != nil || header.Filename != "profile.png" {
+			t.Fatalf("multipart file unavailable: %v", err)
+		}
+		return ctx.NoContent(204)
+	})
+	req := httptest.NewRequest("POST", "/upload", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, req)
+	if rec.Code != 204 {
+		t.Fatalf("multipart request failed: %d %s", rec.Code, rec.Body.String())
 	}
 }
