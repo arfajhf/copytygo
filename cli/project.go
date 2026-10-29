@@ -260,61 +260,89 @@ declare module "*.vue" {
 const projectMain = `package main
 
 import (
-    "log"
-    "github.com/arfajhf/copytygo/v5/config"
-    "github.com/arfajhf/copytygo/v5/core"
-    "github.com/arfajhf/copytygo/v5/foundation"
-    "github.com/arfajhf/copytygo/v5/studio"
-    "github.com/arfajhf/copytygo/v5/queue"
-    "github.com/arfajhf/copytygo/v5/scheduler"
-    "{{MODULE}}/app/jobs"
-    "{{MODULE}}/routes"
+	"log"
+
+	"{{MODULE}}/app/jobs"
+	"{{MODULE}}/routes"
+
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/foundation"
+	"github.com/arfajhf/copytygo/v5/queue"
+	"github.com/arfajhf/copytygo/v5/scheduler"
+	"github.com/arfajhf/copytygo/v5/studio"
 )
 
 func main() {
-    if err := config.LoadEnv(".env"); err != nil { log.Fatal(err) }
-    app := core.New()
-    if err := foundation.RegisterDefaults(app.Services); err != nil { log.Fatal(err) }
-    if err := jobs.Register(queue.DefaultRegistry); err != nil { log.Fatal(err) }
-    app.Use(core.RequestID(), core.RequestLogger(), core.SecurityHeaders(), core.BodyLimit(2<<20))
-    if err := queue.AttachConfigured(app); err != nil { log.Fatal(err) }
-    scheduler.Attach(app, scheduler.Default)
-    routes.Register(app)
-    studio.Register(app)
-    log.Fatal(app.Run())
+	if err := config.LoadEnv(".env"); err != nil {
+		log.Fatal(err)
+	}
+
+	app := core.New()
+
+	if err := foundation.RegisterDefaults(app.Services); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := jobs.Register(queue.DefaultRegistry); err != nil {
+		log.Fatal(err)
+	}
+
+	app.Use(
+		core.RequestID(),
+		core.RequestLogger(),
+		core.SecurityHeaders(),
+		core.BodyLimit(2 << 20),
+	)
+
+	if err := queue.AttachConfigured(app); err != nil {
+		log.Fatal(err)
+	}
+
+	scheduler.Attach(app, scheduler.Default)
+	routes.Register(app)
+	studio.Register(app)
+
+	log.Fatal(app.Run())
 }
 `
+
 const projectRoutes = `package routes
 
 import (
-    "net/http"
+	"net/http"
 
-    "github.com/arfajhf/copytygo/v5/config"
-    "github.com/arfajhf/copytygo/v5/core"
-    "github.com/arfajhf/copytygo/v5/foundation"
-    "github.com/arfajhf/copytygo/v5/version"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/foundation"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 func Register(app *core.Application) {
-    app.Get("/", core.Welcome()).Name("welcome")
+	app.Get("/", core.Welcome()).Name("welcome")
 
-    app.Get("/api/health", func(ctx *core.Context) error {
-        status, checks, err := foundation.RunHealth(ctx.Request.Context(), app.Services)
-        if err != nil {
-            return err
-        }
-        if string(status) != "healthy" {
-            ctx.Status(http.StatusServiceUnavailable)
-        }
-        return ctx.JSON(core.Map{
-            "framework": "CopyTyGo",
-            "version": version.Framework,
-            "environment": config.Get("APP_ENV", "local"),
-            "status": status,
-            "checks": checks,
-            "request_id": core.RequestIDValue(ctx),
-        })
-    }).Name("health")
+	app.Get("/api/health", func(ctx *core.Context) error {
+		status, checks, err := foundation.RunHealth(
+			ctx.Request.Context(),
+			app.Services,
+		)
+		if err != nil {
+			return err
+		}
+
+		if string(status) != "healthy" {
+			ctx.Status(http.StatusServiceUnavailable)
+		}
+
+		return ctx.JSON(core.Map{
+			"framework":   "CopyTyGo",
+			"version":     version.Framework,
+			"environment": config.Get("APP_ENV", "local"),
+			"status":      status,
+			"checks":      checks,
+			"request_id":  core.RequestIDValue(ctx),
+		})
+	}).Name("health")
 }
 `
 const frontendPackage = `{"name":"copytygo-frontend","private":true,"scripts":{"dev":"vite","build":"tsc && vite build"},"devDependencies":{"@types/node":"^24.0.0","typescript":"^5.9.0","vite":"^6.0.0"}}`
@@ -427,12 +455,30 @@ export function fieldErrors(errors: Record<string, string[]>): string[] {
 `
 const frontendMain = `import { api } from "./api";
 
-type Health = { framework: string; status: string };
+type Health = {
+  framework: string;
+  status: string;
+};
+
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 async function boot() {
   const data = await api.get<Health>("/api/health");
-  app.innerHTML = '<img src="/logo.png" alt="CopyTyGo logo" width="72" height="72" style="object-fit:contain">' + "<h1>" + data.framework + "</h1><p>" + data.status + "</p>";
+
+  const logo = document.createElement("img");
+  logo.src = "/logo.png";
+  logo.alt = "CopyTyGo logo";
+  logo.width = 72;
+  logo.height = 72;
+  logo.style.objectFit = "contain";
+
+  const heading = document.createElement("h1");
+  heading.textContent = data.framework;
+
+  const status = document.createElement("p");
+  status.textContent = data.status;
+
+  app.replaceChildren(logo, heading, status);
 }
 
 void boot();
