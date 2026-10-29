@@ -91,6 +91,8 @@ Restrict filesystem permissions for the configured storage path.
 
 For upload endpoints, use an explicit HTTP request-body limit (for example `app.Use(core.BodyLimit(2 << 20))`) **before** parsing multipart forms. `ctx.File("avatar", maxMemory)` accepts a multipart **in-memory threshold**, not a total upload byte limit. Pass a positive `maxBytes` to `storage.SaveUploadedFile` for a second, per-file size check; never treat `maxBytes=0` as a limit. Validate file signatures/MIME types against the application-specific allowlist before saving, use server-generated storage keys instead of untrusted filenames, and keep private uploads outside publicly served frontend assets.
 
+Use `storage.SaveUploadedFileAllowed(disk, key, header, maxBytes, "image/png", "image/jpeg")` for a content-sniffed MIME allowlist with a mandatory positive per-file size limit. The caller must supply a server-generated storage key, enforce authorization on the upload route, and add application-specific scanning where needed. A valid MIME signature alone does not prove a file is safe. `SaveUploadedFile` remains available for backward compatibility but does not enforce MIME allowlisting; `maxBytes=0` there is unlimited.
+
 Local disk operations now use Go `os.Root` to prevent path traversal through symlinks escaping the storage directory. This filesystem boundary does not replace authentication, authorization, content validation, quotas, or malware scanning for untrusted files.
 
 Use real production SMTP credentials and never expose `MAIL_PASSWORD` through application responses.
