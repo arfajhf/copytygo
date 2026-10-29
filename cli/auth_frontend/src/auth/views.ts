@@ -12,18 +12,70 @@ export function layout(session: Session, title: string, content: string, welcome
   return `<header class="navbar"><div class="nav-inner"><a class="brand" href="/"><img src="/logo.png" alt="CopyTyGo logo"><span>${escape(session.appName)}</span></a><nav aria-label="Main navigation">${links}</nav></div></header><main class="${welcome ? "welcome" : "main"}">${content}</main>`;
 }
 export function welcomeView(session: Session): string {
-  return layout(session, "Welcome", `<section class="welcome-card"><p class="eyebrow">YOUR NEXT APPLICATION STARTS HERE</p><h1>${escape(session.appName)}</h1><p>Build applications with TypeScript and Go. Your project is ready. Start building from the CLI or open the local development Studio.</p><div class="welcome-actions"><a class="button" href="https://github.com/arfajhf/copytygo/blob/v${encodeURIComponent(session.version)}/README.md" target="_blank" rel="noreferrer">Documentation ↗</a>${session.showStudio ? '<a class="button outline" href="/__copytygo">Open Studio</a>' : ""}<a class="button outline" href="https://github.com/arfajhf/copytygo" target="_blank" rel="noreferrer">GitHub ↗</a></div><div class="features"><span>CopyTyGo ${escape(session.version)}</span><span>${escape(session.environment)}</span><span>TypeScript + Go</span></div></section>`, true);
+  return layout(session, "Welcome", `<section class="welcome-card">
+      <p class="eyebrow">YOUR NEXT APPLICATION STARTS HERE</p>
+      <h1>${escape(session.appName)}</h1>
+      <p>Build applications with TypeScript and Go. Your project is ready. Start building from the CLI or open the local development Studio.</p>
+      <div class="welcome-actions">
+      <a class="button" href="https://github.com/arfajhf/copytygo/blob/v${encodeURIComponent(session.version)}/README.md" target="_blank" rel="noreferrer">Documentation ↗</a>${session.showStudio ? '<a class="button outline" href="/__copytygo">Open Studio</a>' : ""}<a class="button outline" href="https://github.com/arfajhf/copytygo" target="_blank" rel="noreferrer">GitHub ↗</a>
+      </div>
+      <div class="features">
+      <span>CopyTyGo ${escape(session.version)}</span>
+      <span>${escape(session.environment)}</span>
+      <span>TypeScript + Go</span>
+      </div>
+      </section>`, true);
 }
 export function field(name: string, label: string, type = "text", value = "", options: { autocomplete?: string; optional?: boolean; hint?: string } = {}): string {
-  return `<label class="field">${escape(label)}<input name="${name}" type="${type}" value="${escape(value)}" ${options.optional ? "" : "required"} ${options.autocomplete ? `autocomplete="${options.autocomplete}"` : ""} ${type === "password" ? 'minlength="8" maxlength="72"' : ""}>${options.hint ? `<small>${escape(options.hint)}</small>` : ""}<small class="field-error" data-error="${name}"></small></label>`;
+  return `<label class="field">${escape(label)}<input name="${name}" type="${type}" value="${escape(value)}" ${options.optional ? "" : "required"} ${options.autocomplete ? `autocomplete="${options.autocomplete}"` : ""} ${type === "password" ? 'minlength="8" maxlength="72"' : ""}>${options.hint ? `<small>${escape(options.hint)}</small>` : ""}<small class="field-error" data-error="${name}">
+      </small>
+      </label>`;
 }
 export function authView(session: Session, register: boolean): string {
   const title = register ? "Create account" : "Welcome back";
-  return layout(session, title, `<section class="card form-card"><p class="eyebrow">${escape(session.appName)}</p><h1>${title}</h1><p>${register ? "A few details and you're ready to start." : "Log in to continue to your dashboard."}</p><form id="auth-form"><div id="form-error" class="notice error" role="alert" hidden></div>${register ? field("name", "Name", "text", "", { autocomplete: "name" }) : ""}${field("email", "Email", "email", "", { autocomplete: "email" })}${field("password", "Password", "password", "", { autocomplete: register ? "new-password" : "current-password", hint: "Use at least 8 characters." })}${register ? field("password_confirmation", "Confirm password", "password", "", { autocomplete: "new-password" }) : ""}<button class="button full" type="submit">${register ? "Create account" : "Log in"}</button></form><p class="form-footer">${register ? 'Already registered? <a href="/login">Log in</a>' : 'New here? <a href="/register">Create an account</a>'}</p></section>`);
+  return layout(session, title, `<section class="card form-card">
+      <p class="eyebrow">${escape(session.appName)}</p>
+      <h1>${title}</h1>
+      <p>${register ? "A few details and you're ready to start." : "Log in to continue to your dashboard."}</p>
+      <form id="auth-form">
+      <div id="form-error" class="notice error" role="alert" hidden>
+      </div>${register ? field("name", "Name", "text", "", { autocomplete: "name" }) : ""}${field("email", "Email", "email", "", { autocomplete: "email" })}${field("password", "Password", "password", "", { autocomplete: register ? "new-password" : "current-password", hint: "Use at least 8 characters." })}${register ? field("password_confirmation", "Confirm password", "password", "", { autocomplete: "new-password" }) : ""}<button class="button full" type="submit">${register ? "Create account" : "Log in"}</button>
+      </form>
+      <p class="form-footer">${register ? 'Already registered? <a href="/login">Log in</a>' : 'New here? <a href="/register">Create an account</a>'}</p>
+      </section>`);
 }
 export function dashboardView(session: Session, result: Dashboard): string {
   const admin = session.multi && result.user.role === "admin";
-  return layout(session, "Dashboard", `<div class="page-heading"><div><p class="eyebrow">${admin ? "ADMIN WORKSPACE" : "YOUR WORKSPACE"}</p><h1>Hi, ${escape(result.user.name)}.</h1><p>Welcome to your dashboard.</p></div><span class="badge">${admin ? "Administrator" : session.multi ? "Member" : "Account"}</span></div>${admin && result.stats ? `<div class="stats"><article class="card"><p>Total users</p><strong>${result.stats.total}</strong></article><article class="card"><p>Administrators</p><strong>${result.stats.admins}</strong></article><article class="card"><p>Members</p><strong>${result.stats.members}</strong></article></div><section class="card"><h2>Manage your users</h2><p>Find accounts, update roles, or add a new user.</p><a class="button" href="/users">Manage users</a></section>` : `<section class="card"><h2>You're all set.</h2><p>This is your starting point. Customize this dashboard in frontend/src/auth/views.ts.</p><a class="button secondary" href="/account">View account</a></section>`}`);
+  return layout(session, "Dashboard", `<div class="page-heading">
+      <div>
+      <p class="eyebrow">${admin ? "ADMIN WORKSPACE" : "YOUR WORKSPACE"}</p>
+      <h1>Hi, ${escape(result.user.name)}.</h1>
+      <p>Welcome to your dashboard.</p>
+      </div>
+      <span class="badge">${admin ? "Administrator" : session.multi ? "Member" : "Account"}</span>
+      </div>${admin && result.stats ? `<div class="stats">
+      <article class="card">
+      <p>Total users</p>
+      <strong>${result.stats.total}</strong>
+      </article>
+      <article class="card">
+      <p>Administrators</p>
+      <strong>${result.stats.admins}</strong>
+      </article>
+      <article class="card">
+      <p>Members</p>
+      <strong>${result.stats.members}</strong>
+      </article>
+      </div>
+      <section class="card">
+      <h2>Manage your users</h2>
+      <p>Find accounts, update roles, or add a new user.</p>
+      <a class="button" href="/users">Manage users</a>
+      </section>` : `<section class="card">
+      <h2>You're all set.</h2>
+      <p>This is your starting point. Customize this dashboard in frontend/src/auth/views.ts.</p>
+      <a class="button secondary" href="/account">View account</a>
+      </section>`}`);
 }
 export function accountView(session: Session): string {
   const user = session.user!;
