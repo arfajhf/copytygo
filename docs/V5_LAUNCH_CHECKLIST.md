@@ -16,7 +16,9 @@ This is a launch gate, not a statement that v5 is released.
 - [ ] Audit auth, CSRF, static asset serving, file uploads, SQL identifiers, sessions, authorization and production Studio isolation
 - [x] Bound local disk operations to Go's os.Root to reject symlink escape during file read/write/delete, plus regression tests
 - [x] Reject non-finite numeric inputs; close multipart FormFile reader after metadata extraction
-- [ ] Verify request body limits for all upload routes, file MIME/signature allowlists, authenticated upload access, and malformed JSON handling
+- [x] Add opt-in content-sniffed MIME allowlists and mandatory size limit for SaveUploadedFileAllowed; malformed generated resource JSON is now rejected with HTTP 400
+- [ ] Validate upload route authentication and signature handling end-to-end, including reverse-proxy limits and application-specific scanning
+- [ ] Confirm malformed JSON, form inputs, and body limits through on-device Fedora acceptance after CI
 - [x] Add private-by-default generated resource routes with role enforcement and CSRF; explicit public access and route resync are supported
 - [ ] Confirm generated resource protections through end-to-end browser and bearer-client tests on a fresh v5 project
 - [ ] Validate all 4 project starters, both database drivers, native builds and production assets
