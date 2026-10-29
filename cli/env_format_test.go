@@ -80,3 +80,11 @@ func TestFormatEnvironmentFileRejectsSymlinks(t *testing.T) {
 		t.Fatal("env:format should not overwrite symlinked secrets")
 	}
 }
+
+func TestFormatEnvironmentTextPreservesMultilineValues(t *testing.T) {
+	before := "APP_NAME=demo\nCUSTOM_KEY=\"first\n\nsecond\"\nDB_DRIVER=mysql\n"
+	after := formatEnvironmentText([]byte(before))
+	if string(after) != before {
+		t.Fatalf("formatter modified custom multiline value: %q", after)
+	}
+}
