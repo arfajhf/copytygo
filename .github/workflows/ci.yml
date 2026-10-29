@@ -108,6 +108,67 @@ jobs:
             cd ..
           done
 
+
+  upgrade-v4-smoke:
+    name: Upgrade actual v4.0.6 starter to v5
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout candidate v5
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build v5 candidate CLI
+        run: go build -o build/ctg-v5 ./cmd/ctg
+
+      - name: Create v4 project and upgrade a copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          TMP="$(mktemp -d)"
+          trap 'rm -rf "$TMP"' EXIT
+
+          git clone --depth 1 --branch v4.0.6 https://github.com/arfajhf/copytygo.git "$TMP/framework-v4"
+          (cd "$TMP/framework-v4" && go build -o "$TMP/ctg-v4" ./cmd/ctg)
+          cd "$TMP"
+          "$TMP/ctg-v4" new legacy-app
+          cd legacy-app
+          "$TMP/ctg-v4" install:auth multi
+          "$TMP/ctg-v4" make:resource Product name:string price:decimal
+          grep -q 'app.Resource("/products"' routes/resources.go
+          test -f frontend/src/auth/main.ts
+          test -f database/migrations/registry.go
+
+          # Preserve a fully separate, immutable v4 fixture for comparison.
+          cp -a . "$TMP/legacy-original"
+          find . -type f -name '*.go' -print0 | xargs -0 -r sed -i 's@github.com/arfajhf/copytygo/v4@github.com/arfajhf/copytygo/v5@g'
+          go mod edit -droprequire=github.com/arfajhf/copytygo/v4
+          go mod edit -require=github.com/arfajhf/copytygo/v5@v5.0.0-rc.1
+          go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
+          go mod tidy
+
+          "$ROOT/build/ctg-v5" resource:sync
+          grep -q 'sessions.Middleware()' routes/resources.go
+          grep -q 'sessions.RequireAdmin()' routes/resources.go
+          grep -q 'sessions.CSRF()' routes/resources.go
+          if grep -R -n 'github.com/arfajhf/copytygo/v4' --include='*.go' .; then
+            echo 'Old v4 imports remain after migration' >&2
+            exit 1
+          fi
+          go test ./...
+          go build -o build/upgraded-app ./cmd/app
+          test -x build/upgraded-app
+          test -f frontend/src/auth/main.ts
+          test -f database/migrations/registry.go
+          test -f .env
+          test -f .env.example
+
   frontend-smoke:
     name: Frontend starter (${{ matrix.frontend }})
     runs-on: ubuntu-latest
