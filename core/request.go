@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -12,49 +13,108 @@ import (
 	"github.com/arfajhf/copytygo/v5/validation"
 )
 
+// Input returns a scalar form/JSON value for backward compatibility.
+// Use InputWithError or Validate if malformed input must be reported as HTTP 400.
 func (ctx *Context) Input(name string) string {
-	if ctx.Request == nil {
-		return ""
+	value, _ := ctx.InputWithError(name)
+	return value
+}
+
+// InputWithError reports malformed input instead of treating it as missing.
+// The JSON decoder runs once per request and preserves JSON numeric precision.
+func (ctx *Context) InputWithError(name string) (string, error) {
+	values, err := ctx.readInputs()
+	if err != nil {
+		return "", err
 	}
+	return values[name], nil
+}
+
+const maxJSONInputBytes int64 = 16 << 20
+
+func (ctx *Context) readInputs() (map[string]string, error) {
+	if ctx == nil || ctx.Request == nil {
+		return nil, NewHTTPError(http.StatusBadRequest, "Request is unavailable")
+	}
+	if ctx.inputParsed {
+		return ctx.inputValues, ctx.inputError
+	}
+	ctx.inputParsed = true
+	ctx.inputValues = make(map[string]string)
 
 	contentType := ctx.Request.Header.Get("Content-Type")
-	mediaType, _, _ := mime.ParseMediaType(contentType)
-
-	switch mediaType {
-	case "application/json":
-		if ctx.Request.Body == nil {
-			return ""
-		}
-		raw, err := io.ReadAll(ctx.Request.Body)
-		if err != nil {
-			return ""
-		}
-		ctx.Request.Body = io.NopCloser(strings.NewReader(string(raw)))
-
-		var data map[string]any
-		if err := json.Unmarshal(raw, &data); err != nil {
-			return ""
-		}
-		value, ok := data[name]
-		if !ok || value == nil {
-			return ""
-		}
-		switch v := value.(type) {
-		case string:
-			return v
-		default:
-			encoded, err := json.Marshal(v)
-			if err != nil {
-				return ""
-			}
-			return string(encoded)
-		}
-	default:
-		if err := ctx.Request.ParseForm(); err != nil {
-			return ""
-		}
-		return ctx.Request.FormValue(name)
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil && contentType != "" {
+		ctx.inputError = NewHTTPError(http.StatusBadRequest, "Invalid Content-Type")
+		return nil, ctx.inputError
 	}
+	if mediaType == "application/json" {
+		if ctx.Request.Body == nil {
+			ctx.inputError = NewHTTPError(http.StatusBadRequest, "Invalid JSON body")
+			return nil, ctx.inputError
+		}
+		// The generated application also installs BodyLimit(2<<20).
+		// This ceiling protects manual handlers that omit that middleware.
+		raw, err := io.ReadAll(io.LimitReader(ctx.Request.Body, maxJSONInputBytes+1))
+		if err != nil {
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				ctx.inputError = NewHTTPError(http.StatusRequestEntityTooLarge, "Request body is too large")
+			} else {
+				ctx.inputError = NewHTTPError(http.StatusBadRequest, "Unable to read JSON body")
+			}
+			return nil, ctx.inputError
+		}
+		if int64(len(raw)) > maxJSONInputBytes {
+			ctx.inputError = NewHTTPError(http.StatusRequestEntityTooLarge, "Request body is too large")
+			return nil, ctx.inputError
+		}
+		ctx.Request.Body = io.NopCloser(bytes.NewReader(raw))
+
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		var fields map[string]json.RawMessage
+		if err := decoder.Decode(&fields); err != nil || fields == nil {
+			ctx.inputError = NewHTTPError(http.StatusBadRequest, "JSON body must be an object")
+			return nil, ctx.inputError
+		}
+		var extra any
+		if err := decoder.Decode(&extra); err != io.EOF {
+			ctx.inputError = NewHTTPError(http.StatusBadRequest, "Request body must contain only one JSON value")
+			return nil, ctx.inputError
+		}
+		for key, rawValue := range fields {
+			value := bytes.TrimSpace(rawValue)
+			if len(value) == 0 || bytes.Equal(value, []byte("null")) {
+				continue
+			}
+			if value[0] == '"' {
+				var decoded string
+				if err := json.Unmarshal(value, &decoded); err != nil {
+					ctx.inputError = NewHTTPError(http.StatusBadRequest, "Invalid JSON string")
+					return nil, ctx.inputError
+				}
+				ctx.inputValues[key] = decoded
+			} else {
+				ctx.inputValues[key] = string(value)
+			}
+		}
+		return ctx.inputValues, nil
+	}
+	if err := ctx.Request.ParseForm(); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			ctx.inputError = NewHTTPError(http.StatusRequestEntityTooLarge, "Request body is too large")
+		} else {
+			ctx.inputError = NewHTTPError(http.StatusBadRequest, "Invalid form body")
+		}
+		return nil, ctx.inputError
+	}
+	for name, values := range ctx.Request.Form {
+		if len(values) > 0 {
+			ctx.inputValues[name] = values[0]
+		}
+	}
+	return ctx.inputValues, nil
 }
 
 func (ctx *Context) Bind(target any) error {
@@ -160,9 +220,9 @@ func (ctx *Context) bindForm(target any) error {
 
 
 func (ctx *Context) Validate(rules map[string]string) error {
-	data := make(map[string]string, len(rules))
-	for field := range rules {
-		data[field] = ctx.Input(field)
+	data, err := ctx.readInputs()
+	if err != nil {
+		return err
 	}
 
 	v := validation.New(data)
