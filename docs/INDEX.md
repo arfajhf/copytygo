@@ -1,6 +1,6 @@
 # CopyTyGo documentation
 
-CopyTyGo is a full-stack Go + TypeScript framework. These documents describe the development and production workflows for the **v5 release candidate**. Until a final v5 tag is published, use the latest stable `v4.0.6` for new public installations.
+CopyTyGo is a full-stack Go + TypeScript framework. These documents describe the **v5 release candidate**, intended to become CopyTyGo's first publicly recommended stable release. The v4.0.6 tag was an internal prelaunch version. Do not publish stable-install instructions for v5 until the final immutable tag is available.
 
 ## Start here
 
@@ -37,4 +37,4 @@ ctg dev
 
 Never expose Studio on a production server. Set `APP_ENV=production` and `APP_DEBUG=false`, configure a strong and unique `APP_KEY`, and enforce HTTPS in production. Development execution blocked by Windows security should be diagnosed through policy/antivirus logs, not through global protection disabling.
 
-This index and all attached docs are maintained as source-controlled documentation. A standalone public documentation site is a separate v5 launch requirement, not yet claimed as live.
+This index and all attached docs are maintained as source-controlled documentation. The official public site is planned, not yet live. Its default installation and documentation links must resolve to the latest **stable** released version. Keep historical versions accessible through explicitly versioned URLs. See [website release plan](WEBSITE_LAUNCH_PLAN.md).
