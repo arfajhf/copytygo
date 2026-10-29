@@ -11,7 +11,8 @@ This is a launch gate, not a statement that v5 is released.
 - [x] Add actionable Windows diagnostic documentation and regression checks
 - [x] Provide optional WSL2 full native development without disabling host Smart App Control; Windows-native trust acceptance remains outstanding
 - [x] Migrate the Go module and generated templates to the v5 semantic import path `github.com/arfajhf/copytygo/v5`
-- [ ] Test upgrades from existing v4 projects and document breaking changes
+- [x] Add CI migration test from a real v4.0.6 multi-role TypeScript app with generated resource, and document major-version upgrade commands
+- [ ] Validate upgrade of customized v4 projects and real database data/session preservation, including rollback
 - [ ] Audit old HTML auth templates and remove or label compatibility-only code; TypeScript must remain the default source for generated auth UI
 - [ ] Audit auth, CSRF, static asset serving, file uploads, SQL identifiers, sessions, authorization and production Studio isolation
 - [x] Bound local disk operations to Go's os.Root to reject symlink escape during file read/write/delete, plus regression tests
