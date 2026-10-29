@@ -4,18 +4,29 @@
 
 CopyTyGo is a full-stack Go framework focused on productive application development without hiding the strengths of Go.
 
-The upcoming v5 release builds on the feature-complete v4 framework. It focuses on Windows development reliability, a new Go v5 module path, documentation, compatibility tests and launch quality.
+CopyTyGo v5 is planned as the first public stable release. The earlier v4.0.6 tag was an internal prelaunch milestone. v5 focuses on Go + TypeScript developer experience, secure backend tooling, documentation, production reliability and release quality.
 
-> **v5 candidate branch, not publicly released.** The latest stable tag is `v4.0.6`. Go 1.27.1+ and Node.js 22+ are needed for full frontend development.
+> **Prelaunch release candidate.** v5 has not been published as a stable module yet, and internal v4 tags are not recommended as the public onboarding path. Go 1.27.1+ and Node.js 22+ are needed for full frontend development.
 
 ## Quick start
 
-Until the v5 candidate passes acceptance testing and receives a public release tag, install the latest stable v4 CLI:
+Until v5.0.0 is tagged and verified, this branch is for release-candidate testing. Build the CLI locally rather than installing an unpublished version:
 
-```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.6
+```bash
+git clone -b feature/v5-release-candidate https://github.com/arfajhf/copytygo.git
+cd copytygo
+go build -o ctg ./cmd/ctg
+./ctg version
+```
+
+After the **v5.0.0 stable tag is actually published and tested**, the public installation command will be:
+
+```bash
+go install github.com/arfajhf/copytygo/v5/cmd/ctg@v5.0.0
 ctg new
 ```
+
+For testing generated v5 applications before publication, follow [the v5 release-candidate upgrade and local module instructions](docs/UPGRADE_V5.md). Do not use a local `replace` directive in published projects.
 
 The interactive installer can configure:
 
