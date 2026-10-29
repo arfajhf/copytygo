@@ -30,7 +30,11 @@ func InstallAuth(mode, root string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	updateRoutes := os.IsNotExist(err) || unchangedCurrentAuthRoutes(current, module) || legacyAuthRoutes(current) || unchangedBrowserRoutes(current, module) || matchesAuthSnapshot(current, "routes.txt", module)
+	updateRoutes := os.IsNotExist(err) ||
+		unchangedCurrentAuthRoutes(current, module) ||
+		legacyAuthRoutes(current) ||
+		unchangedBrowserRoutes(current, module) ||
+		matchesAuthSnapshot(current, "routes.txt", module)
 	if !updateRoutes && !strings.Contains(string(current), "appauth.Sessions()") {
 		return fmt.Errorf("copytygo: routes/auth.go has custom auth routes; integrate the TypeScript starter routes from docs/AUTHENTICATION.md manually")
 	}
@@ -266,10 +270,14 @@ import (
 )
 
 // Middleware protects bearer-token API routes. Browser JSON APIs use Sessions().Middleware().
-func Middleware() core.Middleware { return copyauth.Middleware() }
+func Middleware() core.Middleware {
+	return copyauth.Middleware()
+}
 
 // RequireRole must run after authentication middleware.
-func RequireRole(roles ...string) core.Middleware { return copyauth.RequireRole(roles...) }
+func RequireRole(roles ...string) core.Middleware {
+	return copyauth.RequireRole(roles...)
+}
 `
 
 const authWebScaffold = `package auth
@@ -281,7 +289,9 @@ import copyauth "github.com/arfajhf/copytygo/v5/auth"
 const DefaultRole = %q
 
 // Sessions supplies JSON controllers. All UI lives in frontend/src/auth/.
-func Sessions() *copyauth.BrowserAuth { return copyauth.NewBrowserAuth(DefaultRole) }
+func Sessions() *copyauth.BrowserAuth {
+	return copyauth.NewBrowserAuth(DefaultRole)
+}
 `
 
 const authRoutesScaffold = `package routes
@@ -297,7 +307,15 @@ import (
 func RegisterAuth(app *core.Application) {
  sessions := appauth.Sessions()
  frontend.Assets(app)
- for _, path := range []string{"/login", "/register", "/dashboard", "/account", "/users", "/users/create", "/users/:id/edit"} {
+ for _, path := range []string{
+  "/login",
+  "/register",
+  "/dashboard",
+  "/account",
+  "/users",
+  "/users/create",
+  "/users/:id/edit",
+ } {
   app.Get(path, frontend.Page())
  }
 
@@ -305,16 +323,31 @@ func RegisterAuth(app *core.Application) {
  app.Get("/api/session", sessions.Session)
  app.Post("/api/session/login", sessions.Login).Middleware(sessions.CSRF())
  app.Post("/api/session/register", sessions.Register).Middleware(sessions.CSRF())
- app.Post("/api/session/logout", sessions.Logout).Middleware(sessions.Middleware(), sessions.CSRF())
+ app.Post("/api/session/logout", sessions.Logout).Middleware(
+  sessions.Middleware(),
+  sessions.CSRF(),
+ )
  app.Get("/api/dashboard", sessions.Dashboard).Middleware(sessions.Middleware())
 
  // Always enforce fresh database roles on the backend, including every write.
  if appauth.DefaultRole != "" {
   app.Get("/api/users", sessions.Users).Middleware(sessions.Middleware(), sessions.RequireAdmin())
   app.Get("/api/users/:id", sessions.User).Middleware(sessions.Middleware(), sessions.RequireAdmin())
-  app.Post("/api/users", sessions.CreateUser).Middleware(sessions.Middleware(), sessions.RequireAdmin(), sessions.CSRF())
-  app.Put("/api/users/:id", sessions.UpdateUser).Middleware(sessions.Middleware(), sessions.RequireAdmin(), sessions.CSRF())
-  app.Delete("/api/users/:id", sessions.DeleteUser).Middleware(sessions.Middleware(), sessions.RequireAdmin(), sessions.CSRF())
+  app.Post("/api/users", sessions.CreateUser).Middleware(
+   sessions.Middleware(),
+   sessions.RequireAdmin(),
+   sessions.CSRF(),
+  )
+  app.Put("/api/users/:id", sessions.UpdateUser).Middleware(
+   sessions.Middleware(),
+   sessions.RequireAdmin(),
+   sessions.CSRF(),
+  )
+  app.Delete("/api/users/:id", sessions.DeleteUser).Middleware(
+   sessions.Middleware(),
+   sessions.RequireAdmin(),
+   sessions.CSRF(),
+  )
  }
 
  // Bearer APIs remain available for external/mobile clients.
@@ -397,7 +430,10 @@ customized HTML files are preserved on disk but are no longer starter UI.
 API-only projects keep bearer endpoints and do not add a frontend or Node dependency.
 `
 
-func fileExists(path string) bool { info, err := os.Stat(path); return err == nil && !info.IsDir() }
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
 
 func matchesAuthSnapshot(raw []byte, name, argument string) bool {
 	expected, err := legacyAuthStarter.ReadFile("auth_legacy_v404/" + name)
