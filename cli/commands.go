@@ -57,6 +57,9 @@ func RegisterDeveloperCommands(app *CLI) {
 	app.Command("resource:sync", func(_ []string) error {
 		return GenerateResourceRoutes(".")
 	})
+	app.Command("env:format", func(_ []string) error {
+		return FormatEnvironmentFiles()
+	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf("usage: ctg make:model <name>")
