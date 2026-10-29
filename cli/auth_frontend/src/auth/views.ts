@@ -27,16 +27,84 @@ export function dashboardView(session: Session, result: Dashboard): string {
 }
 export function accountView(session: Session): string {
   const user = session.user!;
-  return layout(session, "Your account", `<div class="page-heading"><h1>Your account</h1></div><section class="card"><dl class="account"><dt>Name</dt><dd>${escape(user.name)}</dd><dt>Email</dt><dd>${escape(user.email)}</dd>${session.multi ? `<dt>Role</dt><dd>${escape(user.role)}</dd>` : ""}</dl></section>`);
+  return layout(session, "Your account", `<div class="page-heading">
+      <h1>Your account</h1>
+      </div>
+      <section class="card">
+      <dl class="account">
+      <dt>Name</dt>
+      <dd>${escape(user.name)}</dd>
+      <dt>Email</dt>
+      <dd>${escape(user.email)}</dd>${session.multi ? `<dt>Role</dt>
+      <dd>${escape(user.role)}</dd>` : ""}</dl>
+      </section>`);
 }
 export function usersView(session: Session, result: UserList): string {
   const search = new URLSearchParams(location.search).get("search") || "";
   const success = ({ created: "User created successfully.", updated: "User updated successfully.", deleted: "User deleted successfully." } as Record<string, string>)[new URLSearchParams(location.search).get("saved") || ""];
   const pageLink = (page: number) => `/users?${new URLSearchParams({ page: String(page), search })}`;
-  return layout(session, "Users", `<div class="page-heading"><div><p class="eyebrow">ADMINISTRATION</p><h1>Users</h1><p>Monitor and manage ${result.total} accounts.</p></div><a class="button" href="/users/create">Add user</a></div><section class="card">${success ? `<div class="notice success" role="status">${success}</div>` : ""}<div id="form-error" class="notice error" role="alert" hidden></div><form class="search" method="GET" action="/users"><input name="search" aria-label="Search users" placeholder="Search name or email" value="${escape(search)}"><button class="button secondary">Search</button></form><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead><tbody>${result.users.map(user => `<tr><td>${escape(user.name)}</td><td>${escape(user.email)}</td><td><span class="badge">${escape(user.role)}</span></td><td class="row-actions"><a href="/users/${encodeURIComponent(user.id)}/edit">Edit</a>${user.id !== session.user?.id ? `<button class="text-danger" data-delete="${escape(user.id)}" data-name="${escape(user.name)}">Delete</button>` : '<span class="muted">Your account</span>'}</td></tr>`).join("") || '<tr><td colspan="4">No users found.</td></tr>'}</tbody></table></div><div class="pagination"><span>Page ${result.page}</span><div>${result.page > 1 ? `<a class="button secondary" href="${escape(pageLink(result.page - 1))}">Previous</a>` : ""}${result.page * result.pageSize < result.total ? `<a class="button secondary" href="${escape(pageLink(result.page + 1))}">Next</a>` : ""}</div></div></section>`);
+  return layout(session, "Users", `<div class="page-heading">
+      <div>
+      <p class="eyebrow">ADMINISTRATION</p>
+      <h1>Users</h1>
+      <p>Monitor and manage ${result.total} accounts.</p>
+      </div>
+      <a class="button" href="/users/create">Add user</a>
+      </div>
+      <section class="card">${success ? `<div class="notice success" role="status">${success}</div>` : ""}<div id="form-error" class="notice error" role="alert" hidden>
+      </div>
+      <form class="search" method="GET" action="/users">
+      <input name="search" aria-label="Search users" placeholder="Search name or email" value="${escape(search)}">
+      <button class="button secondary">Search</button>
+      </form>
+      <div class="table-wrap">
+      <table>
+      <thead>
+      <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>${result.users.map(user => `<tr>
+      <td>${escape(user.name)}</td>
+      <td>${escape(user.email)}</td>
+      <td>
+      <span class="badge">${escape(user.role)}</span>
+      </td>
+      <td class="row-actions">
+      <a href="/users/${encodeURIComponent(user.id)}/edit">Edit</a>${user.id !== session.user?.id ? `<button class="text-danger" data-delete="${escape(user.id)}" data-name="${escape(user.name)}">Delete</button>` : '<span class="muted">Your account</span>'}</td>
+      </tr>`).join("") || '<tr><td colspan="4">No users found.</td></tr>'}</tbody>
+      </table>
+      </div>
+      <div class="pagination">
+      <span>Page ${result.page}</span>
+      <div>${result.page > 1 ? `<a class="button secondary" href="${escape(pageLink(result.page - 1))}">Previous</a>` : ""}${result.page * result.pageSize < result.total ? `<a class="button secondary" href="${escape(pageLink(result.page + 1))}">Next</a>` : ""}</div>
+      </div>
+      </section>`);
 }
 export function userFormView(session: Session, user?: User): string {
   const title = user ? "Edit user" : "Add user";
   const own = user?.id === session.user?.id;
-  return layout(session, title, `<div class="page-heading"><div><a href="/users">← Users</a><h1>${title}</h1></div></div><section class="card form-card user-form"><form id="user-form"><div id="form-error" class="notice error" role="alert" hidden></div>${field("name", "Name", "text", user?.name)}${field("email", "Email", "email", user?.email)}<label class="field">Role<select name="role" ${own ? "disabled" : ""}><option value="user" ${user?.role !== "admin" ? "selected" : ""}>Member</option><option value="admin" ${user?.role === "admin" ? "selected" : ""}>Administrator</option></select>${own ? '<small>You cannot remove your own administrator role.</small><input type="hidden" name="role" value="admin">' : ""}<small class="field-error" data-error="role"></small></label>${field("password", user ? "New password" : "Password", "password", "", { optional: !!user, autocomplete: "new-password", hint: user ? "Leave blank to keep the current password." : "Use at least 8 characters." })}${field("password_confirmation", "Confirm password", "password", "", { optional: !!user, autocomplete: "new-password" })}<div class="form-actions"><button class="button" type="submit">${user ? "Save changes" : "Create user"}</button><a class="button secondary" href="/users">Cancel</a></div></form></section>`);
+  return layout(session, title, `<div class="page-heading">
+      <div>
+      <a href="/users">← Users</a>
+      <h1>${title}</h1>
+      </div>
+      </div>
+      <section class="card form-card user-form">
+      <form id="user-form">
+      <div id="form-error" class="notice error" role="alert" hidden>
+      </div>${field("name", "Name", "text", user?.name)}${field("email", "Email", "email", user?.email)}<label class="field">Role<select name="role" ${own ? "disabled" : ""}>
+      <option value="user" ${user?.role !== "admin" ? "selected" : ""}>Member</option>
+      <option value="admin" ${user?.role === "admin" ? "selected" : ""}>Administrator</option>
+      </select>${own ? '<small>You cannot remove your own administrator role.</small><input type="hidden" name="role" value="admin">' : ""}<small class="field-error" data-error="role">
+      </small>
+      </label>${field("password", user ? "New password" : "Password", "password", "", { optional: !!user, autocomplete: "new-password", hint: user ? "Leave blank to keep the current password." : "Use at least 8 characters." })}${field("password_confirmation", "Confirm password", "password", "", { optional: !!user, autocomplete: "new-password" })}<div class="form-actions">
+      <button class="button" type="submit">${user ? "Save changes" : "Create user"}</button>
+      <a class="button secondary" href="/users">Cancel</a>
+      </div>
+      </form>
+      </section>`);
 }
