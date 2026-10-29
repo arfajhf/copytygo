@@ -102,65 +102,12 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		studioValue = "true"
 	}
 
-	env := "APP_NAME=" + name +
-		"\nAPP_ENV=local" +
-		"\nAPP_DEBUG=true" +
-		"\nAPP_HOST=127.0.0.1" +
-		"\nAPP_PORT=8080" +
-		"\nAPP_KEY=" + key +
-		"\nCOPYTYGO_STUDIO=" + studioValue +
-		"\nCOPYTYGO_DOCS_URL=" + version.DocsURL +
-		"\nSERVER_READ_HEADER_TIMEOUT=5" +
-		"\nSERVER_READ_TIMEOUT=15" +
-		"\nSERVER_WRITE_TIMEOUT=30" +
-		"\nSERVER_IDLE_TIMEOUT=60" +
-		"\nSERVER_SHUTDOWN_TIMEOUT=10" +
-		"\nDB_DRIVER=" + options.Database +
-		"\nDB_HOST=127.0.0.1" +
-		"\nDB_PORT=" + dbPort +
-		"\nDB_DATABASE=" + name +
-		"\nDB_USERNAME=" + dbUser +
-		"\nDB_PASSWORD=" +
-		"\nQUEUE_DRIVER=memory" +
-		"\nQUEUE_WORKERS=1" +
-		"\nQUEUE_POLL_SECONDS=1" +
-		"\nQUEUE_BACKOFF_SECONDS=1" +
-		"\nSTORAGE_PATH=storage/app" +
-		"\nMAIL_HOST=127.0.0.1" +
-		"\nMAIL_PORT=1025" +
-		"\nMAIL_USERNAME=" +
-		"\nMAIL_PASSWORD=" +
-		"\nMAIL_FROM=noreply@copytygo.local\n"
-
-	envExample := "APP_NAME=CopyTyGo" +
-		"\nAPP_ENV=local" +
-		"\nAPP_DEBUG=true" +
-		"\nAPP_HOST=127.0.0.1" +
-		"\nAPP_PORT=8080" +
-		"\nAPP_KEY=" +
-		"\nCOPYTYGO_STUDIO=true" +
-		"\nCOPYTYGO_DOCS_URL=" + version.DocsURL +
-		"\nSERVER_READ_HEADER_TIMEOUT=5" +
-		"\nSERVER_READ_TIMEOUT=15" +
-		"\nSERVER_WRITE_TIMEOUT=30" +
-		"\nSERVER_IDLE_TIMEOUT=60" +
-		"\nSERVER_SHUTDOWN_TIMEOUT=10" +
-		"\nDB_DRIVER=" + options.Database +
-		"\nDB_HOST=127.0.0.1" +
-		"\nDB_PORT=" + dbPort +
-		"\nDB_DATABASE=copytygo" +
-		"\nDB_USERNAME=" + dbUser +
-		"\nDB_PASSWORD=" +
-		"\nQUEUE_DRIVER=memory" +
-		"\nQUEUE_WORKERS=1" +
-		"\nQUEUE_POLL_SECONDS=1" +
-		"\nQUEUE_BACKOFF_SECONDS=1" +
-		"\nSTORAGE_PATH=storage/app" +
-		"\nMAIL_HOST=127.0.0.1" +
-		"\nMAIL_PORT=1025" +
-		"\nMAIL_USERNAME=" +
-		"\nMAIL_PASSWORD=" +
-		"\nMAIL_FROM=noreply@copytygo.local\n"
+	env := projectEnvironment(
+		name, key, name, options.Database, dbPort, dbUser, studioValue,
+	)
+	envExample := projectEnvironment(
+		"CopyTyGo", "", "copytygo", options.Database, dbPort, dbUser, "true",
+	)
 
 	files := map[string]string{
 		"go.mod":          "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v5 " + version.Module() + "\n",
@@ -211,6 +158,50 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 	fmt.Println()
 	fmt.Printf("Next: cd %s && ctg dev\n", name)
 	return nil
+}
+
+
+// projectEnvironment keeps example and local environment keys in identical order.
+// A single empty line separates related settings without changing dotenv behavior.
+func projectEnvironment(name, key, dbName, driver, dbPort, dbUser, studio string) string {
+	return strings.Join([]string{
+		"APP_NAME=" + name,
+		"APP_ENV=local",
+		"APP_DEBUG=true",
+		"APP_HOST=127.0.0.1",
+		"APP_PORT=8080",
+		"APP_KEY=" + key,
+		"",
+		"COPYTYGO_STUDIO=" + studio,
+		"COPYTYGO_DOCS_URL=" + version.DocsURL,
+		"",
+		"SERVER_READ_HEADER_TIMEOUT=5",
+		"SERVER_READ_TIMEOUT=15",
+		"SERVER_WRITE_TIMEOUT=30",
+		"SERVER_IDLE_TIMEOUT=60",
+		"SERVER_SHUTDOWN_TIMEOUT=10",
+		"",
+		"DB_DRIVER=" + driver,
+		"DB_HOST=127.0.0.1",
+		"DB_PORT=" + dbPort,
+		"DB_DATABASE=" + dbName,
+		"DB_USERNAME=" + dbUser,
+		"DB_PASSWORD=",
+		"",
+		"QUEUE_DRIVER=memory",
+		"QUEUE_WORKERS=1",
+		"QUEUE_POLL_SECONDS=1",
+		"QUEUE_BACKOFF_SECONDS=1",
+		"",
+		"STORAGE_PATH=storage/app",
+		"",
+		"MAIL_HOST=127.0.0.1",
+		"MAIL_PORT=1025",
+		"MAIL_USERNAME=",
+		"MAIL_PASSWORD=",
+		"MAIL_FROM=noreply@copytygo.local",
+		"",
+	}, "\n")
 }
 
 func frontendFiles(kind string) map[string]string {
