@@ -100,7 +100,13 @@ func (ctx *Context) readInputs() (map[string]string, error) {
 		}
 		return ctx.inputValues, nil
 	}
-	if err := ctx.Request.ParseForm(); err != nil {
+	var parseErr error
+	if mediaType == "multipart/form-data" {
+		parseErr = ctx.Request.ParseMultipartForm(defaultMultipartMemory)
+	} else {
+		parseErr = ctx.Request.ParseForm()
+	}
+	if err := parseErr; err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
 			ctx.inputError = NewHTTPError(http.StatusRequestEntityTooLarge, "Request body is too large")
