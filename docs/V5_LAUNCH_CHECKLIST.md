@@ -14,6 +14,9 @@ This is a launch gate, not a statement that v5 is released.
 - [ ] Test upgrades from existing v4 projects and document breaking changes
 - [ ] Audit old HTML auth templates and remove or label compatibility-only code; TypeScript must remain the default source for generated auth UI
 - [ ] Audit auth, CSRF, static asset serving, file uploads, SQL identifiers, sessions, authorization and production Studio isolation
+- [x] Bound local disk operations to Go's os.Root to reject symlink escape during file read/write/delete, plus regression tests
+- [x] Reject non-finite numeric inputs; close multipart FormFile reader after metadata extraction
+- [ ] Verify request body limits for all upload routes, file MIME/signature allowlists, authenticated upload access, and malformed JSON handling
 - [x] Add private-by-default generated resource routes with role enforcement and CSRF; explicit public access and route resync are supported
 - [ ] Confirm generated resource protections through end-to-end browser and bearer-client tests on a fresh v5 project
 - [ ] Validate all 4 project starters, both database drivers, native builds and production assets
