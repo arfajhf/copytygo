@@ -85,42 +85,34 @@ func formatEnvironmentText(source []byte) []byte {
 		eol = "\r\n"
 	}
 	normalized := strings.ReplaceAll(string(source), "\r\n", "\n")
-	hasFinalNewline := strings.HasSuffix(normalized, "\n")
-	normalized = strings.TrimRight(normalized, "\n")
 	if normalized == "" {
 		return source
 	}
 
-	var output []string
+	lines := strings.Split(normalized, "\n")
+	output := make([]string, 0, len(lines)+8)
 	lastSection := ""
-	pendingBlank := false
-	for _, line := range strings.Split(normalized, "\n") {
-		if strings.TrimSpace(line) == "" {
-			pendingBlank = true
-			continue
-		}
 
+	for _, line := range lines {
 		section := environmentSection(line)
-		separate := pendingBlank || (section != "" &&
-			lastSection != "" && section != lastSection)
-		if separate && len(output) > 0 {
+		if section != "" && lastSection != "" && section != lastSection {
+			// Normalize only blank lines between known sections. Preserve
+			// all other whitespace, comments and potential multiline values.
+			for len(output) > 0 && output[len(output)-1] == "" {
+				output = output[:len(output)-1]
+			}
 			output = append(output, "")
 		}
-		output = append(output, line)
 
+		output = append(output, line)
 		if section != "" {
 			lastSection = section
-		} else if !strings.HasPrefix(strings.TrimSpace(line), "#") {
+		} else if line != "" && !strings.HasPrefix(strings.TrimSpace(line), "#") {
 			lastSection = ""
 		}
-		pendingBlank = false
 	}
 
-	formatted := strings.Join(output, eol)
-	if hasFinalNewline {
-		formatted += eol
-	}
-	return []byte(formatted)
+	return []byte(strings.Join(output, eol))
 }
 
 func environmentSection(line string) string {
