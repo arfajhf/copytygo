@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"go/format"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,7 +135,17 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 	}
 
 	for path, content := range files {
-		if err := os.WriteFile(filepath.Join(name, path), []byte(content), 0644); err != nil {
+		data := []byte(content)
+
+		if filepath.Ext(path) == ".go" {
+			formatted, err := format.Source(data)
+			if err != nil {
+				return fmt.Errorf("copytygo: format generated %s: %w", path, err)
+			}
+			data = formatted
+		}
+
+		if err := os.WriteFile(filepath.Join(name, path), data, 0644); err != nil {
 			return err
 		}
 	}
