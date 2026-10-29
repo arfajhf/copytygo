@@ -33,6 +33,10 @@ ctg dev
 - `ctg build`: compile a deployable native application and frontend assets.
 - `ctg doctor --db --production`: check the configuration of a production deployment.
 
+## Formatting generated projects
+
+New projects have grouped dotenv settings and a generated `.editorconfig`. Run `ctg env:format` from an existing project to add one blank separator line between known setting groups in `.env` and `.env.example`; values and comments remain unchanged. Go files are formatted at generation, and frontend presets use readable JSON and component templates.
+
 ## Security baseline
 
 Never expose Studio on a production server. Set `APP_ENV=production` and `APP_DEBUG=false`, configure a strong and unique `APP_KEY`, and enforce HTTPS in production. Development execution blocked by Windows security should be diagnosed through policy/antivirus logs, not through global protection disabling.
