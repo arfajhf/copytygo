@@ -75,6 +75,7 @@ func (cli *CLI) printHelp() {
 	fmt.Println("  studio                     Open CopyTyGo Studio in browser")
 	fmt.Println("  doctor [--db] [--production] Check project, runtime, security, DB and production config")
 	fmt.Println("  build                      Build application")
+	fmt.Println("  env:format                 Add section spacing to .env and .env.example")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
 	fmt.Println("  update [version]           Update CLI and project dependency")
