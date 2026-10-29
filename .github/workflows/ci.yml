@@ -169,6 +169,25 @@ jobs:
           test -f .env
           test -f .env.example
 
+          # Smoke the upgraded production binary without a database connection.
+          # Anonymous access must be denied before any resource DB query.
+          APP_ENV=production APP_DEBUG=false COPYTYGO_STUDIO=false APP_PORT=19097 ./build/upgraded-app > "$TMP/upgrade-runtime.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true; rm -rf "$TMP"' EXIT
+          STATUS=""
+          for attempt in {1..20}; do
+            STATUS="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:19097/products || true)"
+            if [ "$STATUS" = "401" ]; then break; fi
+            sleep 1
+          done
+          if [ "$STATUS" != "401" ]; then
+            cat "$TMP/upgrade-runtime.log"
+            echo "Expected authenticated v4-upgraded resource to reject guest with 401, got $STATUS" >&2
+            exit 1
+          fi
+          STUDIO="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:19097/__copytygo)"
+          test "$STUDIO" = "404"
+
   frontend-smoke:
     name: Frontend starter (${{ matrix.frontend }})
     runs-on: ubuntu-latest
