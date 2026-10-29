@@ -55,6 +55,16 @@ Documentation: ...
 
 The default application route renders the CopyTyGo welcome page with links to Documentation, Studio, and GitHub.
 
+## Source formatting and environment configuration
+
+Generated `.env` and `.env.example` files now separate the application, Studio, server, database, queue, storage and mail settings with one blank line between groups. Existing projects can apply the same layout without changing their key values:
+
+```bash
+ctg env:format
+```
+
+The formatter preserves existing values, comments and file permissions, and refuses symbolic-link dotenv files. The starter also generates an `.editorconfig` for Go, TypeScript, JSON, Vue and CSS indentation. Go files are formatted before being written, and frontend package/TS config files are emitted as readable multiline JSON.
+
 ## CopyTyGo Studio
 
 Studio is a local development workspace bundled with the framework.
