@@ -89,6 +89,10 @@ MAIL_FROM=noreply@example.com
 
 Restrict filesystem permissions for the configured storage path.
 
+For upload endpoints, use an explicit HTTP request-body limit (for example `app.Use(core.BodyLimit(2 << 20))`) **before** parsing multipart forms. `ctx.File("avatar", maxMemory)` accepts a multipart **in-memory threshold**, not a total upload byte limit. Pass a positive `maxBytes` to `storage.SaveUploadedFile` for a second, per-file size check; never treat `maxBytes=0` as a limit. Validate file signatures/MIME types against the application-specific allowlist before saving, use server-generated storage keys instead of untrusted filenames, and keep private uploads outside publicly served frontend assets.
+
+Local disk operations now use Go `os.Root` to prevent path traversal through symlinks escaping the storage directory. This filesystem boundary does not replace authentication, authorization, content validation, quotas, or malware scanning for untrusted files.
+
 Use real production SMTP credentials and never expose `MAIL_PASSWORD` through application responses.
 
 ## 5. Sessions and authentication
