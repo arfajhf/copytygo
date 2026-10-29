@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v5/core"
 )
 
 type Policy func(*core.Context, any) bool

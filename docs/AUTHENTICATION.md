@@ -29,6 +29,10 @@ Use Node.js 22+ and Go 1.27.1+. `ctg dev` installs frontend dependencies when ne
 
 Auth UI uses TypeScript under the existing frontend folder, including React/Vue presets. Your existing frontend index and preset are preserved; the auth starter has a separate entry you can customize or integrate into your chosen framework. No Go HTML view files are generated. TypeScript edits reload through Vite; restart after Go edits. API-only projects generate bearer routes without a frontend or Node dependency.
 
+## Generated REST resource protection
+
+`ctg make:resource` now creates **private-by-default** resource routes. Multi-role browser applications require a current admin session, and POST/PUT/DELETE also require `X-CSRF-Token`. Single-role applications require a session. API-only starters use bearer authentication plus current database role checks. After adding auth to an existing project or upgrading older resource controllers, run `ctg resource:sync`. Access can be customized with `--access=authenticated|admin|user|public`. Public CRUD must be an explicit decision. See [generated resource security](RESOURCE_SECURITY.md).
+
 ## Public assets and logo
 
 Put images in `frontend/public/images/`, and use `/images/name.png` in your TypeScript UI.

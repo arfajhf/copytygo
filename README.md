@@ -1,21 +1,32 @@
 <p><img src="branding/logo.png" alt="CopyTyGo logo" width="100"></p>
 
-# CopyTyGo v4
+# CopyTyGo v5 (release candidate)
 
 CopyTyGo is a full-stack Go framework focused on productive application development without hiding the strengths of Go.
 
-v4 is the **Complete Framework + Studio** milestone. It combines the production foundation from v3 with a broader backend ecosystem, visual development tooling, richer project starters, and Native/Lite Runtime parity.
+CopyTyGo v5 is planned as the first public stable release. The earlier v4.0.6 tag was an internal prelaunch milestone. v5 focuses on Go + TypeScript developer experience, secure backend tooling, documentation, production reliability and release quality.
 
-> Stable release: `v4.0.6`. Go 1.27.1 or newer is required. Node.js 22+ is needed for frontend development and builds.
+> **Prelaunch release candidate.** v5 has not been published as a stable module yet, and internal v4 tags are not recommended as the public onboarding path. Go 1.27.1+ and Node.js 22+ are needed for full frontend development.
 
 ## Quick start
 
-Install the final v4 CLI, then create a project:
+Until v5.0.0 is tagged and verified, this branch is for release-candidate testing. Build the CLI locally rather than installing an unpublished version:
 
-```powershell
-go install github.com/arfajhf/copytygo/v4/cmd/ctg@v4.0.6
+```bash
+git clone -b feature/v5-release-candidate https://github.com/arfajhf/copytygo.git
+cd copytygo
+go build -o ctg ./cmd/ctg
+./ctg version
+```
+
+After the **v5.0.0 stable tag is actually published and tested**, the public installation command will be:
+
+```bash
+go install github.com/arfajhf/copytygo/v5/cmd/ctg@v5.0.0
 ctg new
 ```
+
+For testing generated v5 applications before publication, follow [the v5 release-candidate upgrade and local module instructions](docs/UPGRADE_V5.md). Do not use a local `replace` directive in published projects.
 
 The interactive installer can configure:
 
@@ -43,6 +54,16 @@ Documentation: ...
 ```
 
 The default application route renders the CopyTyGo welcome page with links to Documentation, Studio, and GitHub.
+
+## Source formatting and environment configuration
+
+Generated `.env` and `.env.example` files now separate the application, Studio, server, database, queue, storage and mail settings with one blank line between groups. Existing projects can apply the same layout without changing their key values:
+
+```bash
+ctg env:format
+```
+
+The formatter preserves existing values, comments and file permissions, and refuses symbolic-link dotenv files. The starter also generates an `.editorconfig` for Go, TypeScript, JSON, Vue and CSS indentation. Go files are formatted before being written, and frontend package/TS config files are emitted as readable multiline JSON.
 
 ## CopyTyGo Studio
 
@@ -79,7 +100,7 @@ ctg studio
 
 ## Backend ecosystem
 
-CopyTyGo v4 includes:
+The existing backend ecosystem carried forward toward v5 includes:
 
 - MySQL and PostgreSQL
 - migrations and schema DSL
@@ -166,6 +187,7 @@ scheduler.Default.Cron(
 
 ```powershell
 ctg make:resource Product name:string price:decimal stock:integer active:boolean description:text?
+# v5 defaults to private resource endpoints. Use --public only when explicitly intended.
 ```
 
 This generates:
@@ -179,7 +201,7 @@ This generates:
 - timestamps
 - soft deletes
 
-Resource API:
+Resource API (private by default; browser sessions require CSRF on writes, API-only uses a bearer token and fresh database role checks; see [resource security](docs/RESOURCE_SECURITY.md)):
 
 ```text
 GET     /products
@@ -307,6 +329,11 @@ Studio also exposes a visual Runtime Health dashboard.
 ctg dev
 ```
 
+On Windows, this compiles and runs `build/dev/app.exe` from the project instead of running a temporary `go run` executable. On Linux/macOS, the default remains `go run`. Use `ctg dev --build` for a project-local build on any OS. This does **not** bypass Windows Defender or App Control: the CLI preserves security-policy errors.
+
+If Smart App Control blocks Windows `go.exe`, the full Go + TypeScript Native Runtime can run inside WSL2 instead. Use `ctg dev` inside WSL, or the optional `ctg dev --wsl` from an **allowed** Windows CLI with WSL configured. See [WSL Native development](docs/WSL_DEVELOPMENT.md), [Windows diagnostics](docs/WINDOWS_DEVELOPMENT.md) and the [v5 launch checklist](docs/V5_LAUNCH_CHECKLIST.md).
+
+
 CopyTyGo runs the complete generated Go application in Native Runtime on every `ctg dev` startup. Runtime decisions cached by older CLI versions are ignored, including after installing auth or changing project source.
 
 `ctg dev --native` remains a compatible alias for the default command. Compilation, application and operating-system execution errors remain visible; the CLI does not automatically switch runtimes.
@@ -341,7 +368,8 @@ CLI:
 
 ```text
 ctg make:controller <name>
-ctg make:resource <name> [field:type ...]
+ctg make:resource <name> [field:type ...] [--access=default|authenticated|admin|user|public]
+ctg resource:sync
 ctg make:model <name>
 ctg make:migration <name>
 ctg make:middleware <name>
@@ -379,16 +407,16 @@ Studio does not register in production even if the local development setting was
 
 ## Go module path
 
-CopyTyGo v4 follows Go semantic import versioning:
+CopyTyGo v5 uses Go semantic import versioning:
+
+```text
+github.com/arfajhf/copytygo/v5
+```
+
+Existing v4 applications may remain on:
 
 ```text
 github.com/arfajhf/copytygo/v4
 ```
 
-Existing v3 applications may remain on:
-
-```text
-github.com/arfajhf/copytygo/v3
-```
-
-until intentionally upgraded.
+until intentionally upgraded. See the [v5 upgrade guide](docs/UPGRADE_V5.md) and [documentation index](docs/INDEX.md). The candidate module is not installable from a public final tag yet.

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/core"
-	"github.com/arfajhf/copytygo/v4/security"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/security"
 )
 
 const sessionContextPrefix = "copytygo.session.state:"

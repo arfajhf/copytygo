@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v4/database/migration"
-	"github.com/arfajhf/copytygo/v4/database/schema"
+	"github.com/arfajhf/copytygo/v5/database/migration"
+	"github.com/arfajhf/copytygo/v5/database/schema"
 )
 
 type migrationColumnSpec struct {

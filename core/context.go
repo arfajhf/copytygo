@@ -15,6 +15,10 @@ type Context struct {
 	statusCode int
 	values     map[string]any
 	router     *Router
+
+	inputParsed bool
+	inputValues map[string]string
+	inputError  error
 }
 
 type Map map[string]any

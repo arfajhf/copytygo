@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v5/config"
 )
 
 func OpenApplication(studio bool) error {

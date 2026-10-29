@@ -15,17 +15,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 
-	copyauth "github.com/arfajhf/copytygo/v4/auth"
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/database"
-	"github.com/arfajhf/copytygo/v4/database/drivers"
-	"github.com/arfajhf/copytygo/v4/security"
-	"github.com/arfajhf/copytygo/v4/validation"
+	copyauth "github.com/arfajhf/copytygo/v5/auth"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/database"
+	"github.com/arfajhf/copytygo/v5/database/drivers"
+	"github.com/arfajhf/copytygo/v5/security"
+	"github.com/arfajhf/copytygo/v5/validation"
 )
 
 type liteRoute struct {
@@ -60,10 +61,23 @@ var liteMemoryStore = struct {
 }
 
 func Dev(args []string) error {
+	// WSL uses Linux Go for the full application when Windows blocks go.exe.
+	if len(args) == 1 && args[0] == "--wsl" {
+		return runWSLDev()
+	}
+	// A stable native binary is also available explicitly on other platforms.
+	if len(args) == 1 && args[0] == "--build" {
+		return devWithRuntimes([]string{"--native"}, runNativeBuildDev, runLiteDev, os.Stdout)
+	}
 	return devWithRuntimes(args, runNativeDev, runLiteDev, os.Stdout)
 }
 
 func runNativeDev() error {
+	// go run launches an executable under a transient Windows temp path.
+	// Build in the project instead to keep the application path predictable.
+	if runtime.GOOS == "windows" {
+		return runNativeBuildDev()
+	}
 	env, cleanup, err := startAuthFrontend()
 	if err != nil {
 		return err
@@ -73,7 +87,7 @@ func runNativeDev() error {
 	cmd.Env = env
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = &stderr
+	cmd.Stderr = nativeStderrWriter(os.Stderr, &stderr)
 	cmd.Stdin = os.Stdin
 
 	err = cmd.Run()
@@ -81,8 +95,7 @@ func runNativeDev() error {
 		return nil
 	}
 
-	message := strings.TrimSpace(stderr.String())
-	return fmt.Errorf("copytygo native runtime: %w: %s", err, message)
+	return nativeExecutionError(err, stderr.String(), runtime.GOOS)
 }
 
 func runLiteDev() error {

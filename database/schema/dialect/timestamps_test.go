@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arfajhf/copytygo/v4/database/schema"
+	"github.com/arfajhf/copytygo/v5/database/schema"
 )
 
 func TestTimestampsUseCurrentTimestampDefaults(t *testing.T) {

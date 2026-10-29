@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/security"
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/security"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 type doctorCheck struct {
@@ -27,7 +27,7 @@ type DoctorResult struct {
 
 func RunDoctorChecks(args []string) []DoctorResult {
 	checks := []doctorCheck{
-		{Name: "go.mod", Err: doctorFileContains("go.mod", "github.com/arfajhf/copytygo/v4")},
+		{Name: "go.mod", Err: doctorFileContains("go.mod", "github.com/arfajhf/copytygo/v5")},
 		{Name: ".env", Err: doctorFileExists(".env")},
 		{Name: "routes", Err: doctorRoutes()},
 		{Name: "Lite params/query", Err: doctorLiteParams()},

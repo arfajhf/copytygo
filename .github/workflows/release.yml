@@ -141,13 +141,13 @@ jobs:
           export GOBIN="$TMP/bin"
           # Fetch the just-created tag directly, without waiting for proxy indexing.
           export GOPROXY=direct
-          go install "github.com/arfajhf/copytygo/v4/cmd/ctg@$TAG"
+          go install "github.com/arfajhf/copytygo/v5/cmd/ctg@$TAG"
           CTG="$GOBIN/ctg"
           test "$("$CTG" version)" = "CopyTyGo v$VERSION"
           cd "$TMP"
           "$CTG" new release-smoke
           cd release-smoke
-          grep -q "require github.com/arfajhf/copytygo/v4 $TAG" go.mod
+          grep -q "require github.com/arfajhf/copytygo/v5 $TAG" go.mod
           if grep -q '^replace ' go.mod; then
             echo "Release smoke must not use a local module replacement."
             exit 1

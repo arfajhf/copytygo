@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arfajhf/copytygo/v4/branding"
+	"github.com/arfajhf/copytygo/v5/branding"
 )
 
 // ensurePublicAssets repairs older projects as well as scaffolding new ones.

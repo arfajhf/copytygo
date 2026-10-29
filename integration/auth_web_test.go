@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/auth"
-	"github.com/arfajhf/copytygo/v4/core"
-	"github.com/arfajhf/copytygo/v4/database"
-	"github.com/arfajhf/copytygo/v4/database/drivers"
-	"github.com/arfajhf/copytygo/v4/database/query"
-	"github.com/arfajhf/copytygo/v4/security"
+	"github.com/arfajhf/copytygo/v5/auth"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/database"
+	"github.com/arfajhf/copytygo/v5/database/drivers"
+	"github.com/arfajhf/copytygo/v5/database/query"
+	"github.com/arfajhf/copytygo/v5/security"
 )
 
 func TestBrowserAuthDatabaseIntegration(t *testing.T) {

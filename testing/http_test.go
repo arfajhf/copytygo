@@ -4,7 +4,7 @@ import (
 	"net/http"
 	stdtesting "testing"
 
-	"github.com/arfajhf/copytygo/v4/core"
+	"github.com/arfajhf/copytygo/v5/core"
 )
 
 func TestHTTPClient(t *stdtesting.T) {

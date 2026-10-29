@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/retry"
+	"github.com/arfajhf/copytygo/v5/retry"
 )
 
 type Client struct {

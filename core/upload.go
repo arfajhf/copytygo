@@ -22,7 +22,7 @@ func (ctx *Context) File(name string, maxMemory ...int64) (*multipart.FileHeader
 		return nil, NewHTTPError(http.StatusBadRequest, "Invalid multipart form")
 	}
 
-	_, header, err := ctx.Request.FormFile(name)
+	file, header, err := ctx.Request.FormFile(name)
 	if err != nil {
 		if err == http.ErrMissingFile {
 			return nil, NewHTTPError(http.StatusBadRequest, fmt.Sprintf("File %q is required", name))
@@ -30,5 +30,10 @@ func (ctx *Context) File(name string, maxMemory ...int64) (*multipart.FileHeader
 		return nil, NewHTTPError(http.StatusBadRequest, "Unable to read uploaded file")
 	}
 
+	// FormFile opens a reader even though Context.File only returns the header.
+	// Close that descriptor; callers can open the header again when saving.
+	if err := file.Close(); err != nil {
+		return nil, NewHTTPError(http.StatusBadRequest, "Unable to close uploaded file")
+	}
 	return header, nil
 }

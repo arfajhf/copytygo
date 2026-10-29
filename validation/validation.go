@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -66,8 +67,9 @@ func (v *Validator) Integer(field string) *Validator {
 func (v *Validator) Numeric(field string) *Validator {
 	value := strings.TrimSpace(v.data[field])
 	if value != "" {
-		if _, err := strconv.ParseFloat(value, 64); err != nil {
-			v.add(field, "must be numeric")
+		number, err := strconv.ParseFloat(value, 64)
+		if err != nil || math.IsNaN(number) || math.IsInf(number, 0) {
+			v.add(field, "must be a finite numeric value")
 		}
 	}
 	return v

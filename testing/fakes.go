@@ -3,9 +3,9 @@ package testing
 import (
 	"sync"
 
-	"github.com/arfajhf/copytygo/v4/events"
-	"github.com/arfajhf/copytygo/v4/mail"
-	"github.com/arfajhf/copytygo/v4/storage"
+	"github.com/arfajhf/copytygo/v5/events"
+	"github.com/arfajhf/copytygo/v5/mail"
+	"github.com/arfajhf/copytygo/v5/storage"
 )
 
 type Mail = mail.Fake

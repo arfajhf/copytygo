@@ -177,8 +177,8 @@ func migrationTemplate(
 	return fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v4/database/migration"
-	"github.com/arfajhf/copytygo/v4/database/schema"
+	"github.com/arfajhf/copytygo/v5/database/migration"
+	"github.com/arfajhf/copytygo/v5/database/schema"
 )
 
 func Register%s() error {
@@ -222,8 +222,8 @@ func resourceMigrationTemplate(
 	return fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v4/database/migration"
-	"github.com/arfajhf/copytygo/v4/database/schema"
+	"github.com/arfajhf/copytygo/v5/database/migration"
+	"github.com/arfajhf/copytygo/v5/database/schema"
 )
 
 func Register%s() error {

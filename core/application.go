@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
-	copycontainer "github.com/arfajhf/copytygo/v4/container"
-	"github.com/arfajhf/copytygo/v4/version"
-	"github.com/arfajhf/copytygo/v4/logging"
+	"github.com/arfajhf/copytygo/v5/config"
+	copycontainer "github.com/arfajhf/copytygo/v5/container"
+	"github.com/arfajhf/copytygo/v5/version"
+	"github.com/arfajhf/copytygo/v5/logging"
 )
 
 type BackgroundTask func(context.Context) error
@@ -129,7 +129,21 @@ type ResourceController interface {
 	Destroy(*Context) error
 }
 
+// Resource preserves the public registration API for explicit application code.
+// Generated resources use ResourceWithMiddleware so access is never implicit.
 func (app *Application) Resource(path string, controller ResourceController) *Application {
+	return app.ResourceWithMiddleware(path, controller, nil, nil)
+}
+
+// ResourceWithMiddleware applies common middleware to all resource routes and
+// write middleware only to POST, PUT, and DELETE. Cookie-based resources can
+// require authentication for reads and CSRF for writes without affecting GET.
+func (app *Application) ResourceWithMiddleware(
+	path string,
+	controller ResourceController,
+	common []Middleware,
+	writes []Middleware,
+) *Application {
 	base := strings.TrimRight(path, "/")
 	if base == "" {
 		base = "/"
@@ -140,12 +154,26 @@ func (app *Application) Resource(path string, controller ResourceController) *Ap
 	}
 	member += "/:id"
 
-	app.Get(base, controller.Index)
-	app.Get(member, controller.Show)
-	app.Post(base, controller.Store)
-	app.Put(member, controller.Update)
-	app.Delete(member, controller.Destroy)
+	app.Get(base, controller.Index).Middleware(common...)
+	app.Get(member, controller.Show).Middleware(common...)
+
+	writeMiddleware := make([]Middleware, 0, len(common)+len(writes))
+	writeMiddleware = append(writeMiddleware, common...)
+	writeMiddleware = append(writeMiddleware, writes...)
+	app.Post(base, controller.Store).Middleware(writeMiddleware...)
+	app.Put(member, controller.Update).Middleware(writeMiddleware...)
+	app.Delete(member, controller.Destroy).Middleware(writeMiddleware...)
 	return app
+}
+
+// ResourceAccessUnconfigured is the fail-closed guard for generated resources
+// without an installed auth starter. No request reaches the resource handler.
+func ResourceAccessUnconfigured() Middleware {
+	return func(next Handler) Handler {
+		return func(ctx *Context) error {
+			return NewHTTPError(http.StatusUnauthorized, "Resource authentication is not configured")
+		}
+	}
 }
 
 func (app *Application) Group(

@@ -60,8 +60,10 @@ jobs:
           ./ctg new smoke-app
           cd smoke-app
 
-          go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
+          go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
           go mod tidy
+          "$TMP/ctg" make:resource Product name:string price:decimal
+          grep -q 'ResourceAccessUnconfigured' routes/resources.go
           "$TMP/ctg" make:job SendWelcomeEmail
           "$TMP/ctg" make:listener NotifyAdmin
           "$TMP/ctg" make:seeder UserSeeder
@@ -87,8 +89,14 @@ jobs:
           for MODE in single multi; do
             "$CTG" new "auth-$MODE"
             cd "auth-$MODE"
-            go mod edit -replace=github.com/arfajhf/copytygo/v4="$ROOT"
+            go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
             "$CTG" install:auth "$MODE"
+            "$CTG" make:resource Product name:string price:decimal
+            grep -q 'sessions.Middleware()' routes/resources.go
+            grep -q 'sessions.CSRF()' routes/resources.go
+            if [ "$MODE" = "multi" ]; then
+              grep -q 'sessions.RequireAdmin()' routes/resources.go
+            fi
             go mod tidy
             go test ./...
             mkdir -p build
@@ -99,6 +107,93 @@ jobs:
             grep -q 'sessions.Dashboard' routes/auth.go
             cd ..
           done
+
+
+  upgrade-v4-smoke:
+    name: Upgrade actual v4.0.6 starter to v5
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout candidate v5
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build v5 candidate CLI
+        run: go build -o build/ctg-v5 ./cmd/ctg
+
+      - name: Create v4 project and upgrade a copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          TMP="$(mktemp -d)"
+          trap 'rm -rf "$TMP"' EXIT
+
+          git clone --depth 1 --branch v4.0.6 https://github.com/arfajhf/copytygo.git "$TMP/framework-v4"
+          (cd "$TMP/framework-v4" && go build -o "$TMP/ctg-v4" ./cmd/ctg)
+          cd "$TMP"
+          "$TMP/ctg-v4" new legacy-app
+          cd legacy-app
+          "$TMP/ctg-v4" install:auth multi
+          "$TMP/ctg-v4" make:resource Product name:string price:decimal
+          grep -q 'app.Resource("/products"' routes/resources.go
+          test -f frontend/src/auth/main.ts
+          test -f database/migrations/registry.go
+
+          # Preserve a fully separate, immutable v4 fixture for comparison.
+          cp -a . "$TMP/legacy-original"
+          find . -type f -name '*.go' -print0 | xargs -0 -r sed -i 's@github.com/arfajhf/copytygo/v4@github.com/arfajhf/copytygo/v5@g'
+          go mod edit -droprequire=github.com/arfajhf/copytygo/v4
+          go mod edit -require=github.com/arfajhf/copytygo/v5@v5.0.0-rc.1
+          go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
+          go mod tidy
+
+          "$ROOT/build/ctg-v5" resource:sync
+          grep -q 'sessions.Middleware()' routes/resources.go
+          grep -q 'sessions.RequireAdmin()' routes/resources.go
+          grep -q 'sessions.CSRF()' routes/resources.go
+          if grep -R -n 'github.com/arfajhf/copytygo/v4' --include='*.go' .; then
+            echo 'Old v4 imports remain after migration' >&2
+            exit 1
+          fi
+          go test ./...
+          go build -o build/upgraded-app ./cmd/app
+          test -x build/upgraded-app
+          test -f frontend/src/auth/main.ts
+          test -f database/migrations/registry.go
+          test -f .env
+          test -f .env.example
+          # Preserve secrets, frontend UI and migration files, except required
+          # Go import-path replacements. Never regenerate an existing schema.
+          cmp "$TMP/legacy-original/.env" .env
+          cmp "$TMP/legacy-original/.env.example" .env.example
+          cmp "$TMP/legacy-original/frontend/src/auth/main.ts" frontend/src/auth/main.ts
+          cmp "$TMP/legacy-original/frontend/public/logo.png" frontend/public/logo.png
+          test "$(find "$TMP/legacy-original/database/migrations" -name '*.go' | wc -l)" -eq "$(find database/migrations -name '*.go' | wc -l)"
+
+          # Smoke the upgraded production binary without a database connection.
+          # Anonymous access must be denied before any resource DB query.
+          APP_ENV=production APP_DEBUG=false COPYTYGO_STUDIO=false APP_PORT=19097 ./build/upgraded-app > "$TMP/upgrade-runtime.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true; rm -rf "$TMP"' EXIT
+          STATUS=""
+          for attempt in {1..20}; do
+            STATUS="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:19097/products || true)"
+            if [ "$STATUS" = "401" ]; then break; fi
+            sleep 1
+          done
+          if [ "$STATUS" != "401" ]; then
+            cat "$TMP/upgrade-runtime.log"
+            echo "Expected authenticated v4-upgraded resource to reject guest with 401, got $STATUS" >&2
+            exit 1
+          fi
+          STUDIO="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:19097/__copytygo)"
+          test "$STUDIO" = "404"
 
   frontend-smoke:
     name: Frontend starter (${{ matrix.frontend }})
@@ -280,7 +375,7 @@ jobs:
           & $ctg new windows-smoke
 
           Set-Location (Join-Path $tmp "windows-smoke")
-          go mod edit "-replace=github.com/arfajhf/copytygo/v4=$root"
+          go mod edit "-replace=github.com/arfajhf/copytygo/v5=$root"
           go mod tidy
           go test ./...
 

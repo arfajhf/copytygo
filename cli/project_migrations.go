@@ -1,6 +1,6 @@
 package cli
 
-import "github.com/arfajhf/copytygo/v4/database/migration"
+import "github.com/arfajhf/copytygo/v5/database/migration"
 
 func ProjectMigrationStatus() ([]migration.StatusRecord, error) {
 	migrator, cleanup, err := prepareMigrator(

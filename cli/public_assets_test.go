@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arfajhf/copytygo/v4/branding"
+	"github.com/arfajhf/copytygo/v5/branding"
 )
 
 func TestAuthUpgradeRestoresPublicFolderAndLogo(t *testing.T) {

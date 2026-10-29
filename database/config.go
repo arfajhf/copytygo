@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/arfajhf/copytygo/v4/config"
+	"github.com/arfajhf/copytygo/v5/config"
 )
 
 type Config struct {

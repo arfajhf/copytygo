@@ -1,13 +1,15 @@
 package auth
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"time"
 
-	"github.com/arfajhf/copytygo/v4/config"
-	"github.com/arfajhf/copytygo/v4/core"
-	"github.com/arfajhf/copytygo/v4/security"
+	"github.com/arfajhf/copytygo/v5/config"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/security"
 )
 
 const ClaimsContextKey = "copytygo.auth.claims"
@@ -77,6 +79,46 @@ func RequireRole(roles ...string) core.Middleware {
 				return core.NewHTTPError(http.StatusForbidden, "Insufficient role")
 			}
 
+			return next(ctx)
+		}
+	}
+}
+
+// RequireCurrentRole checks the current database account on every request.
+// Middleware() must run first to authenticate the signed bearer token. Role
+// claims from a token alone are not enough if an admin was demoted/deleted.
+func RequireCurrentRole(multi bool, roles ...string) core.Middleware {
+	return requireStoredRole(databaseUsers{multi: multi}, roles...)
+}
+
+// roleUserFinder allows role revocation behavior to be unit-tested without
+// requiring a live database. Production uses databaseUsers.Find.
+type roleUserFinder interface {
+	Find(context.Context, string) (User, error)
+}
+
+func requireStoredRole(store roleUserFinder, roles ...string) core.Middleware {
+	return func(next core.Handler) core.Handler {
+		return func(ctx *core.Context) error {
+			claims, ok := Claims(ctx)
+			if !ok {
+				return core.NewHTTPError(http.StatusUnauthorized, "Authentication required")
+			}
+			requestCtx, cancel := context.WithTimeout(ctx.Request.Context(), 10*time.Second)
+			defer cancel()
+			user, err := store.Find(requestCtx, claims.Subject)
+			if errors.Is(err, errUserMissing) {
+				return core.NewHTTPError(http.StatusUnauthorized, "Account no longer exists")
+			}
+			if err != nil {
+				return err
+			}
+			claims.Role = user.Role
+			claims.Data = map[string]string{"name": user.Name, "email": user.Email}
+			ctx.Set(ClaimsContextKey, claims)
+			if len(roles) > 0 && !slices.Contains(roles, user.Role) {
+				return core.NewHTTPError(http.StatusForbidden, "Insufficient role")
+			}
 			return next(ctx)
 		}
 	}

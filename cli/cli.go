@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arfajhf/copytygo/v4/version"
+	"github.com/arfajhf/copytygo/v5/version"
 )
 
 type CommandHandler func(args []string) error
@@ -70,17 +70,19 @@ func (cli *CLI) printHelp() {
 	fmt.Println("Usage: ctg <command>")
 	fmt.Println("\nProject:")
 	fmt.Println("  new [name] [-i|--interactive] Create a project or open the setup wizard")
-	fmt.Println("  dev [--lite|--native]      Run Native dev; Lite requires --lite")
+	fmt.Println("  dev [--lite|--native|--build|--wsl] Native Go; WSL runs full Linux native; Lite explicit")
 	fmt.Println("  open                       Open application in browser")
 	fmt.Println("  studio                     Open CopyTyGo Studio in browser")
 	fmt.Println("  doctor [--db] [--production] Check project, runtime, security, DB and production config")
 	fmt.Println("  build                      Build application")
+	fmt.Println("  env:format                 Add section spacing to .env and .env.example")
 	fmt.Println("  route:list                 List project routes")
 	fmt.Println("  version                    Show version")
 	fmt.Println("  update [version]           Update CLI and project dependency")
 	fmt.Println("\nGenerators:")
 	fmt.Println("  make:controller <name> [--resource|--memory-resource]")
-	fmt.Println("  make:resource <name> [field:type ...]")
+	fmt.Println("  make:resource <name> [field:type ...] [--access=default|authenticated|admin|user|public]")
+	fmt.Println("  resource:sync                 Regenerate secure resource routes after auth changes")
 	fmt.Println("  make:model <name>")
 	fmt.Println("  make:migration <name>")
 	fmt.Println("  make:middleware <name>")

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased (v5 preparation)
+
+- Fail closed on malformed JSON in `Context.Validate` (400), respect request body limits (413), preserve large JSON integer precision and cache parsed fields per request; forms and multipart remain supported.
+- Add optional `storage.SaveUploadedFileAllowed` for MIME signature allowlists with mandatory positive file size limits, while preserving the original upload API.
+
+- Secure generated database resources by default: multi-role admin, single-role authenticated, CSRF on browser writes, bearer guards for API-only projects and fail-closed for missing auth. Public CRUD now requires explicit `--public`. Existing controllers can be secured with `ctg resource:sync`.
+- Add `ResourceWithMiddleware` with separate read/common and write guards, plus authorization regression coverage. See [generated resource security](docs/RESOURCE_SECURITY.md).
+
+- Build and execute a predictable `build/dev/app.exe` on Windows instead of the temporary `go run` executable. `ctg dev --build` enables the same behavior on other OSes.
+- Preserve the native error when Windows application-control policy denies execution and provide targeted event-log guidance instead of bypassing security controls.
+- Add regression coverage and Windows troubleshooting documentation; final v5 module migration and launch are tracked separately.
+
 ## v4.0.6
 
 - Restore frontend/public/, the supplied logo.png and an images directory for older auth projects during install:auth, ctg dev and ctg build, preserving custom assets.

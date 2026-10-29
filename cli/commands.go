@@ -46,9 +46,19 @@ func RegisterDeveloperCommands(app *CLI) {
 	})
 	app.Command("make:resource", func(args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf("usage: ctg make:resource <name> [field:type ...]")
+			return fmt.Errorf("usage: ctg make:resource <name> [field:type ...] [--access=default|authenticated|admin|user|public]")
 		}
-		return MakeResourceWithFields(args[0], args[1:])
+		fields, access, err := parseResourceArguments(args[1:])
+		if err != nil {
+			return err
+		}
+		return MakeResourceWithOptions(args[0], fields, access)
+	})
+	app.Command("resource:sync", func(_ []string) error {
+		return GenerateResourceRoutes(".")
+	})
+	app.Command("env:format", func(_ []string) error {
+		return FormatEnvironmentFiles()
 	})
 	app.Command("make:model", func(args []string) error {
 		if len(args) < 1 {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arfajhf/copytygo/v4/cli"
+	"github.com/arfajhf/copytygo/v5/cli"
 )
 
 func main() {

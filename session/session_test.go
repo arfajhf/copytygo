@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arfajhf/copytygo/v4/core"
-	"github.com/arfajhf/copytygo/v4/security"
+	"github.com/arfajhf/copytygo/v5/core"
+	"github.com/arfajhf/copytygo/v5/security"
 )
 
 func TestSignedPayload(t *testing.T) {

@@ -57,6 +57,16 @@ func ParseResourceFields(specs []string) ([]ResourceField, error) {
 }
 
 func MakeResourceWithFields(name string, specs []string) error {
+	return MakeResourceWithOptions(name, specs, "default")
+}
+
+// MakeResourceWithOptions sets an explicit access policy that is preserved
+// when resources.go is regenerated. "default" uses admin for multi-role auth,
+// authenticated for single-role auth, and deny-by-default without auth.
+func MakeResourceWithOptions(name string, specs []string, access string) error {
+	if !validResourceAccess(access) {
+		return fmt.Errorf("copytygo: unsupported resource access %q; use default, authenticated, admin, user or public", access)
+	}
 	if !safeName.MatchString(name) {
 		return fmt.Errorf("invalid resource name")
 	}
@@ -69,7 +79,7 @@ func MakeResourceWithFields(name string, specs []string) error {
 	if err := writeResourceModel(name, fields); err != nil {
 		return err
 	}
-	if err := writeResourceController(name, fields); err != nil {
+	if err := writeResourceControllerWithAccess(name, fields, access); err != nil {
 		return err
 	}
 	if err := writeResourceMigration(name, fields); err != nil {
@@ -84,6 +94,7 @@ func MakeResourceWithFields(name string, specs []string) error {
 	fmt.Printf("Resource %s created.\n", name)
 	fmt.Printf("Route: /%s\n", table)
 	fmt.Printf("Fields: %s\n", resourceFieldSummary(fields))
+	fmt.Printf("Resource access: %s (regenerate with ctg resource:sync after auth changes)\n", access)
 	fmt.Println()
 	return nil
 }
@@ -113,6 +124,10 @@ func writeResourceModel(name string, fields []ResourceField) error {
 }
 
 func writeResourceController(name string, fields []ResourceField) error {
+	return writeResourceControllerWithAccess(name, fields, "default")
+}
+
+func writeResourceControllerWithAccess(name string, fields []ResourceField, access string) error {
 	controller := name
 	if !strings.HasSuffix(controller, "Controller") {
 		controller += "Controller"
@@ -140,9 +155,10 @@ func writeResourceController(name string, fields []ResourceField) error {
 
 	body := fmt.Sprintf(`package controllers
 
-import "github.com/arfajhf/copytygo/v4/core"
+import "github.com/arfajhf/copytygo/v5/core"
 
 // copytygo:resource %s
+// copytygo:resource-access %s
 
 type %s struct{}
 
@@ -183,7 +199,7 @@ func (%s) Destroy(ctx *core.Context) error {
 	return ctx.DBDestroy("%s", ctx.Param("id"), core.DBResourceOptions{SoftDeletes: true})
 }
 `,
-		resource,
+		resource, access,
 		controller,
 		controller, resource, searchable, filterable, sortable,
 		controller, resource,
@@ -220,8 +236,8 @@ func writeResourceMigration(name string, fields []ResourceField) error {
 	content := fmt.Sprintf(`package migrations
 
 import (
-	"github.com/arfajhf/copytygo/v4/database/migration"
-	"github.com/arfajhf/copytygo/v4/database/schema"
+	"github.com/arfajhf/copytygo/v5/database/migration"
+	"github.com/arfajhf/copytygo/v5/database/schema"
 )
 
 func Register%s() error {
