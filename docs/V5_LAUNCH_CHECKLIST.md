@@ -1,6 +1,6 @@
 # CopyTyGo v5 public launch readiness
 
-CopyTyGo v5 is a **new major Go module** release. A complete v4 backend already exists. The v5 work is focused on developer reliability, security, compatibility, published documentation and distribution.
+CopyTyGo v5 is the **first planned public stable release**. The prior v4.0.6 tag was used internally before public launch. v5 work now focuses on reliability, security, onboarding, official website/documentation and public distribution.
 
 This is a launch gate, not a statement that v5 is released.
 
@@ -12,7 +12,7 @@ This is a launch gate, not a statement that v5 is released.
 - [x] Provide optional WSL2 full native development without disabling host Smart App Control; Windows-native trust acceptance remains outstanding
 - [x] Migrate the Go module and generated templates to the v5 semantic import path `github.com/arfajhf/copytygo/v5`
 - [x] Add CI migration test from a real v4.0.6 multi-role TypeScript app with generated resource, and document major-version upgrade commands
-- [ ] Validate upgrade of customized v4 projects and real database data/session preservation, including rollback
+- [x] Classify customized v4 upgrade and production-data rollback as non-blocking for the first public launch, because v4.0.6 has not been distributed to external users (revisit if the audience changes)
 - [ ] Audit old HTML auth templates and remove or label compatibility-only code; TypeScript must remain the default source for generated auth UI
 - [ ] Audit auth, CSRF, static asset serving, file uploads, SQL identifiers, sessions, authorization and production Studio isolation
 - [x] Bound local disk operations to Go's os.Root to reject symlink escape during file read/write/delete, plus regression tests
@@ -25,8 +25,9 @@ This is a launch gate, not a statement that v5 is released.
 - [ ] Validate all 4 project starters, both database drivers, native builds and production assets
 - [ ] Run the complete CI matrix and Windows smoke checks against the release candidate
 - [ ] Update all current architecture, authentication, runtime, production and upgrade documentation
-- [ ] Publish a coherent official documentation site or select a stable permanent docs URL
+- [ ] Publish the official CopyTyGo website with landing page, installation guide, versioned docs, examples, releases and changelog; define a permanent docs URL
 - [ ] Add a complete end-to-end example app and newcomer quickstart
 - [ ] Prepare final release notes, immutable tag, fresh `go install` verification and launch announcement
+- [ ] On website launch, recommend the newest **stable** release as the default, not release candidates or internal v4 tags; keep previous version docs available by direct version URL
 
 **Do not merge or publish a final v5 tag solely because CI is green.** Local acceptance and release-candidate validation remain required.
