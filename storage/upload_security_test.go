@@ -19,8 +19,9 @@ func uploadedFileHeader(t *testing.T, filename string, data []byte) *multipart.F
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	if err := req.ParseMultipartForm(1<<20); err != nil { t.Fatal(err) }
 	t.Cleanup(func() { if req.MultipartForm != nil { _ = req.MultipartForm.RemoveAll() } })
-	_, header, err := req.FormFile("attachment")
+	file, header, err := req.FormFile("attachment")
 	if err != nil { t.Fatal(err) }
+	if err := file.Close(); err != nil { t.Fatal(err) }
 	return header
 }
 
