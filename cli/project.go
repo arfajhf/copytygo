@@ -114,6 +114,7 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		"go.mod":          "module " + name + "\n\ngo 1.27.1\n\nrequire github.com/arfajhf/copytygo/v5 " + version.Module() + "\n",
 		".env":            env,
 		".env.example":    envExample,
+		".editorconfig":   projectEditorConfig,
 		"cmd/app/main.go": strings.ReplaceAll(projectMain, "{{MODULE}}", name),
 		"routes/web.go":   projectRoutes,
 		"README.md": "# " + name + "\n\nGenerated with CopyTyGo " + version.Framework +
@@ -390,6 +391,25 @@ declare module "*.vue" {
 		}
 	}
 }
+
+const projectEditorConfig = `root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.go]
+indent_style = tab
+
+[*.{ts,tsx,js,jsx,json,vue,css,html}]
+indent_style = space
+indent_size = 2
+
+[.env*]
+trim_trailing_whitespace = false
+`
 
 const projectMain = `package main
 
