@@ -1,6 +1,6 @@
 # CopyTyGo documentation
 
-CopyTyGo is a full-stack Go + TypeScript framework. These documents describe the **v5 release candidate**, intended to become CopyTyGo's first publicly recommended stable release. The v4.0.6 tag was an internal prelaunch version. Do not publish stable-install instructions for v5 until the final immutable tag is available.
+CopyTyGo is a full-stack Go + TypeScript framework. These documents cover **CopyTyGo v5.0.0**, the intended first public stable release. The earlier v4.0.6 tag was an internal prelaunch version. Install from the immutable v5.0.0 tag once the GitHub Release and clean installation checks are complete.
 
 ## Start here
 
