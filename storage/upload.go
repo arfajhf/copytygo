@@ -45,16 +45,20 @@ func SaveUploadedFileAllowed(disk Disk, path string, header *multipart.FileHeade
 	if err != nil {
 		return fmt.Errorf("copytygo storage: unable to detect uploaded content type: %w", err)
 	}
+	matched := false
 	for _, allowed := range allowedTypes {
 		expected, _, err := mime.ParseMediaType(strings.TrimSpace(allowed))
 		if err != nil || expected == "" || strings.Contains(expected, "*") {
 			return fmt.Errorf("copytygo storage: invalid allowed MIME type %q", allowed)
 		}
 		if strings.EqualFold(detected, expected) {
-			return disk.Put(path, data)
+			matched = true
 		}
 	}
-	return fmt.Errorf("copytygo storage: uploaded content type %q is not allowed", detected)
+	if !matched {
+		return fmt.Errorf("copytygo storage: uploaded content type %q is not allowed", detected)
+	}
+	return disk.Put(path, data)
 }
 
 func readUploadedFile(header *multipart.FileHeader, maxBytes int64) ([]byte, error) {
