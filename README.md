@@ -1,32 +1,23 @@
 <p><img src="branding/logo.png" alt="CopyTyGo logo" width="100"></p>
 
-# CopyTyGo v5 (release candidate)
+# CopyTyGo v5.0.0
 
 CopyTyGo is a full-stack Go framework focused on productive application development without hiding the strengths of Go.
 
-CopyTyGo v5 is planned as the first public stable release. The earlier v4.0.6 tag was an internal prelaunch milestone. v5 focuses on Go + TypeScript developer experience, secure backend tooling, documentation, production reliability and release quality.
+CopyTyGo v5.0.0 is the first public stable release in the v5 module series. The earlier v4.0.6 tag was an internal prelaunch milestone. CopyTyGo focuses on Go + TypeScript developer experience, secure backend tooling, and production reliability.
 
-> **Prelaunch release candidate.** v5 has not been published as a stable module yet, and internal v4 tags are not recommended as the public onboarding path. Go 1.27.1+ and Node.js 22+ are needed for full frontend development.
+> **Requirements:** Go 1.27.1+ and Node.js 22+ for full frontend development. This README targets the official `v5.0.0` release tag. Verify the GitHub Release is published before installing.
 
 ## Quick start
 
-Until v5.0.0 is tagged and verified, this branch is for release-candidate testing. Build the CLI locally rather than installing an unpublished version:
-
-```bash
-git clone -b feature/v5-release-candidate https://github.com/arfajhf/copytygo.git
-cd copytygo
-go build -o ctg ./cmd/ctg
-./ctg version
-```
-
-After the **v5.0.0 stable tag is actually published and tested**, the public installation command will be:
+Once the official `v5.0.0` release is published, install the CLI from the immutable version tag:
 
 ```bash
 go install github.com/arfajhf/copytygo/v5/cmd/ctg@v5.0.0
 ctg new
 ```
 
-For testing generated v5 applications before publication, follow [the v5 release-candidate upgrade and local module instructions](docs/UPGRADE_V5.md). Do not use a local `replace` directive in published projects.
+For fresh projects, follow the [getting started and CLI documentation](docs/INDEX.md). Do not use a local Go module `replace` directive in published applications. The official documentation website will be linked when available.
 
 The interactive installer can configure:
 
