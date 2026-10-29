@@ -149,7 +149,7 @@ jobs:
           cp -a . "$TMP/legacy-original"
           find . -type f -name '*.go' -print0 | xargs -0 -r sed -i 's@github.com/arfajhf/copytygo/v4@github.com/arfajhf/copytygo/v5@g'
           go mod edit -droprequire=github.com/arfajhf/copytygo/v4
-          go mod edit -require=github.com/arfajhf/copytygo/v5@v5.0.0-rc.1
+          go mod edit -require=github.com/arfajhf/copytygo/v5@v5.0.0
           go mod edit -replace=github.com/arfajhf/copytygo/v5="$ROOT"
           go mod tidy
 
