@@ -51,7 +51,7 @@ func InstallAuth(mode, root string) error {
 	if installed, ok := liteAuthDefaultRole(filepath.Join(root, "app/auth/web.go")); ok && installed != defaultRole {
 		return fmt.Errorf("copytygo: auth mode differs from the existing starter; reinstall with the original single/multi mode to preserve your users schema")
 	}
-	model := fmt.Sprintf("package auth\n\n// User describes the application user. Password hashes are never serialized.\ntype User struct {\n\tID int64 `json:\"id\"`\n\tName string `json:\"name\"`\n\tEmail string `json:\"email\"`\n\tPassword string `json:\"-\"`\n%s}\n", roleField)
+	model := fmt.Sprintf("// Authentication user model. Password hashes stay out of JSON.\n\npackage auth\n\n// User describes the application user. Password hashes are never serialized.\ntype User struct {\n\tID int64 `json:\"id\"`\n\tName string `json:\"name\"`\n\tEmail string `json:\"email\"`\n\tPassword string `json:\"-\"`\n%s}\n", roleField)
 	files := map[string]string{
 		"app/auth/user.go":       model,
 		"app/auth/middleware.go": authMiddlewareScaffold,
@@ -262,7 +262,9 @@ func Register%s() error {
 	return GenerateMigrationRegistry(directory)
 }
 
-const authMiddlewareScaffold = `package auth
+const authMiddlewareScaffold = `// Authentication middleware helpers for API requests.
+
+package auth
 
 import (
  copyauth "github.com/arfajhf/copytygo/v5/auth"
@@ -280,7 +282,9 @@ func RequireRole(roles ...string) core.Middleware {
 }
 `
 
-const authWebScaffold = `package auth
+const authWebScaffold = `// Authentication configuration: default role and session handlers.
+
+package auth
 
 import copyauth "github.com/arfajhf/copytygo/v5/auth"
 
