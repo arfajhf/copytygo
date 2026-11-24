@@ -177,6 +177,10 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 // A single empty line separates related settings without changing dotenv behavior.
 func projectEnvironment(name, key, dbName, driver, dbPort, dbUser, studio string) string {
 	return strings.Join([]string{
+		"# ==========================================",
+		"# CopyTyGo Application Configuration",
+		"# ==========================================",
+		"",
 		"APP_NAME=" + name,
 		"APP_ENV=local",
 		"APP_DEBUG=true",
@@ -279,7 +283,9 @@ export default defineConfig({
   },
 });`,
 			"frontend/index.html": `<link rel="icon" href="/logo.png"><div id="root"></div><script type="module" src="/src/main.tsx"></script>`,
-			"frontend/src/main.tsx": `import React from "react";
+			"frontend/src/main.tsx": `// React entry point. Edit this file to customize your app.
+
+import React from "react";
 import { createRoot } from "react-dom/client";
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -354,10 +360,13 @@ export default defineConfig({
   },
 });`,
 			"frontend/index.html": `<link rel="icon" href="/logo.png"><div id="app"></div><script type="module" src="/src/main.ts"></script>`,
-			"frontend/src/main.ts": `import { createApp } from "vue";
+			"frontend/src/main.ts": `// Vue entry point. Start editing App.vue to build your UI.
+
+import { createApp } from "vue";
 import App from "./App.vue";
 createApp(App).mount("#app");`,
-			"frontend/src/App.vue": `<template>
+			"frontend/src/App.vue": `<!-- Main UI component. Customize this page for your app. -->
+<template>
   <main>
     <img
       src="/logo.png"
@@ -411,7 +420,12 @@ indent_size = 2
 trim_trailing_whitespace = false
 `
 
-const projectMain = `package main
+const projectMain = `// ==========================================
+// CopyTyGo Application Entry Point
+// Loads configuration, services, and routes.
+// ==========================================
+
+package main
 
 import (
 	"log"
@@ -461,7 +475,12 @@ func main() {
 }
 `
 
-const projectRoutes = `package routes
+const projectRoutes = `// ==========================================
+// Application Routes
+// Add your HTTP endpoints in this file.
+// ==========================================
+
+package routes
 
 import (
 	"net/http"
@@ -546,7 +565,10 @@ export default defineConfig({
 });
 `
 const frontendHTML = `<link rel="icon" href="/logo.png"><div id="app"></div><script type="module" src="/src/main.ts"></script>`
-const frontendAPI = `export type ApiError = {
+const frontendAPI = `// API client for Go backend requests.
+// Set a bearer token only when your API requires one.
+
+export type ApiError = {
   error?: {
     status?: number;
     message?: string;
@@ -631,7 +653,9 @@ export class CopyTyGoClient {
 
 export const api = new CopyTyGoClient();
 `
-const frontendForms = `export function formJSON(form: HTMLFormElement): Record<string, string> {
+const frontendForms = `// Form helpers for submitting and displaying validation errors.
+
+export function formJSON(form: HTMLFormElement): Record<string, string> {
   return Object.fromEntries(new FormData(form).entries()) as Record<string, string>;
 }
 
@@ -641,7 +665,9 @@ export function fieldErrors(errors: Record<string, string[]>): string[] {
   );
 }
 `
-const frontendMain = `import { api } from "./api";
+const frontendMain = `// Application UI entry point. Customize the welcome screen here.
+
+import { api } from "./api";
 
 type Health = {
   framework: string;
