@@ -36,7 +36,7 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		return fmt.Errorf("copytygo: invalid project name")
 	}
 	if _, err := os.Stat(name); err == nil {
-		return fmt.Errorf("copytygo: directory %q already exists", name)
+		return fmt.Errorf("copytygo: directory %q already exists\nHint: choose a different project name or directory.", name)
 	}
 
 	options.Database = strings.ToLower(strings.TrimSpace(options.Database))
