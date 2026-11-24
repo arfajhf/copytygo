@@ -47,3 +47,13 @@ DB_DATABASE=myapp
 - Use `gofmt` for Go and the existing `.editorconfig` conventions for frontend files.
 
 The v5.0.1 candidate applies this policy to generated starters. Existing user project files are left unchanged.
+
+## CLI messages in the v5.0.1 candidate
+
+Project creation reports the selected database, frontend, authentication mode, Studio status and the two next commands. It does not print generated secrets.
+
+Database connection errors from `ctg db:check`, database-backed migrations and `ctg doctor --db` provide a short explanation and a configuration hint. Underlying driver errors are not copied into terminal output, since some database drivers include credentials or full connection strings in their messages. Test user-facing errors with incorrect hosts and invalid credentials.
+
+Unknown CLI commands point to `ctg help`. Trying to create a project in an existing directory suggests choosing a different name or location, without modifying that directory.
+
+These changes improve diagnostics and presentation; they do not add commands or change the framework's public APIs.
