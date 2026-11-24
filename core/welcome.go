@@ -124,6 +124,9 @@ var welcomeTemplate = template.Must(template.New("copytygo-welcome").Parse(`<!do
 .navbar a.nav-action-primary{background:#ecf3ff;border-color:#ecf3ff;color:#0d1a2f}
 .navbar a.nav-action-primary:hover{background:#fff;border-color:#fff}
 .navbar a:focus-visible{outline:2px solid #8fb5ff;outline-offset:3px}
+.welcome{flex:1;display:grid;place-items:center;padding:48px 28px}
+.shell{width:min(1040px,100%)}
+.badge{display:inline-flex;gap:8px;align-items:center;padding:7px 11px;border:1px solid #293955;border-radius:999px;color:#a9bbd7;font-size:13px;background:#0d1729cc}
 .dot{width:8px;height:8px;border-radius:50%;background:#59d98e;box-shadow:0 0 18px #59d98e}
 .card{margin-top:16px;border:1px solid #24324a;border-radius:24px;background:#0c1525d9;box-shadow:0 28px 90px #0008;overflow:hidden}
 .hero{padding:58px 54px 40px}.mark{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#80a7ff;font-weight:700}h1{font-size:clamp(42px,7vw,76px);line-height:.98;margin:16px 0;color:#f8fbff;letter-spacing:-.055em}
