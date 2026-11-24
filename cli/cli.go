@@ -57,7 +57,7 @@ func (cli *CLI) Run() error {
 
 	if !exists {
 		return fmt.Errorf(
-			"unknown command %q",
+			"unknown command %q\nHint: run ctg help to see available commands.",
 			command,
 		)
 	}
