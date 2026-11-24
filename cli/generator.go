@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"go/format"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -43,8 +44,17 @@ func writeGenerated(path, content string) error {
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("copytygo: %s already exists", path)
 	}
-	return os.WriteFile(path, []byte(content), 0644)
+	data := []byte(generatedFileIntro(path) + content)
+	if filepath.Ext(path) == ".go" {
+		formatted, err := format.Source(data)
+		if err != nil {
+			return fmt.Errorf("copytygo: format generated %s: %w", path, err)
+		}
+		data = formatted
+	}
+	return os.WriteFile(path, data, 0644)
 }
+
 func MakeController(name, dir string) error {
 	return MakeControllerWithMode(name, dir, "")
 }
