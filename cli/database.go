@@ -33,7 +33,7 @@ func databaseHealthCheck() error {
 
 	db, err := database.Connect()
 	if err != nil {
-		return err
+		return databaseConnectionError(err)
 	}
 	defer database.Close()
 
@@ -41,7 +41,7 @@ func databaseHealthCheck() error {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("copytygo: database ping failed: %w", err)
+		return databaseConnectionError(err)
 	}
 
 	return nil
