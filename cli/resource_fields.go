@@ -233,7 +233,9 @@ func writeResourceMigration(name string, fields []ResourceField) error {
 		columns.WriteString("\t\t\t\t\t" + expr + "\n")
 	}
 
-	content := fmt.Sprintf(`package migrations
+	content := fmt.Sprintf(`// Resource migration. Customize the table fields here.
+
+package migrations
 
 import (
 	"github.com/arfajhf/copytygo/v5/database/migration"
