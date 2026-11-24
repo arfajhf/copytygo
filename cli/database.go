@@ -15,12 +15,11 @@ func DatabaseCheck(_ []string) error {
 		return err
 	}
 
-	fmt.Println("CopyTyGo Database")
-	fmt.Println("-----------------")
-	fmt.Println("Driver   :", config.Get("DB_DRIVER", "mysql"))
-	fmt.Println("Host     :", config.Get("DB_HOST", "127.0.0.1"))
-	fmt.Println("Database :", config.Get("DB_DATABASE", ""))
-	fmt.Println("Status   : connected")
+	fmt.Println("CopyTyGo | Database connected")
+	fmt.Println("-----------------------------")
+	fmt.Println("  Driver   :", config.Get("DB_DRIVER", "mysql"))
+	fmt.Println("  Host     :", config.Get("DB_HOST", "127.0.0.1"))
+	fmt.Println("  Database :", config.Get("DB_DATABASE", ""))
 	return nil
 }
 
