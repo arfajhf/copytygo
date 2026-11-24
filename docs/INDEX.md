@@ -15,6 +15,7 @@ CopyTyGo is a full-stack Go + TypeScript framework. These documents cover **Copy
 8. [Upgrade v4 to v5](UPGRADE_V5.md): module path, breaking changes and migration checks.
 9. [V5 release gates](V5_LAUNCH_CHECKLIST.md): track outstanding launch validation.
 10. [Recommended code reading order](LEARNING_PATH.md): navigate framework packages.
+11. [Generated code style](GENERATED_CODE_STYLE.md): short file comments, readable scaffolds and safe marker conventions.
 
 ## Development commands
 
