@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"go/format"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -161,15 +162,27 @@ func NewProjectWithOptions(name string, options ProjectOptions) error {
 		}
 	}
 
-	fmt.Println()
-	fmt.Printf("Created CopyTyGo project %s\n", name)
-	fmt.Printf("Database : %s\n", options.Database)
-	fmt.Printf("Frontend : %s\n", options.Frontend)
-	fmt.Printf("Auth     : %s\n", options.Auth)
-	fmt.Printf("Studio   : %t\n", options.Studio)
-	fmt.Println()
-	fmt.Printf("Next: cd %s && ctg dev\n", name)
+	printProjectCreated(os.Stdout, name, options)
 	return nil
+}
+
+// printProjectCreated keeps the next steps easy to scan on any terminal.
+func printProjectCreated(output io.Writer, name string, options ProjectOptions) {
+	studio := "disabled"
+	if options.Studio {
+		studio = "enabled"
+	}
+
+	fmt.Fprintln(output, "\nCopyTyGo | Project created")
+	fmt.Fprintln(output, "--------------------------")
+	fmt.Fprintf(output, "  Name      : %s\n", name)
+	fmt.Fprintf(output, "  Database  : %s\n", options.Database)
+	fmt.Fprintf(output, "  Frontend  : %s\n", options.Frontend)
+	fmt.Fprintf(output, "  Auth      : %s\n", options.Auth)
+	fmt.Fprintf(output, "  Studio    : %s\n", studio)
+	fmt.Fprintln(output, "\nNext steps:")
+	fmt.Fprintf(output, "  cd %s\n", name)
+	fmt.Fprintln(output, "  ctg dev")
 }
 
 
