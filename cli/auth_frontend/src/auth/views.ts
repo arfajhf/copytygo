@@ -1,3 +1,5 @@
+// Edit these templates to customize your application's pages.
+
 import type { Session, User, Dashboard, UserList } from "./api";
 
 // Every dynamic value is escaped before entering markup, including user names.
