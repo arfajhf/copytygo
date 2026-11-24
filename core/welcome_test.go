@@ -152,3 +152,29 @@ func TestWelcomeEscapesApplicationNameInNavbar(t *testing.T) {
 		t.Fatal("escaped project name missing")
 	}
 }
+
+func TestWelcomePreservesCenteredCardAndRunningBadge(t *testing.T) {
+	app := New()
+	app.Get("/", Welcome())
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	page := rec.Body.String()
+	// Guard the core layout rules so navbar changes cannot stretch the hero again.
+	for _, rule := range []string{
+		".welcome{flex:1;display:grid;place-items:center;padding:48px 28px}",
+		".shell{width:min(1040px,100%)}",
+		".badge{display:inline-flex;gap:8px;align-items:center;",
+		".card{margin-top:16px;",
+		".hero{padding:58px 54px 40px}",
+		"@media(max-width:700px)",
+		".grid{grid-template-columns:1fr}",
+	} {
+		if !strings.Contains(page, rule) {
+			t.Errorf("welcome layout rule missing: %s", rule)
+		}
+	}
+	if !strings.Contains(page, "<span class=\"dot\"></span>Your application is running") {
+		t.Fatal("running status badge markup missing")
+	}
+}
