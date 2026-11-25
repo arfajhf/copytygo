@@ -15,12 +15,11 @@ func DatabaseCheck(_ []string) error {
 		return err
 	}
 
-	fmt.Println("CopyTyGo Database")
-	fmt.Println("-----------------")
-	fmt.Println("Driver   :", config.Get("DB_DRIVER", "mysql"))
-	fmt.Println("Host     :", config.Get("DB_HOST", "127.0.0.1"))
-	fmt.Println("Database :", config.Get("DB_DATABASE", ""))
-	fmt.Println("Status   : connected")
+	fmt.Println("CopyTyGo | Database connected")
+	fmt.Println("-----------------------------")
+	fmt.Println("  Driver   :", config.Get("DB_DRIVER", "mysql"))
+	fmt.Println("  Host     :", config.Get("DB_HOST", "127.0.0.1"))
+	fmt.Println("  Database :", config.Get("DB_DATABASE", ""))
 	return nil
 }
 
@@ -33,7 +32,7 @@ func databaseHealthCheck() error {
 
 	db, err := database.Connect()
 	if err != nil {
-		return err
+		return databaseConnectionError(err)
 	}
 	defer database.Close()
 
@@ -41,7 +40,7 @@ func databaseHealthCheck() error {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("copytygo: database ping failed: %w", err)
+		return databaseConnectionError(err)
 	}
 
 	return nil

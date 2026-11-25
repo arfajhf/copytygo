@@ -1,3 +1,5 @@
+// Session and API helpers for browser authentication.
+
 export interface User {
   id: string;
   name: string;

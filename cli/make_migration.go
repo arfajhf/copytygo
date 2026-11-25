@@ -174,7 +174,9 @@ func migrationTemplate(
 	tableName string,
 ) string {
 
-	return fmt.Sprintf(`package migrations
+	return fmt.Sprintf(`// Schema migration. Edit columns before running it.
+
+package migrations
 
 import (
 	"github.com/arfajhf/copytygo/v5/database/migration"
@@ -219,7 +221,9 @@ func resourceMigrationTemplate(
 	migrationName string,
 	tableName string,
 ) string {
-	return fmt.Sprintf(`package migrations
+	return fmt.Sprintf(`// Resource migration. Customize the initial table schema here.
+
+package migrations
 
 import (
 	"github.com/arfajhf/copytygo/v5/database/migration"

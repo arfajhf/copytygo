@@ -1,3 +1,5 @@
+// Browser authentication pages and form interactions.
+
 import {
   api,
   ApiError,

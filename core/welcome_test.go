@@ -64,3 +64,117 @@ func TestWelcomeOnlyLinksInstalledAuthPages(t *testing.T) {
 		}
 	}
 }
+
+func TestWelcomeNavbarHasProjectIdentityAndUsefulLinks(t *testing.T) {
+	t.Setenv("APP_NAME", "My Store")
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("COPYTYGO_STUDIO", "true")
+
+	app := New()
+	app.Get("/", Welcome())
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	page := rec.Body.String()
+	for _, want := range []string{
+		`aria-label="My Store home"`,
+		`class="brand-name">My Store</span>`,
+		"Powered by CopyTyGo",
+		`aria-label="Main navigation"`,
+		`class="nav-link" href="`,
+		">Docs</a>",
+		">GitHub</a>",
+		`class="nav-action" href="/__copytygo">Open Studio</a>`,
+		"@media(max-width:520px)",
+		".navbar a:focus-visible",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("welcome navigation missing %q", want)
+		}
+	}
+	if strings.Contains(page, `href="/login"`) || strings.Contains(page, `href="/register"`) {
+		t.Fatal("welcome navigation linked to authentication routes that are not installed")
+	}
+}
+
+func TestWelcomeNavbarUsesInstalledAuthRoutes(t *testing.T) {
+	t.Setenv("APP_ENV", "local")
+	app := New()
+	app.Get("/", Welcome())
+	app.Get("/login", func(ctx *Context) error { return ctx.Text("login") })
+	app.Get("/register", func(ctx *Context) error { return ctx.Text("register") })
+
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	page := rec.Body.String()
+
+	for _, want := range []string{
+		`class="nav-link" href="/login">Log in</a>`,
+		`class="nav-action nav-action-primary" href="/register">Register</a>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("missing installed auth navigation: %q", want)
+		}
+	}
+}
+
+func TestWelcomeHidesStudioWhenDisabled(t *testing.T) {
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("COPYTYGO_STUDIO", "false")
+
+	app := New()
+	app.Get("/", Welcome())
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	page := rec.Body.String()
+	if strings.Contains(page, `href="/__copytygo"`) || strings.Contains(page, "Open Studio") {
+		t.Fatal("disabled Studio must not be linked from the welcome page")
+	}
+}
+
+func TestWelcomeEscapesApplicationNameInNavbar(t *testing.T) {
+	t.Setenv("APP_NAME", `<script>alert("unsafe")</script>`)
+
+	app := New()
+	app.Get("/", Welcome())
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	if strings.Contains(rec.Body.String(), `<script>alert("unsafe")</script>`) {
+		t.Fatal("navbar rendered unescaped application name")
+	}
+	if !strings.Contains(rec.Body.String(), "&lt;script&gt;") {
+		t.Fatal("escaped project name missing")
+	}
+}
+
+func TestWelcomePreservesCenteredCardAndRunningBadge(t *testing.T) {
+	app := New()
+	app.Get("/", Welcome())
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	page := rec.Body.String()
+	// Guard the core layout rules so navbar changes cannot stretch the hero again.
+	for _, rule := range []string{
+		".welcome{flex:1;display:grid;place-items:center;padding:48px 28px}",
+		".shell{width:min(1040px,100%)}",
+		".badge{display:inline-flex;gap:8px;align-items:center;",
+		".card{margin-top:16px;",
+		".hero{padding:58px 54px 40px}",
+		"@media(max-width:700px)",
+		".grid{grid-template-columns:1fr}",
+	} {
+		if !strings.Contains(page, rule) {
+			t.Errorf("welcome layout rule missing: %s", rule)
+		}
+	}
+	if !strings.Contains(page, "<span class=\"dot\"></span>Your application is running") {
+		t.Fatal("running status badge markup missing")
+	}
+}

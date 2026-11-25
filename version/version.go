@@ -2,8 +2,8 @@ package version
 
 import "runtime/debug"
 
-const Framework = "5.0.0"
-const StableModule = "v5.0.0"
+const Framework = "5.0.1"
+const StableModule = "v5.0.1"
 const DocsURL = "https://github.com/arfajhf/copytygo/tree/main/docs"
 
 func Module() string {

@@ -1,6 +1,6 @@
 # CopyTyGo documentation
 
-CopyTyGo is a full-stack Go + TypeScript framework. These documents cover **CopyTyGo v5.0.0**, the intended first public stable release. The earlier v4.0.6 tag was an internal prelaunch version. Install from the immutable v5.0.0 tag once the GitHub Release and clean installation checks are complete.
+CopyTyGo is a full-stack Go + TypeScript framework. These documents cover **CopyTyGo v5.0.1**, the first patch release in the stable v5 module series. The first public stable release was v5.0.0. Install from the immutable v5.0.1 tag after its GitHub Release is published.
 
 ## Start here
 
@@ -15,6 +15,7 @@ CopyTyGo is a full-stack Go + TypeScript framework. These documents cover **Copy
 8. [Upgrade v4 to v5](UPGRADE_V5.md): module path, breaking changes and migration checks.
 9. [V5 release gates](V5_LAUNCH_CHECKLIST.md): track outstanding launch validation.
 10. [Recommended code reading order](LEARNING_PATH.md): navigate framework packages.
+11. [Generated code style](GENERATED_CODE_STYLE.md): short file comments, readable scaffolds and safe marker conventions.
 
 ## Development commands
 
@@ -41,4 +42,4 @@ New projects have grouped dotenv settings and a generated `.editorconfig`. Run `
 
 Never expose Studio on a production server. Set `APP_ENV=production` and `APP_DEBUG=false`, configure a strong and unique `APP_KEY`, and enforce HTTPS in production. Development execution blocked by Windows security should be diagnosed through policy/antivirus logs, not through global protection disabling.
 
-This index and all attached docs are maintained as source-controlled documentation. The official public site is planned, not yet live. Its default installation and documentation links must resolve to the latest **stable** released version. Keep historical versions accessible through explicitly versioned URLs. See [website release plan](WEBSITE_LAUNCH_PLAN.md).
+This index and all attached docs are maintained as source-controlled documentation. The official site is https://copytygo.org/; source documentation is maintained in this repository. The full documentation site is being developed. Its default installation and documentation links must resolve to the latest **stable** released version. Keep historical versions accessible through explicitly versioned URLs. See [website release plan](WEBSITE_LAUNCH_PLAN.md).

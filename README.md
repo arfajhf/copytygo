@@ -1,19 +1,19 @@
 <p><img src="branding/logo.png" alt="CopyTyGo logo" width="100"></p>
 
-# CopyTyGo v5.0.0
+# CopyTyGo v5.0.1
 
 CopyTyGo is a full-stack Go framework focused on productive application development without hiding the strengths of Go.
 
-CopyTyGo v5.0.0 is the first public stable release in the v5 module series. The earlier v4.0.6 tag was an internal prelaunch milestone. CopyTyGo focuses on Go + TypeScript developer experience, secure backend tooling, and production reliability.
+CopyTyGo v5.0.1 is the first patch release in the stable v5 module series. The initial public release was v5.0.0. CopyTyGo focuses on Go + TypeScript developer experience, secure backend tooling, and production reliability.
 
-> **Requirements:** Go 1.27.1+ and Node.js 22+ for full frontend development. This README targets the official `v5.0.0` release tag. Verify the GitHub Release is published before installing.
+> **Requirements:** Go 1.27.1+ and Node.js 22+ for full frontend development. This README targets `v5.0.1` once its GitHub Release is published.
 
 ## Quick start
 
-Once the official `v5.0.0` release is published, install the CLI from the immutable version tag:
+After the `v5.0.1` GitHub Release is published, install the CLI from its immutable tag:
 
 ```bash
-go install github.com/arfajhf/copytygo/v5/cmd/ctg@v5.0.0
+go install github.com/arfajhf/copytygo/v5/cmd/ctg@v5.0.1
 ctg new
 ```
 
@@ -55,6 +55,16 @@ ctg env:format
 ```
 
 The formatter preserves existing values, comments and file permissions, and refuses symbolic-link dotenv files. The starter also generates an `.editorconfig` for Go, TypeScript, JSON, Vue and CSS indentation. Go files are formatted before being written, and frontend package/TS config files are emitted as readable multiline JSON.
+
+## What's new in v5.0.1
+
+- Brief purpose-first comments in generated Go, TypeScript, Vue and React starter files.
+- Compact, readable project creation output with next steps.
+- Actionable database connection hints in the CLI without exposing raw driver messages.
+- Responsive dark welcome navbar matching the default application page.
+- Regression tests for generated files, CLI messaging and welcome layout.
+
+This patch preserves the v5 module path and public API. Changes to starter files apply to newly generated projects. Existing customized files are not automatically rewritten.
 
 ## CopyTyGo Studio
 

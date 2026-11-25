@@ -134,7 +134,7 @@ func prepareMigrator(
 	db, err := database.Connect()
 
 	if err != nil {
-		return nil, func() {}, err
+		return nil, func() {}, databaseConnectionError(err)
 	}
 
 	if register != nil {
